@@ -1,6 +1,6 @@
 import { isLineBlocked,getCoverSlot,getHitChance } from './cover.js';
 import { weaponCopy } from './weapons.js';
-const sprite=new Image();sprite.src='./assets/player.svg?v=20260904-17';
+const sprite=new Image();sprite.src='./assets/player.svg?v=20260904-25';
 const DRAW_SCALE=.40;
 export const SQUAD_MODES=['FOLLOW','HOLD','ASSAULT','FOCUS'];
 let squadMode='FOLLOW',healthHud=null;
