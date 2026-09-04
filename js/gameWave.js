@@ -1,1 +1,1 @@
-export * from './game.js?v=20260904-36';
+export * from './game.js?v=20260905-39';
