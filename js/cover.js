@@ -1,5 +1,5 @@
 /* Road-scale urban battlefield: sparse cover, readable sightlines, realistic prop proportions. */
-export function createCover(){return[
+export function createCover(){const layout=[
 {id:'leftCar',x:-430,y:40,w:125,h:42,type:'car'},
 {id:'rightCar',x:430,y:15,w:125,h:42,type:'car'},
 {id:'leftFront',x:-350,y:300,w:150,h:34,type:'wide'},
@@ -9,7 +9,7 @@ export function createCover(){return[
 {id:'farCenter',x:0,y:-540,w:165,h:34,type:'wide'},
 {id:'farLeft',x:-520,y:-470,w:115,h:30,type:'low'},
 {id:'farRight',x:520,y:-500,w:115,h:30,type:'low'}
-]}
+];if(typeof window!=='undefined')window.__battleCovers=layout;return layout}
 export function findCoverForPoint(x,y,covers){return covers.find(c=>Math.abs(x-c.x)<c.w/2+24&&Math.abs(y-c.y)<c.h/2+18)||null}
 export function getCoverSlot(c,actor,threat){let side;if(threat){side=threat.y<c.y?'bottom':'top'}else{side=actor.y<c.y?'top':'bottom'}const inset=c.type==='wide'?30:22;const x=Math.max(c.x-c.w/2+inset,Math.min(c.x+c.w/2-inset,actor.x));const y=side==='top'?c.y-c.h/2-28:c.y+c.h/2+28;return{x,y,side}}
 export function isLineBlocked(a,b,covers){for(const c of covers){const left=c.x-c.w/2,right=c.x+c.w/2,top=c.y-c.h/2,bottom=c.y+c.h/2;const steps=32;for(let i=1;i<steps;i++){const t=i/steps,x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t;if(x>left&&x<right&&y>top&&y<bottom)return true}}return false}
