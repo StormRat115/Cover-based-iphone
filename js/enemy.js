@@ -1,4 +1,4 @@
-export { createBandits, updateBandits } from './enemyCore.js?v=20260904-34';
-import { drawSoldier } from './soldierAssets.js?v=20260904-34';
+export { createBandits, updateBandits } from './enemyCore.js?v=20260904-35';
+import { drawSoldier } from './soldierAssets.js?v=20260904-35';
 
 export function drawBandit(ctx,e,iso,selected){var p=iso(e.x,e.y),x=p[0],y=p[1],s=e.scale||1;ctx.save();ctx.translate(x,y);if(selected&&!e.dead){ctx.strokeStyle='#f5d547';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,-20,13*s,0,Math.PI*2);ctx.stroke()}if(!e.dead){ctx.fillStyle='#111';ctx.fillRect(-13*s,-45*s,26*s,3);ctx.fillStyle=e.type==='heavy'?'#d88c3f':e.type==='shotgunner'?'#b75bd1':e.type==='sniper'?'#79a8d8':e.type==='marksman'?'#d6b84f':e.type==='smg'?'#61a86b':e.type==='pistol'?'#a9a9a9':'#d84b4b';ctx.fillRect(-13*s,-45*s,26*s*Math.max(0,e.hp/e.maxHp),3)}if(e.hit>0&&!e.dead){ctx.globalAlpha=.45;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,-20,14*s,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}drawSoldier(ctx,e,{x:0,y:0,team:'enemy',scale:.30,alpha:(e.dead ? .94 : 1)});ctx.restore()}
