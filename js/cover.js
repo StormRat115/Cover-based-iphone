@@ -1,5 +1,5 @@
-import { drawCityAsset } from './cityAssets.js?v=20260904-26';
-import { createCityCoverLayout } from './cityMap.js?v=20260904-26';
+import { drawCityAsset } from './cityAssets.js?v=20260904-30';
+import { createCityCoverLayout } from './cityMap.js?v=20260904-30';
 
 /* Road-scale tactical cover driven by the compiled city battlefield atlas. */
 export function createCover(){const layout=createCityCoverLayout().map(function(item){return{id:item.id,x:item.x,y:item.y,w:item.w||120,h:item.h||34,type:item.coverType||'low',asset:item.asset,scale:item.scale||.24,segments:item.segments||null}});if(typeof window!=='undefined')window.__battleCovers=layout;return layout}
