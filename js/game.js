@@ -1,9 +1,9 @@
-import { createPlayer, drawPlayer } from './player.js?v=20260904-36';
-import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260904-36';
-import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260904-36';
-import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260904-36';
+import { createPlayer, drawPlayer } from './player.js?v=20260905-39';
+import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260905-39';
+import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260905-39';
+import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260905-39';
 import { initKeyboard, getKeyboardMove } from './input.js';
-import { initTactical } from './tactical.js?v=20260904-36';
+import { initTactical } from './tactical.js?v=20260905-39';
 
 var canvas=document.querySelector('#game');
 var ctx=canvas.getContext('2d');
@@ -24,7 +24,7 @@ var messageButton=document.querySelector('#messageButton');
 var W=0,H=0,dpr=1,last=0,gameOver=false,paused=false,target=null,kills=0;
 var hitMarker=0,damagePops=[],fireHeld=false,playerHitFlash=0,autoPlay=false,autoMoveTimer=0;
 var wave=1,waveState='active',waveTimer=0;
-var world={scaleX:.25,scaleY:.125,offsetY:-40,cameraX:0,cameraY:0,minX:-1700,maxX:1700,minY:-1400,maxY:1400};
+var world={scaleX:.25,scaleY:.125,offsetY:-40,cameraX:0,cameraY:0,minX:-2300,maxX:2300,minY:-1900,maxY:1900};
 
 var player=createPlayer();
 var covers=createCover();
@@ -178,7 +178,7 @@ function updateAutoPlayer(dt){
       var best=null,bestCover=null,bestScore=1e9;
       covers.forEach(function(c){
         var cd=distance(player,c),ed=distance(e,c);
-        if(cd>900||ed<220)return;
+        if(cd>1100||ed<220)return;
         var slot=getCoverSlot(c,player,e);
         var protectedSpot=isLineBlocked({x:slot.x,y:slot.y},e,[c]);
         var score=cd+Math.abs(ed-500)*.45+(protectedSpot?-150:240)+(c.type==='wide'?-40:0);
@@ -309,11 +309,12 @@ function drawMapDecor(){
   worldPoly([[world.minX,world.minY],[-310,world.minY],[-310,world.maxY],[world.minX,world.maxY]],'#343a3a');
   worldPoly([[310,world.minY],[world.maxX,world.minY],[world.maxX,world.maxY],[310,world.maxY]],'#343a3a');
   for(var y=world.minY+80;y<=world.maxY-50;y+=118)worldPoly([[-11,y],[11,y],[11,y+62],[-11,y+62]],'#c0a64d99');
-  [-900,-320,300,920].forEach(drawCrosswalk);
-  var rows=[-1120,-560,0,560,1120];
-  rows.forEach(function(y){drawBuilding(-1180,y,430,320,'#404644');drawBuilding(1180,y,430,320,'#454947')});
-  [-520,0,520].forEach(function(y){drawBuilding(-720,y,300,240,'#3e4442');drawBuilding(720,y,300,240,'#424744')});
-  for(var ly=-1200;ly<=1200;ly+=360){drawStreetLamp(-430,ly);drawStreetLamp(430,ly)}
+  [-1500,-900,-320,300,920,1500].forEach(drawCrosswalk);
+  var outerRows=[-1650,-1100,-550,0,550,1100,1650];
+  outerRows.forEach(function(y){drawBuilding(-1650,y,470,330,'#404644');drawBuilding(1650,y,470,330,'#454947')});
+  var innerRows=[-1200,-600,0,600,1200];
+  innerRows.forEach(function(y){drawBuilding(-980,y,320,250,'#3e4442');drawBuilding(980,y,320,250,'#424744')});
+  for(var ly=-1700;ly<=1700;ly+=360){drawStreetLamp(-430,ly);drawStreetLamp(430,ly)}
 }
 function drawWorld(){
   ctx.fillStyle='#4b514c';ctx.fillRect(0,0,W,H);
