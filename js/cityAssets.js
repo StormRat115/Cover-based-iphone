@@ -1,9 +1,9 @@
 export const cityAtlas=new Image();
-cityAtlas.src='./assets/C226AF9A-3862-4A3E-BA10-1F43A16A3D8A.PNG?v=20260904-26';
+cityAtlas.src='./assets/C226AF9A-3862-4A3E-BA10-1F43A16A3D8A.PNG?v=20260904-27';
 
 export function loadImage(img){return new Promise(function(resolve,reject){if(img.complete&&img.naturalWidth>0){resolve(img);return}img.onload=function(){resolve(img)};img.onerror=function(){reject(new Error('Failed to load city cover atlas'))}})}
 
-export function preloadCityAssets(onProgress){onProgress=onProgress||function(){};onProgress(.2,'LOADING CITY ASSETS');return loadImage(cityAtlas).then(function(){onProgress(1,'CITY ASSETS READY');return cityAtlas})}
+export function preloadCityAssets(onProgress){onProgress=onProgress||function(){};onProgress(.1,'LOADING CITY ASSETS');return loadImage(cityAtlas).then(function(){onProgress(1,'CITY ASSETS READY');return cityAtlas})}
 
 export const CITY_ASSET_DEFS={
 barrier_long:{x:0,y:0,w:355,h:170,kind:'cover',cover:'high'},
