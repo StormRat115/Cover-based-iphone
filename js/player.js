@@ -1,6 +1,6 @@
-import { getHitChance } from './cover.js?v=20260904-34';
+import { getHitChance } from './cover.js?v=20260904-35';
 import { weaponCopy } from './weapons.js';
-import { drawSoldier } from './soldierAssets.js?v=20260904-34';
+import { drawSoldier } from './soldierAssets.js?v=20260904-35';
 
 let chanceHud = null;
 let shotHud = null;
