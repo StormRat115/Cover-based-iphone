@@ -1,6 +1,6 @@
-import { isLineBlocked, getHitChance } from './cover.js?v=20260904-34';
+import { isLineBlocked, getHitChance } from './cover.js?v=20260904-35';
 import { weaponCopy } from './weapons.js';
-import { pickTacticalCover, applyCoverChoice, moveTowardTarget, faceThreat, coverStillUseful, peekPoint } from './combatAI.js?v=20260904-34';
+import { pickTacticalCover, applyCoverChoice, moveTowardTarget, faceThreat, coverStillUseful, peekPoint } from './combatAI.js?v=20260904-35';
 
 export const SQUAD_MODES=['FOLLOW','HOLD','ASSAULT','FOCUS'];
 var squadMode='FOLLOW',healthHud=null;
@@ -151,7 +151,7 @@ function chooseCover(a,target,player,covers,allies,mode,forceNew){
     flankSide:a.role==='flanker'?a.flankSide:0,
     flankWeight:a.role==='flanker'?260:100,
     anchor:mode==='FOLLOW'?player:null,
-    anchorWeight:mode==='FOLLOW'?.22:.08,
+    anchorWeight:mode==='FOLLOW' ? .22 : .08,
     forceNew:!!forceNew
   });
   if(choice){
@@ -167,7 +167,7 @@ function maybeReposition(a,target,covers,mode){
   if(mode==='HOLD')return !coverStillUseful(a,target,covers,190,1350);
   if(!coverStillUseful(a,target,covers,210,a.role==='marksman'?1450:1250))return true;
   if(a.coverCycles<3)return false;
-  var chance=a.role==='flanker'?.45:a.role==='marksman'?.16:.25;
+  var chance=a.role==='flanker' ? .45 : a.role==='marksman' ? .16 : .25;
   if(mode==='ASSAULT')chance+=.15;
   return Math.random()<chance;
 }
@@ -285,7 +285,7 @@ export function updateAllies(allies,dt,player,covers,enemies,spawnProjectile,mod
     var peekOffset=a.cover?Math.hypot(a.x-a.coverAnchorX,a.y-a.coverAnchorY):999;
     var canFire=dist<a.weapon.range&&!a.reloading&&a.exposed&&(!lineBlocked||peekOffset>24);
     if(a.fire<=0&&canFire){
-      a.fire=a.weapon.cooldown*(a.role==='flanker'?.9:1.05)+Math.random()*.16;
+      a.fire=a.weapon.cooldown*(a.role==='flanker' ? .9 : 1.05)+Math.random()*.16;
       faceThreat(a,target);
       a.muzzle=.1;
       if(a.cover&&a.combatState==='exposed')a.shotsLeft--;
