@@ -1,0 +1,3 @@
+await preloadCityAssets((progress, text) => {
+  console.log(progress, text);
+});
