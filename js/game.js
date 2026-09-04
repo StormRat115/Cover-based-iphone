@@ -1,9 +1,9 @@
-import { createPlayer, drawPlayer } from './player.js?v=20260904-35';
-import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260904-35';
-import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260904-35';
-import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260904-35';
+import { createPlayer, drawPlayer } from './player.js?v=20260904-36';
+import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260904-36';
+import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260904-36';
+import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260904-36';
 import { initKeyboard, getKeyboardMove } from './input.js';
-import { initTactical } from './tactical.js?v=20260904-35';
+import { initTactical } from './tactical.js?v=20260904-36';
 
 var canvas=document.querySelector('#game');
 var ctx=canvas.getContext('2d');
@@ -85,8 +85,8 @@ function spawnProjectile(from,to,owner,damage){
   }
   projectiles.push({
     x:from.x+dx/d*22,y:from.y+dy/d*22,px:from.x+dx/d*22,py:from.y+dy/d*22,
-    tx:tx,ty:ty,life:0,maxLife:Math.min(1.65,d/850+.16),speed:980,
-    owner:owner,damage:hitDamage,target:targetRef,coverGrace:(from&&from.exposed)?0.2:0.08
+    tx:tx,ty:ty,life:0,maxLife:Math.min(.85,d/2450+.08),speed:2600,
+    owner:owner,damage:hitDamage,target:targetRef,coverGrace:(from&&from.exposed)?0.12:0.05
   });
 }
 function spawnEnemyProjectile(e,to,owner,damage){spawnProjectile(e,to||player,owner||'enemy',damage)}
@@ -118,10 +118,10 @@ function drawProjectiles(){
     var x=xy[0],y=xy[1],tx=txy[0],ty=txy[1],dx=tx-x,dy=ty-y,d=Math.hypot(dx,dy)||1;
     var tracer=p.owner==='enemy'?'#ff8d62':p.owner==='ally'?'#71b9ff':'#ffe36b';
     var tip=p.owner==='enemy'?'#ffd0a8':p.owner==='ally'?'#c8e7ff':'#fff7b0';
-    ctx.save();ctx.globalAlpha=Math.max(.58,1-p.life/p.maxLife);
+    ctx.save();ctx.globalAlpha=Math.max(.62,1-p.life/p.maxLife);
     ctx.strokeStyle=tracer;ctx.lineWidth=2.2;ctx.lineCap='round';ctx.shadowColor=tracer;ctx.shadowBlur=6;
-    ctx.beginPath();ctx.moveTo(x-dx/d*26,y-dy/d*26);ctx.lineTo(x,y);ctx.stroke();
-    ctx.shadowBlur=0;ctx.fillStyle=tip;ctx.beginPath();ctx.arc(x,y,2.1,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.beginPath();ctx.moveTo(x-dx/d*34,y-dy/d*34);ctx.lineTo(x,y);ctx.stroke();
+    ctx.shadowBlur=0;ctx.fillStyle=tip;ctx.beginPath();ctx.arc(x,y,2.0,0,Math.PI*2);ctx.fill();ctx.restore();
   });
 }
 
