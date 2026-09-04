@@ -64,7 +64,7 @@ function frameFor(actor,state){
 function teamFilter(team){if(team==='ally')return'sepia(.55) saturate(1.75) hue-rotate(155deg) brightness(1.06)';if(team==='enemy')return'sepia(.62) saturate(1.95) hue-rotate(315deg) brightness(1.02)';return'none'}
 
 export function drawSoldier(ctx,actor,options){
-  options=options||{};const state=options.state||getSoldierState(actor),r=frameFor(actor,state),baseScale=options.scale==null?.30:options.scale,scale=baseScale*(actor&&actor.scale?actor.scale:1),dw=r.w*scale,dh=r.h*scale,flip=stableFacing(actor,state),bob=state==='run'?Math.sin(nowMs()*.018)*.65:0;
+  options=options||{};const state=options.state||getSoldierState(actor),r=frameFor(actor,state),baseScale=options.scale==null ? .30 : options.scale,scale=baseScale*(actor&&actor.scale?actor.scale:1),dw=r.w*scale,dh=r.h*scale,flip=stableFacing(actor,state),bob=state==='run'?Math.sin(nowMs()*.018)*.65:0;
   ctx.save();ctx.translate(options.x||0,(options.y||0)+bob);ctx.globalAlpha=options.alpha==null?1:options.alpha;
   ctx.fillStyle='#0007';ctx.beginPath();ctx.ellipse(0,2,Math.max(7,dw*.22),Math.max(2,dh*.05),0,0,Math.PI*2);ctx.fill();
   if(state==='dead'){ctx.translate(0,6);ctx.rotate(flip*1.34)}else if(state==='downed'){ctx.translate(0,3);ctx.rotate(flip*.20)}
