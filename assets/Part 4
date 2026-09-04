@@ -1,0 +1,30 @@
+import { drawCityAsset } from './cityAssets.js';
+import { createCityCoverLayout } from './cityMap.js';
+
+export function createCover() {
+  return createCityCoverLayout().map(item => ({
+    id: item.id,
+    x: item.x,
+    y: item.y,
+    asset: item.asset,
+    scale: item.scale ?? 0.24,
+    type: item.coverType || 'high',
+    w: item.coverType === 'high' ? 140 : 120,
+    h: item.coverType === 'high' ? 42 : 34
+  }));
+}
+
+export function drawCover(ctx, cover, iso) {
+  const [x, y] = iso(cover.x, cover.y);
+
+  if (cover.asset) {
+    drawCityAsset(ctx, cover.asset, x, y, { scale: cover.scale });
+    return;
+  }
+
+  // fallback
+  ctx.save();
+  ctx.fillStyle = cover.type === 'high' ? '#7a7a7a' : '#9a8d68';
+  ctx.fillRect(x - 30, y - 10, 60, 20);
+  ctx.restore();
+}
