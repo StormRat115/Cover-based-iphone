@@ -2,10 +2,8 @@ import { isLineBlocked,getCoverSlot } from './cover.js';
 const sprite=new Image();sprite.src='./assets/player.svg';
 export const SQUAD_MODES=['FOLLOW','HOLD','ASSAULT'];
 let squadMode='FOLLOW';
-if(typeof window!=='undefined'){
- window.squadMode='FOLLOW';
- addEventListener('DOMContentLoaded',()=>document.querySelectorAll('#squadCommands button').forEach((b,i)=>{b.classList.toggle('active',i===0);b.addEventListener('pointerdown',e=>{e.preventDefault();squadMode=b.dataset.command||'FOLLOW';window.squadMode=squadMode;document.querySelectorAll('#squadCommands button').forEach(x=>x.classList.toggle('active',x===b))})}));
-}
+function wireSquadCommands(){document.querySelectorAll('#squadCommands button').forEach((b,i)=>{b.classList.toggle('active',i===0);b.addEventListener('pointerdown',e=>{e.preventDefault();squadMode=b.dataset.command||'FOLLOW';window.squadMode=squadMode;document.querySelectorAll('#squadCommands button').forEach(x=>x.classList.toggle('active',x===b))})})}
+if(typeof window!=='undefined'){window.squadMode='FOLLOW';if(document.readyState==='loading')addEventListener('DOMContentLoaded',wireSquadCommands);else wireSquadCommands()}
 export function createAllies(){return[
 {x:-70,y:170,hp:80,maxHp:80,fire:.4,t:0,dead:false,deathTimer:0,deathDuration:.8,muzzle:0,hit:0,targetX:-70,targetY:170,moveTimer:.2,cover:null,speed:145,facingX:1,facingY:0,scale:.95},
 {x:75,y:185,hp:80,maxHp:80,fire:.9,t:.8,dead:false,deathTimer:0,deathDuration:.8,muzzle:0,hit:0,targetX:75,targetY:185,moveTimer:.5,cover:null,speed:150,facingX:-1,facingY:0,scale:.95},
