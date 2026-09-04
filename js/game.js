@@ -1,7 +1,7 @@
-import { createPlayer, drawPlayer } from './player.js?v=20260904-12';
-import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260904-12';
-import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260904-12';
-import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260904-12';
+import { createPlayer, drawPlayer } from './player.js?v=20260904-13';
+import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260904-13';
+import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260904-13';
+import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260904-13';
 import { initKeyboard, getKeyboardMove } from './input.js';
 var canvas=document.querySelector('#game');var ctx=canvas.getContext('2d');var status=document.querySelector('#status');var hint=document.querySelector('#hint');var fireButton=document.querySelector('#fire');var reloadButton=document.querySelector('#reload');var autoPlayButton=document.querySelector('#autoPlay');var pauseButton=document.querySelector('#pause');var pauseMenu=document.querySelector('#pauseMenu');var resumeButton=document.querySelector('#resumeButton');var pauseRestart=document.querySelector('#pauseRestart');var message=document.querySelector('#message');var messageTitle=document.querySelector('#messageTitle');var messageText=document.querySelector('#messageText');var messageButton=document.querySelector('#messageButton');
 var W=0,H=0,dpr=1,last=0,gameOver=false,won=false,paused=false,target=null,kills=0,hitMarker=0,damagePops=[],fireHeld=false,playerHitFlash=0,damageDir=0,autoPlay=false,autoMoveTimer=0;var wave=1,waveState='active',waveTimer=0,objectiveIndex=0;var OBJECTIVES=['CLEAR THE FIRST POSITION','PUSH THROUGH THE BLOCK','HOLD THE LINE','BREAK THE FINAL ASSAULT'];
