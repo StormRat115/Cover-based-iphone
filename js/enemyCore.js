@@ -1,6 +1,6 @@
-import { isLineBlocked, getHitChance } from './cover.js?v=20260904-34';
+import { isLineBlocked, getHitChance } from './cover.js?v=20260904-35';
 import { weaponCopy } from './weapons.js';
-import { pickTacticalCover, applyCoverChoice, moveTowardTarget, faceThreat, coverStillUseful, peekPoint } from './combatAI.js?v=20260904-34';
+import { pickTacticalCover, applyCoverChoice, moveTowardTarget, faceThreat, coverStillUseful, peekPoint } from './combatAI.js?v=20260904-35';
 
 var TYPES={
   rifleman:{weapon:'rifle',hp:60,speed:205,scale:1},
@@ -95,7 +95,7 @@ function chooseCover(e,player,covers,enemies,forceNew){
 function shouldReposition(e,player,covers){
   if(!coverStillUseful(e,player,covers,190,e.weapon.role==='precision'?1600:1350))return true;
   if(e.coverCycles<2)return false;
-  var chance=e.weapon.role==='flanker'?.48:e.weapon.role==='breach'?.38:e.weapon.role==='precision'?.12:.23;
+  var chance=e.weapon.role==='flanker' ? .48 : e.weapon.role==='breach' ? .38 : e.weapon.role==='precision' ? .12 : .23;
   if(e.hp<e.maxHp*.35)chance*=.45;
   return Math.random()<chance;
 }
