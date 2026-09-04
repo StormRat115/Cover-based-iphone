@@ -1,6 +1,6 @@
-import { createPlayer, drawPlayer } from './player.js?v=20260904-28';
-import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260904-28';
-import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260904-28';
+import { createPlayer, drawPlayer } from './player.js?v=20260904-29';
+import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260904-29';
+import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260904-29';
 import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260904-28';
 import { initKeyboard, getKeyboardMove } from './input.js';
 import { initTactical, drawObjectiveZones } from './tactical.js?v=20260904-28';
