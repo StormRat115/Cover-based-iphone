@@ -19,18 +19,17 @@ var messageButton=document.querySelector('#messageButton');
 var W=0,H=0,dpr=1,last=0,gameOver=false,won=false,target=null,kills=0,hitMarker=0,damagePops=[],fireHeld=false,playerHitFlash=0,damageDir=0,autoPlay=false,autoMoveTimer=0;
 var wave=1,waveState='active',waveTimer=0,objectiveIndex=0;
 var OBJECTIVES=['CLEAR THE FIRST POSITION','PUSH THROUGH THE BLOCK','HOLD THE LINE','BREAK THE FINAL ASSAULT'];
-var world={scaleX:.72,scaleY:.38,offsetY:-40,cameraX:0,cameraY:0,minX:-800,maxX:800,minY:-650,maxY:650};
+var world={scaleX:.36,scaleY:.19,offsetY:-40,cameraX:0,cameraY:0,minX:-800,maxX:800,minY:-650,maxY:650};
 var player=createPlayer();
 var covers=createCover();
 var enemies=createBandits(1);
 var allies=createAllies();
 var projectiles=[];
-
 function resize(){dpr=Math.min(window.devicePixelRatio||1,2);W=window.innerWidth;H=window.innerHeight;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
 window.addEventListener('resize',resize);resize();
 function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
 function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
-function updateCamera(){world.cameraX+=(clamp(player.x,world.minX+260,world.maxX-260)-world.cameraX)*.08;world.cameraY+=(clamp(player.y,world.minY+220,world.maxY-220)-world.cameraY)*.08}
+function updateCamera(){world.cameraX+=(clamp(player.x,world.minX+420,world.maxX-420)-world.cameraX)*.08;world.cameraY+=(clamp(player.y,world.minY+360,world.maxY-360)-world.cameraY)*.08}
 export function iso(x,y){return[W/2+(x-world.cameraX-y+world.cameraY)*world.scaleX,H/2+(x-world.cameraX+y-world.cameraY)*world.scaleY+world.offsetY]}
 function nearestEnemy(){var living=enemies.filter(function(e){return !e.dead});living.sort(function(a,b){return distance(player,a)-distance(player,b)});return living[0]||null}
 function screenToWorld(sx,sy){var a=(sx-W/2)/world.scaleX+world.cameraX;var b=(sy-(H/2+world.offsetY))/world.scaleY+world.cameraY;return{x:clamp((a+b)/2,world.minX,world.maxX),y:clamp((b-a)/2,world.minY,world.maxY)}}
@@ -62,6 +61,6 @@ function update(dt){if(gameOver||won)return;var km=getKeyboardMove();if(!autoPla
 function diamond(x,y,w,h,c){var p=iso(x,y);ctx.beginPath();ctx.moveTo(p[0],p[1]-h);ctx.lineTo(p[0]+w,p[1]);ctx.lineTo(p[0],p[1]+h);ctx.lineTo(p[0]-w,p[1]);ctx.closePath();ctx.fillStyle=c;ctx.fill()}
 function drawWorld(){ctx.fillStyle='#293238';ctx.fillRect(0,0,W,H);for(var x=world.minX;x<=world.maxX;x+=80)for(var y=world.minY;y<=world.maxY;y+=80)diamond(x,y,28,15,(x+y)%160===0?'#303a3f':'#2c353a');covers.forEach(function(c){drawCover(ctx,c,iso)});if(target&&!target.dead){var a=iso(player.x,player.y),b=iso(target.x,target.y);ctx.save();ctx.strokeStyle='#f5d54799';ctx.setLineDash([5,6]);ctx.beginPath();ctx.moveTo(a[0],a[1]-30);ctx.lineTo(b[0],b[1]-30);ctx.stroke();ctx.restore()}}
 function drawMissionUI(){ctx.save();var boxW=Math.min(330,W-24),x=(W-boxW)/2,y=48;ctx.fillStyle='#11181dcc';ctx.strokeStyle='#ffffff33';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+12,y);ctx.lineTo(x+boxW-12,y);ctx.quadraticCurveTo(x+boxW,y,x+boxW,y+12);ctx.lineTo(x+boxW,y+46);ctx.quadraticCurveTo(x+boxW,y+58,x+boxW-12,y+58);ctx.lineTo(x+12,y+58);ctx.quadraticCurveTo(x,y+58,x,y+46);ctx.lineTo(x,y+12);ctx.quadraticCurveTo(x,y,x+12,y);ctx.closePath();ctx.fill();ctx.stroke();ctx.fillStyle='#8fb7c8';ctx.font='800 11px system-ui';ctx.textAlign='left';ctx.fillText('WAVE '+wave+'/4',x+14,y+19);ctx.fillStyle='#fff';ctx.font='900 14px system-ui';ctx.fillText(waveState==='complete'?'OBJECTIVE COMPLETE':OBJECTIVES[objectiveIndex],x+14,y+40);ctx.restore()}
-function draw(){drawWorld();drawProjectiles();var actors=allies.map(function(a){return{o:a,y:a.x+a.y,type:'ally'}}).concat(enemies.map(function(e){return{o:e,y:e.x+e.y,type:'enemy'}}));actors=actors.filter(function(v){return !v.o.dead||v.o.deathTimer<v.o.deathDuration});actors.sort(function(a,b){return a.y-b.y});actors.forEach(function(v){if(v.type==='ally')drawAlly(ctx,v.o,iso);else drawBandit(ctx,v.o,iso,target===v.o)});drawPlayer(ctx,player,iso);drawFeedback();drawMissionUI();var aliveAllies=allies.filter(function(a){return !a.dead}).length,aliveEnemies=enemies.filter(function(e){return !e.dead}).length;status.textContent='HP '+Math.max(0,Math.ceil(player.hp))+' • '+kills+' KILLS • '+aliveEnemies+' HOSTILES • '+aliveAllies+' ALLIES • '+player.weapon.ammo+'/'+player.weapon.magazine+(player.cover?' • IN COVER':'')+(target&&!target.dead?' • TARGET LOCKED':'')+(autoPlay?' • AI PILOT':'');hint.textContent=player.dead?'SOLDIER DOWN':player.reloading?'RELOADING…':autoPlay?'AI PILOT ACTIVE • Tap AUTO PLAY to resume control':'Tap cover to take position • WASD move • Hold FIRE to shoot • R reload';reloadButton.classList.toggle('hidden',player.weapon.ammo===player.weapon.magazine&&!player.reloading)}
-function loop(t){var dt=Math.min(.033,(t-last)/1000||0);last=t;update(dt);draw();window.requestAnimationFrame(loop)}
-window.requestAnimationFrame(loop);
+function draw(){drawWorld();drawProjectiles();var actors=allies.map(function(a){return{o:a,y:a.x+a.y,type:'ally'}}).concat(enemies.map(function(e){return{o:e,y:e.x+e.y,type:'enemy'}}));actors=actors.filter(function(v){return !v.o.dead||v.o.deathTimer<v.o.deathDuration});actors.sort(function(a,b){return a.y-b.y});actors.forEach(function(v){if(v.type==='ally')drawAlly(ctx,v.o,iso);else drawBandit(ctx,v.o,iso,target===v.o)});drawPlayer(ctx,player,iso);drawFeedback();drawMissionUI();var aliveAllies=allies.filter(function(a){return !a.dead}).length,aliveEnemies=enemies.filter(function(e){return !e.dead}).length;status.textContent='HP '+Math.max(0,Math.ceil(player.hp))+' • '+kills+' KILLS • '+aliveEnemies+' HOSTILES • '+aliveAllies+' ALLIES • '+player.weapon.ammo+'/'+player.weapon.magazine+(player.cover?' • IN COVER':'')+(target&&!target.dead?' • TARGET LOCKED':'')+(autoPlay?' • AI PILOT':'');hint.textContent=player.dead?'SOLDIER DOWN':player.reloading?'RELOADING...':'Tap a position to move • Tap an enemy to lock target • Hold FIRE to shoot'}
+function loop(t){var dt=Math.min(.033,(t-last)/1000||.016);last=t;update(dt);draw();requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
