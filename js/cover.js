@@ -1,21 +1,13 @@
-/* Expanded urban battlefield cover. The spawn area is deliberately open; cover appears in staggered lanes and flanks. */
+/* Sparse tactical cover. The squad starts in a deliberately open street; cover is pushed outward into staggered lanes. */
 export function createCover(){return[
-{id:'northWestBlock',x:-650,y:-420,w:210,h:120,type:'building'},
-{id:'northEastBlock',x:650,y:-430,w:220,h:125,type:'building'},
-{id:'westBlock',x:-700,y:-40,w:190,h:130,type:'building'},
-{id:'eastBlock',x:700,y:-70,w:205,h:135,type:'building'},
-{id:'southWestBlock',x:-620,y:455,w:220,h:125,type:'building'},
-{id:'southEastBlock',x:620,y:445,w:225,h:130,type:'building'},
-{id:'northCar',x:-360,y:-360,w:105,h:42,type:'car'},
-{id:'eastCar',x:430,y:180,w:105,h:42,type:'car'},
-{id:'southCar',x:-390,y:300,w:105,h:42,type:'car'},
-{id:'westBarrier',x:-430,y:-95,w:145,h:32,type:'low'},
-{id:'eastBarrier',x:430,y:-125,w:145,h:32,type:'low'},
-{id:'northWall',x:120,y:-400,w:175,h:38,type:'wide'},
-{id:'westWall',x:-330,y:250,w:165,h:38,type:'low'},
-{id:'eastWall',x:350,y:300,w:175,h:38,type:'wide'},
-{id:'southWall',x:80,y:420,w:180,h:38,type:'low'},
-{id:'farWestWall',x:-735,y:300,w:135,h:38,type:'low'}
+{id:'northWestBarrier',x:-520,y:-360,w:155,h:32,type:'low'},
+{id:'northEastBarrier',x:520,y:-390,w:155,h:32,type:'low'},
+{id:'westCar',x:-620,y:70,w:105,h:42,type:'car'},
+{id:'eastCar',x:620,y:40,w:105,h:42,type:'car'},
+{id:'westWall',x:-500,y:390,w:185,h:38,type:'wide'},
+{id:'eastWall',x:520,y:380,w:185,h:38,type:'wide'},
+{id:'northWall',x:80,y:-500,w:170,h:38,type:'low'},
+{id:'southWall',x:-80,y:500,w:170,h:38,type:'low'}
 ]}
 export function findCoverForPoint(x,y,covers){return covers.find(c=>Math.abs(x-c.x)<c.w/2+24&&Math.abs(y-c.y)<c.h/2+18)||null}
 export function getCoverSlot(c,actor,threat){let side;if(threat){side=threat.y<c.y?'bottom':'top'}else{side=actor.y<c.y?'top':'bottom'}const inset=c.type==='wide'||c.type==='building'?32:22;const x=Math.max(c.x-c.w/2+inset,Math.min(c.x+c.w/2-inset,actor.x));const y=side==='top'?c.y-c.h/2-24:c.y+c.h/2+24;return{x,y,side}}
