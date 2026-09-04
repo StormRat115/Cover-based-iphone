@@ -1,7 +1,7 @@
 import { isLineBlocked,getCoverSlot,getHitChance } from './cover.js';
 import { weaponCopy } from './weapons.js';
 import { getPressureAccuracyPenalty } from './tactical.js?v=20260904-17';
-const sprite=new Image();sprite.src='./assets/player.svg?v=20260904-17';
+const sprite=new Image();sprite.src='./assets/player.svg?v=20260904-25';
 const DRAW_SCALE=.40;
 const TYPES={rifleman:{weapon:'rifle',hp:60,speed:98,scale:1},shotgunner:{weapon:'shotgun',hp:90,speed:82,scale:1.05},heavy:{weapon:'lmg',hp:150,speed:58,scale:1.15},sniper:{weapon:'sniper',hp:55,speed:62,scale:.95},marksman:{weapon:'dmr',hp:75,speed:78,scale:1},smg:{weapon:'smg',hp:52,speed:125,scale:.98},pistol:{weapon:'pistol',hp:45,speed:110,scale:.95}};
 const SPAWNS=[[-780,-610],[-430,-690],[-40,-700],[380,-690],[760,-610],[790,-250],[800,210],[690,610],[300,700],[-120,700],[-520,640],[-790,300],[-800,-180],[-650,-680]];
