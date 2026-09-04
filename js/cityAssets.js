@@ -1,9 +1,9 @@
 export const cityAtlas=new Image();
-cityAtlas.src='./assets/C226AF9A-3862-4A3E-BA10-1F43A16A3D8A.PNG?v=20260904-27';
+cityAtlas.src='./assets/C226AF9A-3862-4A3E-BA10-1F43A16A3D8A.PNG?v=20260904-31';
 
-export function loadImage(img){return new Promise(function(resolve,reject){if(img.complete&&img.naturalWidth>0){resolve(img);return}img.onload=function(){resolve(img)};img.onerror=function(){reject(new Error('Failed to load city cover atlas'))}})}
+export function loadImage(img){return new Promise(function(resolve){var tries=0;function ok(){img.onload=null;img.onerror=null;resolve(img)}function fail(){tries++;if(tries>=3){img.onload=null;img.onerror=null;resolve(null);return}var base=img.src.split('&retry=')[0];setTimeout(function(){img.src=base+(base.indexOf('?')>=0?'&':'?')+'retry='+Date.now()},180)}if(img.complete&&img.naturalWidth>0){resolve(img);return}img.onload=ok;img.onerror=fail})}
 
-export function preloadCityAssets(onProgress){onProgress=onProgress||function(){};onProgress(.1,'LOADING CITY ASSETS');return loadImage(cityAtlas).then(function(){onProgress(1,'CITY ASSETS READY');return cityAtlas})}
+export function preloadCityAssets(onProgress){onProgress=onProgress||function(){};onProgress(.1,'LOADING CITY ASSETS');return loadImage(cityAtlas).then(function(img){if(!img){onProgress(1,'CITY ASSET FALLBACK READY');return null}onProgress(1,'CITY ASSETS READY');return cityAtlas})}
 
 export const CITY_ASSET_DEFS={
 barrier_long:{x:0,y:0,w:355,h:170,kind:'cover',cover:'high'},
@@ -44,4 +44,4 @@ traffic_light:{x:1230,y:790,w:95,h:200,kind:'prop'},
 camera_pole:{x:1330,y:780,w:110,h:220,kind:'prop'}
 };
 
-export function drawCityAsset(ctx,key,x,y,options){var def=CITY_ASSET_DEFS[key];if(!def)return;options=options||{};var scale=options.scale==null?0.28:options.scale;var rotation=options.rotation||0;var alpha=options.alpha==null?1:options.alpha;var anchorX=options.anchorX==null?0.5:options.anchorX;var anchorY=options.anchorY==null?0.85:options.anchorY;var dw=def.w*scale,dh=def.h*scale;ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);ctx.rotate(rotation);if(cityAtlas.complete&&cityAtlas.naturalWidth>0)ctx.drawImage(cityAtlas,def.x,def.y,def.w,def.h,-dw*anchorX,-dh*anchorY,dw,dh);ctx.restore()}
+export function drawCityAsset(ctx,key,x,y,options){var def=CITY_ASSET_DEFS[key];if(!def)return false;options=options||{};var scale=options.scale==null?0.28:options.scale;var rotation=options.rotation||0;var alpha=options.alpha==null?1:options.alpha;var anchorX=options.anchorX==null?0.5:options.anchorX;var anchorY=options.anchorY==null?0.85:options.anchorY;var dw=def.w*scale,dh=def.h*scale;ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);ctx.rotate(rotation);var drawn=false;if(cityAtlas.complete&&cityAtlas.naturalWidth>0){ctx.drawImage(cityAtlas,def.x,def.y,def.w,def.h,-dw*anchorX,-dh*anchorY,dw,dh);drawn=true}ctx.restore();return drawn}
