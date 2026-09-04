@@ -1,5 +1,5 @@
-import { drawCityAsset } from './cityAssets.js?v=20260904-34';
-import { createCityCoverLayout } from './cityMap.js?v=20260904-34';
+import { drawCityAsset } from './cityAssets.js?v=20260904-35';
+import { createCityCoverLayout } from './cityMap.js?v=20260904-35';
 
 /* Tactical cover driven by the city battlefield atlas, with threat-aware cover sides. */
 export function createCover(){
