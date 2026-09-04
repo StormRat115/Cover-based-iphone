@@ -1,4 +1,6 @@
-export function createCityCoverLayout(){return[
+const MAP_SCALE=1.32;
+function spread(items){return items.map(function(item){return Object.assign({},item,{x:Math.round(item.x*MAP_SCALE),y:Math.round(item.y*MAP_SCALE)})})}
+export function createCityCoverLayout(){return spread([
 {id:'p1',x:-180,y:520,asset:'barrier_long',coverType:'wide',scale:.26,w:160,h:38},{id:'p2',x:0,y:520,asset:'barrier_long',coverType:'wide',scale:.26,w:160,h:38},{id:'p3',x:180,y:520,asset:'barrier_long',coverType:'wide',scale:.26,w:160,h:38},
 {id:'ml1',x:-280,y:250,asset:'sandbag_long',coverType:'low',scale:.25,w:145,h:32},{id:'ml2',x:-420,y:60,asset:'barrier_short',coverType:'wide',scale:.24,w:120,h:34},{id:'ml3',x:-260,y:-120,asset:'crate_stack',coverType:'low',scale:.24,w:120,h:38},
 {id:'mr1',x:280,y:250,asset:'sandbag_crates',coverType:'low',scale:.24,w:135,h:36},{id:'mr2',x:420,y:40,asset:'barrier_short',coverType:'wide',scale:.24,w:120,h:34},{id:'mr3',x:260,y:-140,asset:'planter',coverType:'low',scale:.24,w:135,h:36},
@@ -6,10 +8,9 @@ export function createCityCoverLayout(){return[
 {id:'f1',x:-260,y:-470,asset:'burned_sedan',coverType:'car',scale:.22,w:150,h:48},{id:'f2',x:250,y:-470,asset:'pickup_truck',coverType:'car',scale:.22,w:160,h:50},{id:'f3',x:0,y:-610,asset:'rubble_long',coverType:'wide',scale:.23,w:165,h:42},
 {id:'l1',x:-560,y:-180,asset:'rubble_wall',coverType:'wide',scale:.22,w:145,h:42},{id:'l2',x:-620,y:180,asset:'barrier_yellow',coverType:'wide',scale:.23,w:145,h:38},{id:'r1',x:560,y:-180,asset:'rubble_wall',coverType:'wide',scale:.22,w:145,h:42},{id:'r2',x:620,y:180,asset:'barrier_striped',coverType:'wide',scale:.23,w:145,h:38},
 {id:'e1',x:-115,y:85,asset:'sandbag_short',coverType:'low',scale:.22,w:85,h:28},{id:'e2',x:125,y:95,asset:'sandbag_short',coverType:'low',scale:.22,w:85,h:28},{id:'e3',x:-360,y:-330,asset:'rubble_small',coverType:'low',scale:.22,w:120,h:34},{id:'e4',x:360,y:-330,asset:'rubble_small',coverType:'low',scale:.22,w:120,h:34}
-]}
-
-export function createCityProps(){return[
+])}
+export function createCityProps(){return spread([
 {x:-760,y:640,asset:'lamp_post',scale:.24},{x:-520,y:380,asset:'lamp_post',scale:.24},{x:760,y:640,asset:'lamp_post',scale:.24},{x:520,y:380,asset:'lamp_post',scale:.24},
 {x:-720,y:-120,asset:'power_pole',scale:.23},{x:720,y:-120,asset:'traffic_light',scale:.23},{x:-690,y:40,asset:'barrels',scale:.22},{x:690,y:40,asset:'barrels',scale:.22},
 {x:-470,y:-550,asset:'guard_booth',scale:.20},{x:470,y:-550,asset:'guard_booth',scale:.20},{x:-120,y:-720,asset:'dual_lamp',scale:.23},{x:120,y:-720,asset:'camera_pole',scale:.23}
-]}
+])}
