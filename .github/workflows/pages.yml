@@ -24,6 +24,13 @@ jobs:
       - name: Checkout development
         uses: actions/checkout@v4
 
+      - name: Validate JavaScript syntax
+        run: |
+          for file in js/*.js; do
+            echo "Checking $file"
+            node --check "$file"
+          done
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
