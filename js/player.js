@@ -1,6 +1,6 @@
 import { getHitChance } from './cover.js';
 import { weaponCopy } from './weapons.js';
-import { drawSoldier } from './soldierAssets.js?v=20260904-29';
+import { drawSoldier } from './soldierAssets.js?v=20260904-30';
 
 let chanceHud = null;
 let shotHud = null;
@@ -55,7 +55,7 @@ function showWeapon(p) {
 export function createPlayer() {
   const p = {
     x: 0, y: 120, tx: 0, ty: 120,
-    hp: 100, maxHp: 100, speed: 185,
+    hp: 100, maxHp: 100, speed: 250,
     state: 'idle', anim: 0,
     cover: null, coverTarget: null, coverBlend: 0,
     aimTarget: null, reloading: false, reloadTimer: 0,
