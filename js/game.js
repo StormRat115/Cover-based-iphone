@@ -1,9 +1,9 @@
-import { createPlayer, drawPlayer } from './player.js?v=20260904-34';
-import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260904-34';
-import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260904-34';
-import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260904-34';
+import { createPlayer, drawPlayer } from './player.js?v=20260904-35';
+import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260904-35';
+import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260904-35';
+import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260904-35';
 import { initKeyboard, getKeyboardMove } from './input.js';
-import { initTactical } from './tactical.js?v=20260904-34';
+import { initTactical } from './tactical.js?v=20260904-35';
 
 var canvas=document.querySelector('#game');
 var ctx=canvas.getContext('2d');
@@ -267,6 +267,7 @@ function update(dt){
   }else if(player.keyboardMove)player.setKeyboardMove(null);
 
   player.x=clamp(player.x,world.minX,world.maxX);player.y=clamp(player.y,world.minY,world.maxY);
+  if(fireHeld&&!autoPlay)attemptFire();
   updateAutoPlayer(dt);
   updateBandits(enemies,dt,player,covers,spawnEnemyProjectile);
   updateAllies(allies,dt,player,covers,enemies,spawnAllyProjectile);
