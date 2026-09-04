@@ -1,4 +1,4 @@
-import { createPlayer, updatePlayer, drawPlayer } from './player.js';
+import { createPlayer, drawPlayer } from './player.js';
 import { createBandits, updateBandits, drawBandit } from './enemy.js';
 import { createCover, findCoverForPoint, drawCover, isLineBlocked } from './cover.js';
 import { initKeyboard, getKeyboardMove } from './input.js';
@@ -18,7 +18,7 @@ export function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
 export function nearestEnemy(){return enemies.filter(e=>!e.dead).sort((a,b)=>distance(player,a)-distance(player,b))[0]||null}
 function screenToWorld(sx,sy){const a=(sx-W/2)/world.scaleX,b=(sy-(H/2+world.offsetY))/world.scaleY;return{x:(a+b)/2,y:(b-a)/2}}
 function setTarget(e){target=e;player.aimTarget=e}
-function attemptFire(){if(gameOver||won||player.reloading)return;const e=target&&!target.dead?target:nearestEnemy();if(!e)return;if(distance(player,e)>player.weapon.range)return;if(player.weapon.ammo<=0){reload();return}if(isLineBlocked(player,e,covers))return;const result=player.fireAt(e);if(result){kills+=e.dead?1:0;if(kills===enemies.length)finish(true)}}
+function attemptFire(){if(gameOver||won||player.reloading)return;const e=target&&!target.dead?target:nearestEnemy();if(!e)return;if(distance(player,e)>player.weapon.range)return;if(player.weapon.ammo<=0){reload();return}if(isLineBlocked(player,e,covers)&&!player.cover)return;const result=player.fireAt(e);if(result){kills+=e.dead?1:0;if(kills===enemies.length)finish(true)}}
 function reload(){if(!player.reloading&&player.weapon.ammo<player.weapon.magazine)player.startReload()}
 fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireButton.classList.add('active');attemptFire()});addEventListener('pointerup',()=>fireButton.classList.remove('active'));
 reloadButton.addEventListener('pointerdown',e=>{e.preventDefault();reload()});restartButton.addEventListener('pointerdown',reset);messageButton.addEventListener('pointerdown',reset);
