@@ -1,6 +1,6 @@
 import { getHitChance } from './cover.js';
 import { weaponCopy } from './weapons.js';
-import { drawSoldier } from './soldierAssets.js?v=20260904-28';
+import { drawSoldier } from './soldierAssets.js?v=20260904-29';
 
 let chanceHud = null;
 let shotHud = null;
@@ -260,6 +260,6 @@ export function drawPlayer(ctx, p, iso) {
     ctx.globalAlpha = 1;
   }
   const recoil = p.weapon.recoil ? Math.sin(p.weapon.recoil / Math.max(0.01, p.weapon.cooldown) * Math.PI) * 1.2 : 0;
-  drawSoldier(ctx, p, { x: 0, y: -recoil, team: 'player', scale: .42, alpha: p.dead ? .94 : p.downed ? .72 : 1 });
+  drawSoldier(ctx, p, { x: 0, y: -recoil, team: 'player', scale: .30, alpha: p.dead ? .94 : p.downed ? .72 : 1 });
   ctx.restore();
 }
