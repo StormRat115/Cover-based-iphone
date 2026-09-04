@@ -1,4 +1,4 @@
-import { createAllies, updateAllies, SQUAD_MODES } from './allyCore4.js?v=20260904-34';
+import { createAllies, updateAllies, SQUAD_MODES } from './allyCore2.js?v=20260904-34';
 import { drawSoldier } from './soldierAssets.js?v=20260904-34';
 
 export { createAllies, updateAllies, SQUAD_MODES };
