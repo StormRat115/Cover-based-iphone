@@ -5,8 +5,8 @@ export function initKeyboard({onFire,onReload}={}){
  addEventListener('keydown',e=>{
   const k=e.key.toLowerCase();
   if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','r'].includes(k)) e.preventDefault();
-  if(k===' '&&!e.repeat){firePressed=true;onFire?.()}
-  if(k==='r'&&!e.repeat){reloadPressed=true;onReload?.()}
+  if(k===' '&&!e.repeat){firePressed=true;if(onFire)onFire();}
+  if(k==='r'&&!e.repeat){reloadPressed=true;if(onReload)onReload();}
   keys.add(k);
  });
  addEventListener('keyup',e=>keys.delete(e.key.toLowerCase()));
