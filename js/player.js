@@ -1,9 +1,7 @@
 import { getHitChance } from './cover.js';
 import { weaponCopy } from './weapons.js';
+import { drawSoldier } from './soldierAssets.js?v=20260904-28';
 
-const sprite = new Image();
-sprite.src = './assets/player.svg?v=20260904-25';
-const DRAW_SCALE = 0.40;
 let chanceHud = null;
 let shotHud = null;
 let weaponHud = null;
@@ -247,33 +245,21 @@ export function drawPlayer(ctx, p, iso) {
   ctx.save();
   ctx.translate(sx, sy);
   if (p.downed) {
-    ctx.globalAlpha = 0.65;
+    ctx.globalAlpha = 0.72;
     ctx.fillStyle = '#d85b50';
-    ctx.fillRect(-11, -4, 22, 3);
+    ctx.fillRect(-11, -5, 22, 3);
     ctx.fillStyle = '#fff';
     ctx.font = '900 9px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('DOWNED ' + Math.max(0, Math.ceil(p.downDuration - p.downTimer)) + 's', 0, -12);
+    ctx.fillText('DOWNED ' + Math.max(0, Math.ceil(p.downDuration - p.downTimer)) + 's', 0, -14);
   }
-  if (p.dead) { ctx.globalAlpha = 0.92; ctx.rotate(-0.12); ctx.translate(0, 6); }
   if (p.hitFlash > 0 && !p.dead) {
-    ctx.globalAlpha = 0.6;
+    ctx.globalAlpha = 0.5;
     ctx.fillStyle = '#ff4545';
-    ctx.beginPath(); ctx.arc(0, -13, 13, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = p.downed ? 0.65 : 1;
+    ctx.beginPath(); ctx.arc(0, -16, 15, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
   }
-  const frame = p.dead ? 6 : p.downed ? 5 : p.state === 'shoot' ? 4 : p.reloading ? 3 : p.cover ? 3 : p.state === 'walk' ? 1 + Math.floor(p.anim * 8) % 2 : 0;
-  const bob = p.dead || p.downed ? 0 : Math.sin(p.anim * 10) * 0.8;
-  const flip = p.facingX < 0 ? -1 : 1;
-  ctx.scale(flip, 1);
-  const recoil = p.weapon.recoil ? Math.sin(p.weapon.recoil / Math.max(0.01, p.weapon.cooldown) * Math.PI) * 2 : 0;
-  if (sprite.complete && sprite.naturalWidth) {
-    ctx.drawImage(sprite, frame * 64, 0, 64, 64, -32 * DRAW_SCALE, -64 * DRAW_SCALE + bob - recoil, 64 * DRAW_SCALE, 64 * DRAW_SCALE);
-  } else {
-    ctx.fillStyle = '#4e626d';
-    ctx.fillRect(-8 * DRAW_SCALE, -38 * DRAW_SCALE, 16 * DRAW_SCALE, 36 * DRAW_SCALE);
-    ctx.fillStyle = '#9a9d9b';
-    ctx.beginPath(); ctx.arc(0, -48 * DRAW_SCALE, 10 * DRAW_SCALE, 0, Math.PI * 2); ctx.fill();
-  }
+  const recoil = p.weapon.recoil ? Math.sin(p.weapon.recoil / Math.max(0.01, p.weapon.cooldown) * Math.PI) * 1.2 : 0;
+  drawSoldier(ctx, p, { x: 0, y: -recoil, team: 'player', scale: .42, alpha: p.dead ? .94 : p.downed ? .72 : 1 });
   ctx.restore();
 }
