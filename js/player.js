@@ -2,7 +2,7 @@ import { getHitChance } from './cover.js';
 import { weaponCopy } from './weapons.js';
 
 const sprite = new Image();
-sprite.src = './assets/player.svg?v=20260904-18';
+sprite.src = './assets/player.svg?v=20260904-25';
 const DRAW_SCALE = 0.40;
 let chanceHud = null;
 let shotHud = null;
