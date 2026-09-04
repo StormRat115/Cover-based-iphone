@@ -1,9 +1,9 @@
-import { createPlayer, drawPlayer } from './player.js?v=20260904-30';
-import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260904-30';
-import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260904-30';
-import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260904-30';
+import { createPlayer, drawPlayer } from './player.js?v=20260904-33';
+import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260904-33';
+import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260904-33';
+import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260904-33';
 import { initKeyboard, getKeyboardMove } from './input.js';
-import { initTactical, drawObjectiveZones } from './tactical.js?v=20260904-30';
+import { initTactical, drawObjectiveZones } from './tactical.js?v=20260904-33';
 
 var canvas=document.querySelector('#game');
 var ctx=canvas.getContext('2d');
@@ -79,7 +79,7 @@ function spawnProjectile(from,to,owner,damage){
     px:from.x+dx/d*22,py:from.y+dy/d*22,
     tx:to.x,ty:to.y,life:0,
     maxLife:Math.min(1.55,d/900+.12),
-    speed:900,owner:owner,damage:damage||0,target:to,coverGrace:.08
+    speed:900,owner:owner,damage:damage||0,target:to,coverGrace:(from&&from.exposed)?0.18:0.08
   })
 }
 function spawnPlayerProjectile(e){spawnProjectile(player,e,'player',player.weapon.damage||24)}
@@ -175,7 +175,7 @@ function attemptFire(){
   if(!e)return;
   if(distance(player,e)>player.weapon.range)return;
   if(player.weapon.ammo<=0){reload();return}
-  if(isLineBlocked(player,e,covers)&&!player.cover)return;
+  if(isLineBlocked(player,e,covers)&&!e.exposed&&!player.cover)return;
   if(player.fireAt(e)){
     spawnPlayerProjectile(e);
     hitMarker=.12;
