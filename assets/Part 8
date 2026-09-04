@@ -1,0 +1,4 @@
+cityProps.forEach(prop => {
+  const [x, y] = iso(prop.x, prop.y);
+  drawCityAsset(ctx, prop.asset, x, y, { scale: prop.scale ?? 0.22 });
+});
