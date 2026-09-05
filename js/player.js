@@ -1,6 +1,6 @@
 import { getHitChance } from './cover.js?v=20260904-35';
 import { weaponCopy } from './weapons.js';
-import { drawSoldier } from './soldierAssets.js?v=20260905-41';
+import { drawSoldier } from './soldierAssets.js?v=20260905-47';
 let chanceHud=null,shotHud=null,weaponHud=null;
 function getChanceHud(){if(chanceHud)return chanceHud;chanceHud=document.createElement('div');chanceHud.id='hitChance';chanceHud.style.cssText='position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 72px);transform:translateX(-50%);padding:5px 9px;border:1px solid #ffffff33;border-radius:8px;background:#11181dcc;color:#9edcff;font:900 12px system-ui;letter-spacing:1px;text-shadow:0 2px 4px #000;z-index:6;pointer-events:none;display:none;white-space:nowrap';document.body.appendChild(chanceHud);return chanceHud}
 function getShotHud(){if(shotHud)return shotHud;shotHud=document.createElement('div');shotHud.id='shotFeedback';shotHud.style.cssText='position:fixed;left:50%;top:calc(50% + 8px);transform:translate(-50%,-50%);padding:4px 8px;border-radius:6px;background:#111a;color:#ff9a82;font:900 13px system-ui;letter-spacing:1.5px;text-shadow:0 2px 4px #000;z-index:7;pointer-events:none;display:none';document.body.appendChild(shotHud);return shotHud}
