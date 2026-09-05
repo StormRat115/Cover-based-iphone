@@ -1,5 +1,5 @@
 import { createAllies, updateAllies as updateAlliesCore, SQUAD_MODES } from './allyCore2.js?v=20260905-51';
-import { drawSoldier } from './soldierAssets.js?v=20260905-50';
+import { drawSoldier } from './soldierAssets.js?v=20260905-58';
 export { createAllies, SQUAD_MODES };
 var ALLY_LINES={contact:['CONTACT!','ENEMY SPOTTED!','I SEE THEM!','EYES UP!'],fire:['ENGAGING!','SENDING ROUNDS!','KEEP THEIR HEADS DOWN!','ON TARGET!'],cover:['I\'M SET!','HOLDING HERE!','COVERING!','GOOD POSITION!'],move:['MOVING!','COVER ME!','PUSHING UP!','REPOSITIONING!'],danger:['TAKING FIRE!','I\'M PINNED!','GET DOWN!','ROUNDS INCOMING!'],kill:['TARGET DOWN!','ONE DOWN!','GOT ONE!','HOSTILE DOWN!'],calm:['STAY SHARP.','WATCH YOUR SECTORS.','CHECK AMMO.','STAY WITH ME.']};
 function pick(list){return list[Math.floor(Math.random()*list.length)]}
