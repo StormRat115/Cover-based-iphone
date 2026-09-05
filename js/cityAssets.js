@@ -1,16 +1,23 @@
-import { loadImage } from "./assets.js?v=20260905-61";
+import { loadImage } from "./assets.js?v=20260905-62";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
   "./assets/C226AF9A-3862-4A3E-BA10-1F43A16A3D8A.PNG?v=20260905-60";
+export const generatedCoverAtlas = new Image();
+generatedCoverAtlas.src =
+  "./assets/generated/cover-runtime-atlas.webp?v=20260905-62";
 
 export function preloadCityAssets(onProgress) {
   onProgress = onProgress || function () {};
   onProgress(0.1, "LOADING CITY ASSETS");
-  return loadImage(cityAtlas).then(function (img) {
-    if (!img) throw new Error("City environment image is not ready");
+  return Promise.all([
+    loadImage(cityAtlas),
+    loadImage(generatedCoverAtlas),
+  ]).then(function (images) {
+    if (!images[0] || !images[1])
+      throw new Error("City environment images are not ready");
     onProgress(1, "CITY ASSETS READY");
-    return cityAtlas;
+    return images;
   });
 }
 
@@ -142,6 +149,18 @@ export const CITY_ASSET_DEFS = {
   power_pole: { x: 1110, y: 790, w: 120, h: 210, kind: "prop" },
   traffic_light: { x: 1230, y: 790, w: 95, h: 200, kind: "prop" },
   camera_pole: { x: 1330, y: 780, w: 110, h: 220, kind: "prop" },
+  gen_concrete_long: { x: 0, y: 0, w: 512, h: 384, atlas: "generated" },
+  gen_concrete_corner: { x: 512, y: 0, w: 512, h: 384, atlas: "generated" },
+  gen_concrete_curve: { x: 1024, y: 0, w: 512, h: 384, atlas: "generated" },
+  gen_sandbag_long: { x: 1536, y: 0, w: 512, h: 384, atlas: "generated" },
+  gen_sandbag_u: { x: 0, y: 384, w: 512, h: 384, atlas: "generated" },
+  gen_brick_wall: { x: 512, y: 384, w: 512, h: 384, atlas: "generated" },
+  gen_wrecked_suv: { x: 1024, y: 384, w: 512, h: 384, atlas: "generated" },
+  gen_cargo_truck: { x: 1536, y: 384, w: 512, h: 384, atlas: "generated" },
+  gen_container: { x: 0, y: 768, w: 512, h: 384, atlas: "generated" },
+  gen_pipe_stack: { x: 512, y: 768, w: 512, h: 384, atlas: "generated" },
+  gen_crate_stack: { x: 1024, y: 768, w: 512, h: 384, atlas: "generated" },
+  gen_planter: { x: 1536, y: 768, w: 512, h: 384, atlas: "generated" },
 };
 
 export function drawCityAsset(ctx, key, x, y, options) {
@@ -160,9 +179,10 @@ export function drawCityAsset(ctx, key, x, y, options) {
   ctx.translate(x, y);
   ctx.rotate(rotation);
   var drawn = false;
-  if (cityAtlas.complete && cityAtlas.naturalWidth > 0) {
+  var atlas = def.atlas === "generated" ? generatedCoverAtlas : cityAtlas;
+  if (atlas.complete && atlas.naturalWidth > 0) {
     ctx.drawImage(
-      cityAtlas,
+      atlas,
       def.x,
       def.y,
       def.w,

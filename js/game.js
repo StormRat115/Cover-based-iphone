@@ -1,41 +1,41 @@
-import { createGameLoop } from "./gameLoop.js?v=20260905-61";
+import { createGameLoop } from "./gameLoop.js?v=20260905-62";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260905-61";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-61";
+} from "./geometry.js?v=20260905-62";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-62";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260905-61";
-import { updateSquadHud } from "./squadHud.js?v=20260905-61";
-import { updateCombatHud } from "./combatHud.js?v=20260905-61";
-import { updatePlayerHud } from "./player.js?v=20260905-61";
-import { resetSquadCommands } from "./allyCore2.js?v=20260905-61";
-import "./squadDrawer.js?v=20260905-61";
-import { createPlayer, drawPlayer } from "./player.js?v=20260905-61";
+} from "./bloodEffects.js?v=20260905-62";
+import { updateSquadHud } from "./squadHud.js?v=20260905-62";
+import { updateCombatHud } from "./combatHud.js?v=20260905-62";
+import { updatePlayerHud } from "./player.js?v=20260905-62";
+import { resetSquadCommands } from "./allyCore2.js?v=20260905-62";
+import "./squadDrawer.js?v=20260905-62";
+import { createPlayer, drawPlayer } from "./player.js?v=20260905-62";
 import {
   createBandits,
   updateBandits,
   drawBandit,
-} from "./enemy.js?v=20260905-61";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-61";
+} from "./enemy.js?v=20260905-62";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-62";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260905-61";
+} from "./cover.js?v=20260905-62";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260905-61";
-import { initTactical } from "./tactical.js?v=20260905-61";
+} from "./input.js?v=20260905-62";
+import { initTactical } from "./tactical.js?v=20260905-62";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),

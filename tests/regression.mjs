@@ -445,8 +445,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    4,
-    "three character sources plus one city source",
+    5,
+    "three character sources plus two environment atlases",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");

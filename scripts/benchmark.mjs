@@ -35,6 +35,10 @@ const oldCover = await before.importModule("js/cover.js?v=20260905-58");
 const newCover = await after.importModule(`js/cover.js?v=${version}`);
 const oldLayout = oldCover.createCover(),
   newLayout = newCover.createCover();
+const originalIds = new Set(oldLayout.map((cover) => cover.id));
+const equivalentNewLayout = newLayout.filter((cover) =>
+  originalIds.has(cover.id),
+);
 const point = () => ({
   x: after.random() * 4600 - 2300,
   y: after.random() * 3800 - 1900,
@@ -51,9 +55,9 @@ function measure(fn, covers) {
 }
 // Warm both functions first; compare identical lines and hit totals.
 measure(oldCover.isLineBlocked, oldLayout);
-measure(newCover.isLineBlocked, newLayout);
+measure(newCover.isLineBlocked, equivalentNewLayout);
 const oldTime = measure(oldCover.isLineBlocked, oldLayout);
-const newTime = measure(newCover.isLineBlocked, newLayout);
+const newTime = measure(newCover.isLineBlocked, equivalentNewLayout);
 if (oldTime.hits !== newTime.hits) throw new Error("Cover behavior changed");
 console.log(
   JSON.stringify(

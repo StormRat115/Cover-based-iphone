@@ -67,3 +67,10 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - Player bullets use bright yellow, longer, glowing tracers in manual and auto play.
 - Auto play fires whenever a clear target is inside the equipped weapon's full range while continuing to advance.
 - A player-only yellow engagement ring scales to the range of the currently equipped weapon.
+
+## Expanded cover set: 20260905-62
+
+- Added four transparent source sheets for concrete, sandbag/rubble, large industrial, and prop cover assets.
+- Added a 164 KB runtime atlas containing 12 selected cover sprites to keep mobile startup lightweight.
+- Expanded the battlefield with straight, corner, curved, U-shaped, vehicle, container, pipe, crate, brick, and planter cover.
+- Added compound collision segments for corner, curved, and U-shaped cover so tactical movement follows their silhouettes.
