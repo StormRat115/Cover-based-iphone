@@ -1,10 +1,10 @@
 export const soldierSource=new Image();
-soldierSource.src='./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-41';
+soldierSource.src='./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-42';
 export const deathSource=new Image();
-deathSource.src='./assets/soldier_death_sheet.png?v=20260905-41';
+deathSource.src='./assets/soldier_death_sheet.png?v=20260905-42';
 
 const SOURCE_W=1448,SOURCE_H=1086,CELL=180,COLS=8;
-const DEATH_FRAMES=6,DEATH_FPS=8,DEATH_DURATION=(DEATH_FRAMES-1)/DEATH_FPS;
+const DEATH_FRAMES=6,DEATH_FPS=8,DEATH_DURATION=(DEATH_FRAMES-1)/DEATH_FPS,DEATH_SCALE=.62;
 let runtimeAtlas=null;
 const FRAME_BOXES={
   idle:[[200,0,120,165],[333,0,120,165],[472,0,120,165],[614,0,120,165],[762,0,120,165]],
@@ -30,6 +30,6 @@ function stableFacing(actor,state){if(!actor)return 1;var now=nowMs(),fx=Number(
 function frameFor(actor,state){var frames=FRAME_BOXES[state]||FRAME_BOXES.idle,row=ROWS[state]||0,now=nowMs();if(actor.__lastSoldierState!==state){actor.__lastSoldierState=state;actor.__soldierStateStart=now}var elapsed=Math.max(0,(now-(actor.__soldierStateStart||now))/1000),fps=FPS[state]||4,col=Math.min(frames.length-1,Math.floor(elapsed*fps)%frames.length);return{x:col*CELL,y:row*CELL,w:CELL,h:CELL,state:state,col:col}}
 function deathFrame(actor){var now=nowMs();if(actor.__lastSoldierState!=='death'){actor.__lastSoldierState='death';actor.__soldierStateStart=now}var elapsed=Math.max(0,(now-(actor.__soldierStateStart||now))/1000),frame=Math.min(DEATH_FRAMES-1,Math.floor(elapsed*DEATH_FPS));return{frame:frame,elapsed:elapsed}}
 function teamFilter(team){if(team==='ally')return'sepia(.35) saturate(1.35) hue-rotate(155deg) brightness(1.05)';if(team==='enemy')return'sepia(.42) saturate(1.5) hue-rotate(315deg) brightness(1.02)';return'none'}
-function drawDeath(ctx,actor,options,scale,flip){if(!deathSource.complete||!deathSource.naturalWidth)return false;var d=deathFrame(actor),sw=deathSource.naturalWidth/DEATH_FRAMES,sh=deathSource.naturalHeight,dw=sw*scale,dh=sh*scale;ctx.save();ctx.scale(flip,1);ctx.filter=teamFilter(options.team||'player');ctx.imageSmoothingEnabled=true;ctx.drawImage(deathSource,d.frame*sw,0,sw,sh,-dw*.5,-dh,dw,dh);ctx.restore();return true}
+function drawDeath(ctx,actor,options,scale,flip){if(!deathSource.complete||!deathSource.naturalWidth)return false;var d=deathFrame(actor),sw=deathSource.naturalWidth/DEATH_FRAMES,sh=deathSource.naturalHeight,deathScale=scale*DEATH_SCALE,dw=sw*deathScale,dh=sh*deathScale;ctx.save();ctx.scale(flip,1);ctx.filter=teamFilter(options.team||'player');ctx.imageSmoothingEnabled=true;ctx.drawImage(deathSource,d.frame*sw,0,sw,sh,-dw*.5,-dh,dw,dh);ctx.restore();return true}
 export function drawSoldier(ctx,actor,options){options=options||{};var state=options.state||getSoldierState(actor),baseScale=options.scale==null ? .28 : options.scale,scale=baseScale*(actor&&actor.scale?actor.scale:1),flip=stableFacing(actor,state),bob=state==='run'?Math.sin(nowMs()*.018)*.65:0;ctx.save();ctx.translate(options.x||0,(options.y||0)+bob);ctx.globalAlpha=options.alpha==null?1:options.alpha;if(state==='death'){if(drawDeath(ctx,actor,options,scale,flip)){ctx.restore();return}state='lowCover'}var r=frameFor(actor,state),dw=r.w*scale,dh=r.h*scale;ctx.fillStyle='#0007';ctx.beginPath();ctx.ellipse(0,2,Math.max(7,dw*.22),Math.max(2,dh*.05),0,0,Math.PI*2);ctx.fill();ctx.scale(flip,1);ctx.filter=teamFilter(options.team||'player');ctx.imageSmoothingEnabled=true;if(runtimeAtlas){ctx.drawImage(runtimeAtlas,r.x,r.y,r.w,r.h,-dw*.5,-dh,dw,dh)}else{ctx.filter='none';ctx.fillStyle=options.team==='enemy'?'#8b514b':options.team==='ally'?'#477da8':'#56646b';ctx.fillRect(-6,-24,12,22);ctx.fillStyle='#9b9d9a';ctx.beginPath();ctx.arc(0,-28,5,0,Math.PI*2);ctx.fill()}ctx.restore()}
-export function getSoldierAtlasInfo(){return{sourceWidth:SOURCE_W,sourceHeight:SOURCE_H,cell:CELL,rows:ROWS,deathFrames:DEATH_FRAMES,deathDuration:DEATH_DURATION,frameCounts:{idle:5,run:8,lowCover:7,tallCover:7,shoot:7,crouchShoot:6,standShoot:5,death:DEATH_FRAMES}}}
+export function getSoldierAtlasInfo(){return{sourceWidth:SOURCE_W,sourceHeight:SOURCE_H,cell:CELL,rows:ROWS,deathFrames:DEATH_FRAMES,deathDuration:DEATH_DURATION,deathScale:DEATH_SCALE,frameCounts:{idle:5,run:8,lowCover:7,tallCover:7,shoot:7,crouchShoot:6,standShoot:5,death:DEATH_FRAMES}}}
