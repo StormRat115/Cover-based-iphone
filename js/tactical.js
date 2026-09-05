@@ -1,3 +1,32 @@
-export function initTactical(){if(typeof window==='undefined')return;if(window.__tacticalReady)return;window.__tacticalReady=true;window.__objectiveZones=[];window.__battlePressure=0;window.__aimDisruption=0;window.__setBattlePressure=function(){window.__battlePressure=0};window.__tacticalTick=function(dt,player,enemies){window.__battlePressure=0;window.__aimDisruption=0;var canvas=document.getElementById('game');if(canvas)canvas.style.transform='';var allies=window.__battleAllies||[];var units=(enemies||[]).concat(allies);for(var i=0;i<units.length;i++){if(!units[i])continue;units[i].suppressed=false;units[i].suppressionLevel=0}};var old=document.getElementById('tacticalHud');if(old)old.remove()}
-export function drawObjectiveZones(){return}
-export function getPressureAccuracyPenalty(){return 0}
+export function initTactical() {
+  if (typeof window === "undefined") return;
+  if (window.__tacticalReady) return;
+  window.__tacticalReady = true;
+  window.__objectiveZones = [];
+  window.__battlePressure = 0;
+  window.__aimDisruption = 0;
+  window.__setBattlePressure = function () {
+    window.__battlePressure = 0;
+  };
+  window.__tacticalTick = function (dt, player, enemies) {
+    window.__battlePressure = 0;
+    window.__aimDisruption = 0;
+    var canvas = document.getElementById("game");
+    if (canvas) canvas.style.transform = "";
+    var allies = window.__battleAllies || [];
+    for (const units of [enemies || [], allies])
+      for (var i = 0; i < units.length; i++) {
+        if (!units[i]) continue;
+        units[i].suppressed = false;
+        units[i].suppressionLevel = 0;
+      }
+  };
+  var old = document.getElementById("tacticalHud");
+  if (old) old.remove();
+}
+export function drawObjectiveZones() {
+  return;
+}
+export function getPressureAccuracyPenalty() {
+  return 0;
+}

@@ -1,1 +1,20 @@
-function init(){var box=document.getElementById('squadCommands');if(!box||document.getElementById('squadToggle'))return;box.classList.add('collapsed');var toggle=document.createElement('button');toggle.id='squadToggle';toggle.type='button';toggle.setAttribute('aria-label','Toggle squad commands');toggle.textContent='›';box.appendChild(toggle);toggle.addEventListener('pointerdown',function(e){e.preventDefault();e.stopPropagation();var closed=box.classList.toggle('collapsed');toggle.textContent=closed?'›':'‹'})}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+function init() {
+  var box = document.getElementById("squadCommands");
+  if (!box || document.getElementById("squadToggle")) return;
+  box.classList.add("collapsed");
+  var toggle = document.createElement("button");
+  toggle.id = "squadToggle";
+  toggle.type = "button";
+  toggle.setAttribute("aria-label", "Toggle squad commands");
+  toggle.textContent = "›";
+  box.appendChild(toggle);
+  toggle.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var closed = box.classList.toggle("collapsed");
+    toggle.textContent = closed ? "›" : "‹";
+  });
+}
+if (document.readyState === "loading")
+  document.addEventListener("DOMContentLoaded", init);
+else init();

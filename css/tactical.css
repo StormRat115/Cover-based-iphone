@@ -1,1 +1,66 @@
-#tacticalHud{position:absolute;left:12px;top:max(12px,env(safe-area-inset-top));width:min(238px,calc(100vw - 92px));padding:9px 11px;border:1px solid #ffffff2d;border-radius:11px;background:#101714d9;box-shadow:0 5px 18px #0007;backdrop-filter:blur(4px);pointer-events:none}#tacticalHud .tacLabel{font-size:8px;font-weight:900;letter-spacing:1.5px;color:#8fb7c8;margin-bottom:2px}#tacObjective{font-size:13px;font-weight:950;letter-spacing:.6px}#tacObjective span{float:right;font-size:8px;color:#8fb7c8;margin-top:3px}#tacPressure{height:14px;margin-top:7px;border-top:1px solid #ffffff12;padding-top:4px}#tacPressure i{display:block;height:3px;width:0;background:#d6b74d;border-radius:3px;transition:width .2s}#tacPressure b{display:block;font-size:7px;letter-spacing:1px;color:#aab5ad;margin-top:3px}.hot{color:#ff806f!important}.warm{color:#f0d16a!important}@media(max-width:700px){#tacticalHud{top:8px;left:8px;width:205px;padding:7px 9px}}
+#tacticalHud {
+  position: absolute;
+  left: 12px;
+  top: max(12px, env(safe-area-inset-top));
+  width: min(238px, calc(100vw - 92px));
+  padding: 9px 11px;
+  border: 1px solid #ffffff2d;
+  border-radius: 11px;
+  background: #101714d9;
+  box-shadow: 0 5px 18px #0007;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+#tacticalHud .tacLabel {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  color: #8fb7c8;
+  margin-bottom: 2px;
+}
+#tacObjective {
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 0.6px;
+}
+#tacObjective span {
+  float: right;
+  font-size: 8px;
+  color: #8fb7c8;
+  margin-top: 3px;
+}
+#tacPressure {
+  height: 14px;
+  margin-top: 7px;
+  border-top: 1px solid #ffffff12;
+  padding-top: 4px;
+}
+#tacPressure i {
+  display: block;
+  height: 3px;
+  width: 0;
+  background: #d6b74d;
+  border-radius: 3px;
+  transition: width 0.2s;
+}
+#tacPressure b {
+  display: block;
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: #aab5ad;
+  margin-top: 3px;
+}
+.hot {
+  color: #ff806f !important;
+}
+.warm {
+  color: #f0d16a !important;
+}
+@media (max-width: 700px) {
+  #tacticalHud {
+    top: 8px;
+    left: 8px;
+    width: 205px;
+    padding: 7px 9px;
+  }
+}
