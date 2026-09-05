@@ -1,6 +1,6 @@
 import { getHitChance } from './cover.js?v=20260904-35';
 import { weaponCopy } from './weapons.js';
-import { drawSoldier } from './soldierAssets.js?v=20260905-47';
+import { drawSoldier } from './soldierAssets.js?v=20260905-50';
 import { CHARACTER_STATS, mitigateDamage, finalAccuracy, attackDamage } from './combatStats.js?v=20260905-50';
 let chanceHud=null,shotHud=null,weaponHud=null;
 function getChanceHud(){if(chanceHud)return chanceHud;chanceHud=document.createElement('div');chanceHud.id='hitChance';chanceHud.style.cssText='position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 72px);transform:translateX(-50%);padding:5px 9px;border:1px solid #ffffff33;border-radius:8px;background:#11181dcc;color:#9edcff;font:900 12px system-ui;letter-spacing:1px;text-shadow:0 2px 4px #000;z-index:6;pointer-events:none;display:none;white-space:nowrap';document.body.appendChild(chanceHud);return chanceHud}
