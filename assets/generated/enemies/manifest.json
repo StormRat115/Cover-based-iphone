@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "format": "rgba-png",
+  "sheet": {
+    "width": 1536,
+    "height": 1022,
+    "columns": 6,
+    "rows": 7,
+    "frameWidth": 256,
+    "frameHeight": 146,
+    "facing": "right",
+    "transparent": true
+  },
+  "animations": {
+    "idle": { "row": 0, "frames": 6, "fps": 6, "loop": true },
+    "run": { "row": 1, "frames": 6, "fps": 10, "loop": true },
+    "lowCover": { "row": 2, "frames": 6, "fps": 6, "loop": true },
+    "tallCover": { "row": 3, "frames": 6, "fps": 6, "loop": true },
+    "shoot": { "row": 4, "frames": 6, "fps": 12, "loop": false },
+    "hit": { "row": 5, "frames": 6, "fps": 10, "loop": false },
+    "death": { "row": 6, "frames": 6, "fps": 8, "loop": false }
+  },
+  "characters": {
+    "rifleman": {
+      "name": "Ashfang Rifleman",
+      "file": "enemy-ashfang-rifleman-sheet.png"
+    },
+    "shotgunner": {
+      "name": "Mawbreaker Breacher",
+      "file": "enemy-mawbreaker-breacher-sheet.png"
+    },
+    "heavy": {
+      "name": "Ironhide Heavy",
+      "file": "enemy-ironhide-heavy-sheet.png"
+    },
+    "sniper": {
+      "name": "Paleeye Stalker",
+      "file": "enemy-paleeye-stalker-sheet.png"
+    }
+  }
+}
