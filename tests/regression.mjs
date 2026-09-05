@@ -618,6 +618,59 @@ test("squad and Marines independently advance cover-to-cover toward the street o
   assert.ok(marines.some((marine) => marine.cover));
 });
 
+test("friendly AI pauses the objective push for contact and resumes after the wipe", async () => {
+  const h = createHarness();
+  const game = await h.importModule(entry);
+  game.startGame();
+  const player = h.window.__battlePlayer;
+  const mission = h.window.__streetMission;
+  const enemies = h.window.__battleEnemies;
+  enemies.forEach((enemy, index) => {
+    enemy.dead = index !== 0;
+    enemy.deathTimer = enemy.deathDuration;
+  });
+  Object.assign(enemies[0], {
+    x: player.x + 420,
+    y: player.y,
+    spawnTimer: 0,
+    dead: false,
+    hp: 5000,
+    maxHp: 5000,
+    exposed: true,
+  });
+  h.nodes.get("autoPlay").emit("pointerdown");
+  h.frame();
+  h.advance(15);
+  assert.equal(player.objectiveAdvancePaused, true);
+  assert.ok(
+    h.window.__battleAllies.every((ally) => ally.objectiveAdvancePaused),
+  );
+  assert.ok(
+    h.window.__battleMarines.every((marine) => marine.objectiveAdvancePaused),
+  );
+
+  enemies[0].dead = true;
+  enemies[0].hp = 0;
+  enemies[0].deathTimer = enemies[0].deathDuration;
+  const before = Math.hypot(
+    player.x - mission.objective.x,
+    player.y - mission.objective.y,
+  );
+  h.advance(90);
+  const after = Math.hypot(
+    player.x - mission.objective.x,
+    player.y - mission.objective.y,
+  );
+  assert.equal(player.objectiveAdvancePaused, false);
+  assert.ok(
+    h.window.__battleAllies.every((ally) => !ally.objectiveAdvancePaused),
+  );
+  assert.ok(
+    h.window.__battleMarines.every((marine) => !marine.objectiveAdvancePaused),
+  );
+  assert.ok(after < before, "the objective push should resume after contact is clear");
+});
+
 test("enemy magazines are consumed and reload, and blood memory stays bounded", async () => {
   const h = createHarness();
   const enemyCore = await h.importModule(`js/enemyCore.js?v=${BUILD}`);

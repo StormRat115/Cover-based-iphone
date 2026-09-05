@@ -1,4 +1,4 @@
-import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260905-67";
+import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260905-68";
 function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }

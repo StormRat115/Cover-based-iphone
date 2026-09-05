@@ -1,5 +1,5 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-67";
-import { weaponCopy } from "./weapons.js?v=20260905-67";
+import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-68";
+import { weaponCopy } from "./weapons.js?v=20260905-68";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -7,13 +7,13 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260905-67";
+} from "./combatAI.js?v=20260905-68";
 import {
   ENEMY_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260905-67";
+} from "./combatStats.js?v=20260905-68";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },

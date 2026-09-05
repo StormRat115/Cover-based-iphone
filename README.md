@@ -88,10 +88,11 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - Marines have no health regeneration, downed state, revival, or mid-mission respawn; a Marine who reaches zero health is permanently KIA for that mission.
 - Enemy target selection and the mission display now account for surviving Marines.
 
-## Street push objective: 20260905-67
+## Street push objective: 20260905-68
 
 - Extended the battlefield to a multi-sector street with 52–58 randomized cover positions and a fortified endpoint.
 - Squad and Marine AI advance cover-to-cover, engage contacts along the route, and defend the captured fortification; Marines remain independent of player movement and squad commands.
+- Friendly AI suspends objective movement as soon as contact appears, fights from tactical cover, and resumes the push only after the hostile group is eliminated.
 - The player squad captures the endpoint by maintaining presence for 30 uninterrupted seconds.
 - Capturing deploys a 200 HP, 20 defense support vehicle with a long-range, high-rate, low-damage turret and visible gunner.
 - Monsters prioritize living Marines, then the support vehicle, before choosing the player squad; enemy snipers are rarer and use stronger, slower precision fire.
@@ -103,7 +104,7 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - All four sheets download and decode during the loading screen so enemy art cannot pop in after a mission begins.
 - Marksman, SMG, and pistol enemies retain the original monster sprite as a safe fallback.
 
-## Northeast assault waves: 20260905-67
+## Northeast assault waves: 20260905-68
 
 - Monster animation states now use per-enemy clocks, calmer frame rates, and held firing/hit reactions instead of racing through six-frame rows.
 - Waves receive 6–12 additional monsters and enter primarily from just beyond the northeast street edge rather than appearing inside the viewport.

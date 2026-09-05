@@ -2,8 +2,8 @@ import {
   isLineBlocked,
   getHitChance,
   getCoverSlot,
-} from "./cover.js?v=20260905-67";
-import { weaponCopy } from "./weapons.js?v=20260905-67";
+} from "./cover.js?v=20260905-68";
+import { weaponCopy } from "./weapons.js?v=20260905-68";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -11,14 +11,14 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260905-67";
+} from "./combatAI.js?v=20260905-68";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260905-67";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-67";
+} from "./combatStats.js?v=20260905-68";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-68";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -151,7 +151,7 @@ function nearestEnemy(a, enemies) {
   var best = null,
     bd = Infinity;
   enemies.forEach(function (e) {
-    if (!e.dead) {
+    if (!e.dead && !e.downed && e.hp > 0 && !(e.spawnTimer > 0)) {
       var d = Math.hypot(a.x - e.x, a.y - e.y);
       if (d < bd) {
         bd = d;
@@ -364,6 +364,7 @@ export function updateAllies(
       engagementRange = aggressiveAdvance
         ? Math.min(a.weapon.range * 0.48, 760)
         : a.weapon.range * 0.82;
+    a.objectiveAdvancePaused = !!e;
     if (a.canRecover !== false && shouldRecover(a)) {
       if (e) faceThreat(a, e);
       recoverInCover(a, e, covers, friendlyTeam, dt);
