@@ -1,4 +1,4 @@
-const BUILD = "20260905-63";
+const BUILD = "20260905-64";
 const element = (id) => document.getElementById(id);
 
 function showGameError(label, error) {
@@ -27,9 +27,9 @@ async function boot() {
     // Independent modules and images download concurrently, using the same URLs
     // as the gameplay imports so atlases are built only once.
     const [menu, soldiers, city] = await Promise.all([
-      import("./mainMenu.js?v=20260905-63"),
-      import("./soldierAssets.js?v=20260905-63"),
-      import("./cityAssets.js?v=20260905-63"),
+      import("./mainMenu.js?v=20260905-64"),
+      import("./soldierAssets.js?v=20260905-64"),
+      import("./cityAssets.js?v=20260905-64"),
     ]);
     let soldierProgress = 0,
       cityProgress = 0;
@@ -56,7 +56,7 @@ async function boot() {
       throw new Error("Battlefield art is not ready. Please retry loading.");
     }
     setLoad(95, "LOADING WAVE DEFENSE");
-    const game = await import("./game.js?v=20260905-63");
+    const game = await import("./game.js?v=20260905-64");
     setLoad(100, "READY");
     start.classList.add("ready");
     start.addEventListener(

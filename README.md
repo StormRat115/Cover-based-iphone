@@ -80,3 +80,10 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - Each mission now generates a different selection and arrangement of 27–33 cover objects across balanced inner, middle, and outer combat rings.
 - Placement protects squad and enemy spawn zones, avoids decorative props, and prevents cover overlap.
 - Starting or restarting a mission creates a fresh battlefield while preserving accurate compound collision shapes.
+
+## Marine support team: 20260905-64
+
+- Added five independent Marines: four riflemen and one LMG support gunner.
+- Marines fight enemies and coordinate cover with the squad, but ignore squad commands and do not occupy squad slots.
+- Marines have no health regeneration, downed state, revival, or mid-mission respawn; a Marine who reaches zero health is permanently KIA for that mission.
+- Enemy target selection and the mission display now account for surviving Marines.

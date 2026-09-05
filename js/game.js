@@ -1,41 +1,46 @@
-import { createGameLoop } from "./gameLoop.js?v=20260905-63";
+import { createGameLoop } from "./gameLoop.js?v=20260905-64";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260905-63";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-63";
+} from "./geometry.js?v=20260905-64";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-64";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260905-63";
-import { updateSquadHud } from "./squadHud.js?v=20260905-63";
-import { updateCombatHud } from "./combatHud.js?v=20260905-63";
-import { updatePlayerHud } from "./player.js?v=20260905-63";
-import { resetSquadCommands } from "./allyCore2.js?v=20260905-63";
-import "./squadDrawer.js?v=20260905-63";
-import { createPlayer, drawPlayer } from "./player.js?v=20260905-63";
+} from "./bloodEffects.js?v=20260905-64";
+import { updateSquadHud } from "./squadHud.js?v=20260905-64";
+import { updateCombatHud } from "./combatHud.js?v=20260905-64";
+import { updatePlayerHud } from "./player.js?v=20260905-64";
+import { resetSquadCommands } from "./allyCore2.js?v=20260905-64";
+import "./squadDrawer.js?v=20260905-64";
+import { createPlayer, drawPlayer } from "./player.js?v=20260905-64";
 import {
   createBandits,
   updateBandits,
   drawBandit,
-} from "./enemy.js?v=20260905-63";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-63";
+} from "./enemy.js?v=20260905-64";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-64";
+import {
+  createMarines,
+  updateMarines,
+  drawMarine,
+} from "./marines.js?v=20260905-64";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260905-63";
+} from "./cover.js?v=20260905-64";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260905-63";
-import { initTactical } from "./tactical.js?v=20260905-63";
+} from "./input.js?v=20260905-64";
+import { initTactical } from "./tactical.js?v=20260905-64";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -86,11 +91,13 @@ var player = createPlayer(),
   covers = createCover(),
   enemies = createBandits(wave),
   allies = createAllies(),
+  marines = createMarines(),
   projectiles = [];
 initTactical();
 window.__battlePlayer = player;
 window.__battleEnemies = enemies;
 window.__battleAllies = allies;
+window.__battleMarines = marines;
 window.__battleCovers = covers;
 window.__waveDefense = true;
 window.__wave = wave;
@@ -582,6 +589,8 @@ function reset() {
   window.__battleCovers = covers;
   allies = createAllies();
   window.__battleAllies = allies;
+  marines = createMarines();
+  window.__battleMarines = marines;
   resetSquadCommands();
   resetBlood();
   clearKeyboard();
@@ -625,7 +634,25 @@ function update(dt) {
   if ((fireHeld || isKeyboardFireHeld()) && !autoPlay) attemptFire();
   updateAutoPlayer(dt);
   updateBandits(enemies, dt, player, covers, spawnEnemyProjectile);
-  updateAllies(allies, dt, player, covers, enemies, spawnAllyProjectile);
+  updateAllies(
+    allies,
+    dt,
+    player,
+    covers,
+    enemies,
+    spawnAllyProjectile,
+    undefined,
+    marines,
+  );
+  updateMarines(
+    marines,
+    dt,
+    player,
+    covers,
+    enemies,
+    spawnAllyProjectile,
+    allies,
+  );
   player.update(dt);
   player.x = clamp(player.x, world.minX, world.maxX);
   player.y = clamp(player.y, world.minY, world.maxY);
@@ -860,6 +887,9 @@ function drawMissionUI() {
   var alive = enemies.filter(function (e) {
       return !e.dead;
     }).length,
+    marineStrength = marines.filter(function (marine) {
+      return !marine.dead;
+    }).length,
     line =
       waveState === "cleared"
         ? "WAVE " +
@@ -867,7 +897,12 @@ function drawMissionUI() {
           " CLEAR  •  NEXT " +
           Math.max(0, waveTimer).toFixed(1) +
           "s"
-        : "WAVE " + wave + "  •  HOSTILES " + alive;
+        : "WAVE " +
+          wave +
+          "  •  HOSTILES " +
+          alive +
+          "  •  MARINES " +
+          marineStrength;
   ctx.fillText(line, x + 14, y + 63);
   ctx.restore();
 }
@@ -885,6 +920,7 @@ function rebuildLayers() {
   for (const [objects, type] of [
     [covers, "cover"],
     [allies, "ally"],
+    [marines, "marine"],
     [enemies, "enemy"],
     [[player], "player"],
   ]) {
@@ -904,6 +940,7 @@ function draw(now) {
     if (!onScreen(v.o.x, v.o.y)) return;
     if (v.type === "cover") drawCover(ctx, v.o, iso);
     else if (v.type === "ally") drawAlly(ctx, v.o, iso);
+    else if (v.type === "marine") drawMarine(ctx, v.o, iso);
     else if (v.type === "enemy") drawBandit(ctx, v.o, iso, target === v.o);
     else drawPlayer(ctx, v.o, iso);
   });
@@ -911,6 +948,9 @@ function draw(now) {
   drawMissionUI();
   var aliveAllies = allies.filter(function (a) {
       return !a.dead;
+    }).length,
+    aliveMarines = marines.filter(function (marine) {
+      return !marine.dead;
     }).length,
     aliveEnemies = enemies.filter(function (e) {
       return !e.dead;
@@ -926,7 +966,9 @@ function draw(now) {
     aliveEnemies +
     " HOSTILES • " +
     aliveAllies +
-    " ALLIES • " +
+    " SQUAD • " +
+    aliveMarines +
+    " MARINES • " +
     player.weapon.ammo +
     "/" +
     player.weapon.magazine +

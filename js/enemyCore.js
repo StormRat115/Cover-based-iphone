@@ -1,5 +1,5 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-63";
-import { weaponCopy } from "./weapons.js?v=20260905-63";
+import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-64";
+import { weaponCopy } from "./weapons.js?v=20260905-64";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -7,13 +7,13 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260905-63";
+} from "./combatAI.js?v=20260905-64";
 import {
   ENEMY_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260905-63";
+} from "./combatStats.js?v=20260905-64";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -123,6 +123,13 @@ function chooseCombatTarget(e, player, covers, enemies) {
   allies.forEach(function (a) {
     if (validTarget(a)) candidates.push(a);
   });
+  var marines =
+    typeof window !== "undefined" && window.__battleMarines
+      ? window.__battleMarines
+      : [];
+  marines.forEach(function (marine) {
+    if (validTarget(marine)) candidates.push(marine);
+  });
   if (!candidates.length) return player;
   var allyFocus = {};
   enemies.forEach(function (o) {
@@ -226,6 +233,15 @@ function applySquadHit(target, amount) {
   target.timeSinceDamage = 0;
   if (target.hp <= 0) {
     target.hp = 0;
+    if (target.permanentDeath) {
+      target.dead = true;
+      target.downed = false;
+      target.deathTimer = 0;
+      target.exposed = false;
+      target.callout = "";
+      target.calloutTimer = 0;
+      return;
+    }
     target.downed = true;
     target.downTimer = 0;
     target.exposed = false;

@@ -2,8 +2,8 @@ import {
   createAllies,
   updateAllies as updateAlliesCore,
   SQUAD_MODES,
-} from "./allyCore2.js?v=20260905-63";
-import { drawSoldier } from "./soldierAssets.js?v=20260905-63";
+} from "./allyCore2.js?v=20260905-64";
+import { drawSoldier } from "./soldierAssets.js?v=20260905-64";
 export { createAllies, SQUAD_MODES };
 var ALLY_LINES = {
   contact: ["CONTACT!", "ENEMY SPOTTED!", "I SEE THEM!", "EYES UP!"],
@@ -35,8 +35,18 @@ export function updateAllies(
   enemies,
   spawnProjectile,
   mode,
+  otherFriendlies,
 ) {
-  updateAlliesCore(allies, dt, player, covers, enemies, spawnProjectile, mode);
+  updateAlliesCore(
+    allies,
+    dt,
+    player,
+    covers,
+    enemies,
+    spawnProjectile,
+    mode,
+    otherFriendlies,
+  );
   var alive = enemies.some(function (e) {
     return !e.dead;
   });

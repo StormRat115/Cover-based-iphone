@@ -1,5 +1,5 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-63";
-import { weaponCopy } from "./weapons.js?v=20260905-63";
+import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-64";
+import { weaponCopy } from "./weapons.js?v=20260905-64";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -7,14 +7,14 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260905-63";
+} from "./combatAI.js?v=20260905-64";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260905-63";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-63";
+} from "./combatStats.js?v=20260905-64";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-64";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -202,7 +202,7 @@ function updateRevive(a, allies, player, dt) {
   var best = null,
     bd = Infinity;
   allies.concat([player]).forEach(function (t) {
-    if (t !== a && t.downed && !t.dead) {
+    if (t !== a && t.downed && !t.dead && t.canBeRevived !== false) {
       var d = Math.hypot(a.x - t.x, a.y - t.y);
       if (d < bd) {
         bd = d;
@@ -245,8 +245,10 @@ export function updateAllies(
   enemies,
   spawnProjectile,
   mode,
+  otherFriendlies,
 ) {
   squadMode = mode || window.squadMode || squadMode;
+  var friendlyTeam = allies.concat(otherFriendlies || []);
   allies.forEach(function (a) {
     a.hit = Math.max(0, a.hit - dt);
     a.muzzle = Math.max(0, a.muzzle - dt);
@@ -260,9 +262,15 @@ export function updateAllies(
       return;
     }
     if (a.hp <= 0 && !a.downed) {
+      a.hp = 0;
+      if (a.permanentDeath) {
+        a.dead = true;
+        a.deathTimer = 0;
+        a.exposed = false;
+        return;
+      }
       a.downed = true;
       a.downTimer = 0;
-      a.hp = 0;
     }
     if (a.downed) {
       a.downTimer += dt;
@@ -279,17 +287,18 @@ export function updateAllies(
         a.weapon.ammo = a.weapon.magazine;
       }
     }
-    if (a.hp < a.maxHp && a.timeSinceDamage > a.regenDelay)
+    if (a.regenRate > 0 && a.hp < a.maxHp && a.timeSinceDamage > a.regenDelay)
       a.hp = Math.min(a.maxHp, a.hp + a.regenRate * dt);
     var pick = nearestEnemy(a, enemies),
       e = pick.target,
       d = pick.dist;
-    if (shouldRecover(a)) {
+    if (a.canRecover !== false && shouldRecover(a)) {
       if (e) faceThreat(a, e);
-      recoverInCover(a, e, covers, allies, dt);
+      recoverInCover(a, e, covers, friendlyTeam, dt);
       return;
     }
-    if (updateRevive(a, allies, player, dt)) return;
+    if (a.canRevive !== false && updateRevive(a, friendlyTeam, player, dt))
+      return;
     if (!e) {
       a.cover = null;
       a.targetX = player.x + (a.coverSlotIndex - 1) * 90;
@@ -314,12 +323,12 @@ export function updateAllies(
       a.repositionCooldown <= 0 &&
       squadMode !== "HOLD"
     ) {
-      var choice = pickTacticalCover(a, e, covers, allies, {
+      var choice = pickTacticalCover(a, e, covers, friendlyTeam, {
         maxTravel: 760,
         desiredRange: Math.min(a.weapon.range * 0.68, 1050),
         flankSide: a.flankSide,
       });
-      if (choice && !claimed(choice, a, allies)) {
+      if (choice && !claimed(choice, a, friendlyTeam)) {
         applyCoverChoice(a, choice);
         a.combatState = "seeking";
         a.repositionCooldown = 1.1;

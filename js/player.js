@@ -1,12 +1,12 @@
-import { getHitChance } from "./cover.js?v=20260905-63";
-import { weaponCopy } from "./weapons.js?v=20260905-63";
-import { drawSoldier } from "./soldierAssets.js?v=20260905-63";
+import { getHitChance } from "./cover.js?v=20260905-64";
+import { weaponCopy } from "./weapons.js?v=20260905-64";
+import { drawSoldier } from "./soldierAssets.js?v=20260905-64";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260905-63";
+} from "./combatStats.js?v=20260905-64";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,

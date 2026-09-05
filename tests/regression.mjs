@@ -244,6 +244,16 @@ test("actual game handles combat, pause, restart, tab hiding and waves", async (
   assert.equal(h.frames.length, 1);
   assert.ok(h.nodes.has("combatHud") && h.nodes.has("squadHealthHud"));
   const player = h.window.__battlePlayer;
+  assert.equal(h.window.__battleMarines.length, 5);
+  assert.ok(
+    h.window.__battleMarines.every(
+      (marine) =>
+        marine.permanentDeath &&
+        marine.regenRate === 0 &&
+        marine.canBeRevived === false &&
+        marine.canRevive === false,
+    ),
+  );
   h.nodes.get("autoPlay").emit("pointerdown");
   h.advance(600);
   assert.ok(Number.isFinite(player.x) && Number.isFinite(player.y));
@@ -262,11 +272,13 @@ test("actual game handles combat, pause, restart, tab hiding and waves", async (
   );
   assert.equal(h.metrics.draws, drawing, "paused frames avoid redrawing");
   const oldAllies = h.window.__battleAllies;
+  const oldMarines = h.window.__battleMarines;
   oldAllies[0].dead = true;
   oldAllies[0].hp = 0;
   player.recovering = true;
   h.nodes.get("pauseRestart").emit("pointerdown");
   assert.notEqual(h.window.__battleAllies, oldAllies);
+  assert.notEqual(h.window.__battleMarines, oldMarines);
   assert.ok(
     h.window.__battleAllies.every(
       (ally) => !ally.dead && !ally.downed && ally.hp === ally.maxHp,
@@ -277,12 +289,18 @@ test("actual game handles combat, pause, restart, tab hiding and waves", async (
   assert.equal(h.window.squadMode, "FOLLOW");
   assert.equal(h.window.__autoPlay, false);
   h.frame();
+  const marine = h.window.__battleMarines[0];
+  marine.hp = 0;
+  h.frame(1000 / 30);
+  assert.equal(marine.dead, true);
+  assert.equal(marine.downed, false);
   for (const enemy of h.window.__battleEnemies) {
     enemy.dead = true;
     enemy.deathTimer = enemy.deathDuration;
   }
   h.advance(180);
   assert.equal(h.window.__wave, 2);
+  assert.equal(marine.dead, true, "KIA Marines must not respawn between waves");
   h.document.hidden = true;
   h.document.emit("visibilitychange");
   h.frame();
@@ -520,6 +538,7 @@ test("sustained simulated play stays finite at mobile and desktop sizes", async 
       for (const actor of [
         h.window.__battlePlayer,
         ...h.window.__battleAllies,
+        ...h.window.__battleMarines,
         ...h.window.__battleEnemies,
       ]) {
         assert.ok(

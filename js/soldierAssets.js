@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260905-63";
+import { loadImage } from "./assets.js?v=20260905-64";
 export const soldierSource = new Image();
 soldierSource.src =
   "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-60";
@@ -327,6 +327,8 @@ function deathFrame(actor) {
 function teamFilter(team) {
   if (team === "ally")
     return "sepia(.35) saturate(1.35) hue-rotate(155deg) brightness(1.05)";
+  if (team === "marine")
+    return "sepia(.28) saturate(1.2) hue-rotate(55deg) brightness(.94)";
   return "none";
 }
 function drawDeath(ctx, actor, options, scale, flip) {
@@ -400,7 +402,9 @@ export function drawSoldier(ctx, actor, options) {
       ? "#7a4a38"
       : team === "ally"
         ? "#477da8"
-        : "#56646b";
+        : team === "marine"
+          ? "#607247"
+          : "#56646b";
     ctx.fillRect(-7, -26, 14, 24);
     ctx.fillStyle = isEnemy ? "#9b6a4e" : "#9b9d9a";
     ctx.beginPath();
