@@ -1,4 +1,4 @@
-import { createBandits, updateBandits as updateBanditsCore } from './enemyCore.js?v=20260904-37';
+import { createBandits, updateBandits as updateBanditsCore } from './enemyCore.js?v=20260905-49';
 import { drawSoldier } from './soldierAssets.js?v=20260905-47';
 export { createBandits };
 var ENEMY_LINES={contact:['CONTACT!','THERE!','I SEE THEM!','MOVE! MOVE!'],fire:['OPEN FIRE!','KEEP FIRING!','LIGHT THEM UP!','PUT ROUNDS ON THEM!'],cover:['HOLD THIS POSITION!','STAY LOW!','WATCH THE FLANK!','COVERING!'],move:['MOVING!','PUSH UP!','GO! GO!','FLANK THEM!'],hurt:['I\'M HIT!','TAKING FIRE!','GET ME COVER!','I\'M PINNED!'],aggressive:['RUSH THEM!','KEEP PRESSURE!','DON\'T LET UP!','ADVANCE!']};
