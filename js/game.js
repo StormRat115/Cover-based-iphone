@@ -85,7 +85,7 @@ function spawnProjectile(from,to,owner,damage){
   }
   projectiles.push({
     x:from.x+dx/d*22,y:from.y+dy/d*22,px:from.x+dx/d*22,py:from.y+dy/d*22,
-    tx:tx,ty:ty,life:0,maxLife:Math.min(.85,d/2450+.08),speed:2600,
+    tx:tx,ty:ty,life:0,maxLife:Math.min(.85,d/2450+.08),speed:4200,
     owner:owner,damage:hitDamage,target:targetRef,coverGrace:(from&&from.exposed)?0.12:0.05
   });
 }
