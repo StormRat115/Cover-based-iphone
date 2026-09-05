@@ -137,6 +137,55 @@ test("waves enter off-screen from the northeast street with 6-12 reinforcements"
   assert.equal(enemies.enemyCountForWave(1, () => 0.999), 19);
   assert.equal(enemies.enemyCountForWave(5, () => 0), 20);
   assert.equal(enemies.enemyCountForWave(5, () => 0.999), 26);
+  const lateWave = enemies.createBandits(6, {
+    random: () => 0,
+    extraCount: 12,
+    spawnView: { world, width: 390, height: 844 },
+  });
+  assert.ok(
+    lateWave.filter((enemy) => enemy.type === "sniper").length <=
+      Math.ceil(lateWave.length / 9),
+    "snipers should be a rare specialist spawn",
+  );
+});
+
+test("monsters prioritize living Marines over the player and squad", async () => {
+  const h = createHarness();
+  const enemyCore = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
+  const marine = {
+    name: "Marine 1",
+    x: 500,
+    y: 0,
+    hp: 90,
+    dead: false,
+    downed: false,
+    exposed: true,
+  };
+  h.window.__battleMarines = [marine];
+  h.window.__battleAllies = [
+    { name: "Rook", x: 60, y: 0, hp: 100, dead: false, downed: false },
+  ];
+  const player = { x: 30, y: 0, hp: 100, dead: false, downed: false };
+  const enemy = enemyCore.createBandits(1)[0];
+  Object.assign(enemy, {
+    x: 0,
+    y: 0,
+    spawnTimer: 0,
+    targetTimer: 0,
+    repositionCooldown: 10,
+    fire: 10,
+  });
+  enemyCore.updateBandits([enemy], 1 / 60, player, [], null);
+  assert.equal(enemy.combatTarget, marine);
+});
+
+test("rifle and sniper balance favors faster assault fire and deliberate precision", async () => {
+  const h = createHarness();
+  const { WEAPONS } = await h.importModule(`js/weapons.js?v=${BUILD}`);
+  assert.ok(WEAPONS.rifle.cooldown <= 0.24);
+  assert.ok(WEAPONS.sniper.damage >= 96);
+  assert.ok(WEAPONS.sniper.cooldown >= 2.6);
+  assert.ok(WEAPONS.sniper.reload >= 3);
 });
 
 test("snipers paint valid targets with a red aiming laser", async () => {
@@ -253,7 +302,9 @@ test("mission cover layouts are unique, reproducible, and keep spawn lanes clear
     different,
     "different missions need different layouts",
   );
-  assert.ok(first.length >= 27 && first.length <= 33);
+  assert.ok(first.length >= 52 && first.length <= 58);
+  assert.ok(first.some((cover) => cover.y < -5000));
+  assert.ok(first.some((cover) => cover.id === "fort-front"));
   for (const cover of first) {
     assert.ok(
       Math.hypot(cover.x, cover.y - 190) >=
@@ -498,6 +549,75 @@ test("actual game handles combat, pause, restart, tab hiding and waves", async (
   assert.equal(h.metrics.intervals, 0);
 });
 
+test("the fort captures after 30 seconds and deploys a 200 HP support turret", async () => {
+  const h = createHarness();
+  const missionModule = await h.importModule(`js/streetMission.js?v=${BUILD}`);
+  const vehicleModule = await h.importModule(`js/supportVehicle.js?v=${BUILD}`);
+  const mission = missionModule.createStreetMission();
+  const player = {
+    x: mission.objective.x,
+    y: mission.objective.y,
+    hp: 100,
+    dead: false,
+    downed: false,
+  };
+  missionModule.updateStreetMission(mission, 29.9, player, []);
+  assert.equal(mission.captured, false);
+  missionModule.updateStreetMission(mission, 0.1, player, []);
+  assert.equal(mission.captured, true);
+  assert.equal(mission.justCaptured, true);
+  const vehicle = vehicleModule.createSupportVehicle(mission.objective);
+  assert.equal(vehicle.hp, 200);
+  assert.equal(vehicle.defense, 20);
+  assert.ok(vehicle.weapon.range >= 2700);
+  assert.ok(vehicle.weapon.cooldown <= 0.075);
+  assert.ok(vehicle.weapon.damage <= 3);
+  const enemy = {
+    x: vehicle.x + 180,
+    y: vehicle.y,
+    hp: 100,
+    maxHp: 100,
+    defense: 0,
+    dead: false,
+    downed: false,
+    hit: 0,
+  };
+  let turretShots = 0;
+  for (let i = 0; i < 180; i++)
+    vehicleModule.updateSupportVehicle(
+      vehicle,
+      1 / 60,
+      [enemy],
+      [],
+      () => turretShots++,
+    );
+  assert.ok(turretShots >= 30, "the fort turret should sustain a high fire rate");
+  assert.ok(enemy.hp < enemy.maxHp, "the support turret should damage hostiles");
+});
+
+test("squad and Marines independently advance cover-to-cover toward the street objective", async () => {
+  const h = createHarness();
+  const alliesModule = await h.importModule(`js/allyCore2.js?v=${BUILD}`);
+  const marineModule = await h.importModule(`js/marines.js?v=${BUILD}`);
+  const coverModule = await h.importModule(`js/cover.js?v=${BUILD}`);
+  const missionModule = await h.importModule(`js/streetMission.js?v=${BUILD}`);
+  h.window.__streetMission = missionModule.createStreetMission();
+  const player = { x: 0, y: 120, hp: 100, dead: false, downed: false };
+  const covers = coverModule.createCover(() => 0.42);
+  const allies = alliesModule.createAllies();
+  const marines = marineModule.createMarines();
+  const allyStart = allies[0].y;
+  const marineStart = marines[0].y;
+  for (let i = 0; i < 360; i++) {
+    alliesModule.updateAllies(allies, 1 / 60, player, covers, [], null, "FOLLOW", marines);
+    marineModule.updateMarines(marines, 1 / 60, player, covers, [], null, allies);
+  }
+  assert.ok(allies.some((ally) => ally.y < allyStart - 100));
+  assert.ok(marines.some((marine) => marine.y < marineStart - 100));
+  assert.ok(allies.some((ally) => ally.cover));
+  assert.ok(marines.some((marine) => marine.cover));
+});
+
 test("enemy magazines are consumed and reload, and blood memory stays bounded", async () => {
   const h = createHarness();
   const enemyCore = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
@@ -731,7 +851,7 @@ test("sustained simulated play stays finite at mobile and desktop sizes", async 
           assert.ok(
             actor.x >= -2300 &&
               actor.x <= 2300 &&
-              actor.y >= -1900 &&
+              actor.y >= -6600 &&
               actor.y <= 1900,
           );
       }

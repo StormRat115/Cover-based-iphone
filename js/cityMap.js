@@ -391,6 +391,7 @@ function createCityCoverTemplates() {
 }
 
 const PLAYER_SAFE_ZONE = { x: 0, y: 190, radius: 330 };
+const OBJECTIVE_SAFE_ZONE = { x: 0, y: -5700, radius: 520 };
 const ENEMY_SPAWNS = [
   [-1500, -1180],
   [-980, -1320],
@@ -442,6 +443,14 @@ function isClear(candidate, placed) {
   )
     return false;
   if (
+    Math.hypot(
+      candidate.x - OBJECTIVE_SAFE_ZONE.x,
+      candidate.y - OBJECTIVE_SAFE_ZONE.y,
+    ) <
+    OBJECTIVE_SAFE_ZONE.radius + extent
+  )
+    return false;
+  if (
     ENEMY_SPAWNS.some(
       ([x, y]) => Math.hypot(candidate.x - x, candidate.y - y) < 190 + extent,
     )
@@ -464,20 +473,17 @@ function isClear(candidate, placed) {
 
 export function createCityCoverLayout(random = Math.random) {
   const templates = shuffled(createCityCoverTemplates(), random);
-  const targetCount = Math.min(templates.length, 27 + Math.floor(random() * 7));
+  const targetCount = 48 + Math.floor(random() * 7);
   const placed = [];
-  for (let i = 0; i < templates.length && placed.length < targetCount; i++) {
-    const template = templates[i];
-    for (let attempt = 0; attempt < 100; attempt++) {
-      const slot = placed.length;
-      const band =
-        slot < 10 ? [370, 760] : slot < 22 ? [760, 1260] : [1260, 1780];
-      const angle = random() * Math.PI * 2;
-      const radius = band[0] + random() * (band[1] - band[0]);
+  for (let slot = 0; slot < targetCount; slot++) {
+    const template = templates[slot % templates.length];
+    for (let attempt = 0; attempt < 140; attempt++) {
+      const progress = (slot + 1) / (targetCount + 2);
+      const lane = ((slot + attempt) % 5) - 2;
       const candidate = Object.assign({}, template, {
-        id: "mission-" + placed.length + "-" + template.id,
-        x: Math.round(Math.cos(angle) * radius + (random() - 0.5) * 150),
-        y: Math.round(Math.sin(angle) * radius * 0.82 + (random() - 0.5) * 120),
+        id: "street-" + slot + "-" + template.id,
+        x: Math.round(lane * 270 + (random() - 0.5) * 190),
+        y: Math.round(-250 - progress * 5000 + (random() - 0.5) * 280),
         segments: template.segments
           ? template.segments.map((segment) => Object.assign({}, segment))
           : null,
@@ -488,6 +494,48 @@ export function createCityCoverLayout(random = Math.random) {
       }
     }
   }
+  placed.push(
+    {
+      id: "fort-front",
+      x: 0,
+      y: -5880,
+      asset: "gen_sandbag_u",
+      coverType: "wide",
+      scale: 0.33,
+      w: 230,
+      h: 72,
+    },
+    {
+      id: "fort-left",
+      x: -245,
+      y: -5680,
+      asset: "gen_concrete_long",
+      coverType: "wide",
+      scale: 0.3,
+      w: 175,
+      h: 48,
+    },
+    {
+      id: "fort-right",
+      x: 245,
+      y: -5680,
+      asset: "gen_concrete_long",
+      coverType: "wide",
+      scale: 0.3,
+      w: 175,
+      h: 48,
+    },
+    {
+      id: "fort-rear",
+      x: 0,
+      y: -5460,
+      asset: "barrier_long",
+      coverType: "wide",
+      scale: 0.28,
+      w: 180,
+      h: 42,
+    },
+  );
   return placed;
 }
 

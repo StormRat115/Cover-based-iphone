@@ -1,5 +1,5 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-66";
-import { weaponCopy } from "./weapons.js?v=20260905-66";
+import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-67";
+import { weaponCopy } from "./weapons.js?v=20260905-67";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -7,13 +7,13 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260905-66";
+} from "./combatAI.js?v=20260905-67";
 import {
   ENEMY_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260905-66";
+} from "./combatStats.js?v=20260905-67";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -82,7 +82,7 @@ export function createBandits(wave, options) {
       type = "rifleman";
     if (wave >= 2 && i % 5 === 1) type = "shotgunner";
     if (wave >= 2 && i % 6 === 3) type = "heavy";
-    if (wave >= 3 && i % 4 === 0) type = "sniper";
+    if (wave >= 3 && i % 10 === 0) type = "sniper";
     if (wave >= 3 && i % 7 === 4) type = "marksman";
     if (wave >= 4 && i % 6 === 1) type = "smg";
     if (wave >= 4 && i % 8 === 6) type = "pistol";
@@ -148,22 +148,27 @@ function validTarget(t) {
   return !!t && !t.dead && !t.downed && t.hp > 0;
 }
 function chooseCombatTarget(e, player, covers, enemies) {
-  var candidates = [];
-  if (validTarget(player)) candidates.push(player);
+  var fallback = [];
+  if (validTarget(player)) fallback.push(player);
   var allies =
     typeof window !== "undefined" && window.__battleAllies
       ? window.__battleAllies
       : [];
   allies.forEach(function (a) {
-    if (validTarget(a)) candidates.push(a);
+    if (validTarget(a)) fallback.push(a);
   });
   var marines =
     typeof window !== "undefined" && window.__battleMarines
       ? window.__battleMarines
       : [];
-  marines.forEach(function (marine) {
-    if (validTarget(marine)) candidates.push(marine);
-  });
+  var activeMarines = marines.filter(validTarget),
+    supportVehicle =
+      typeof window !== "undefined" ? window.__supportVehicle : null,
+    candidates = activeMarines.length
+      ? activeMarines
+      : validTarget(supportVehicle)
+        ? [supportVehicle]
+        : fallback;
   if (!candidates.length) return player;
   var allyFocus = {};
   enemies.forEach(function (o) {
@@ -181,8 +186,7 @@ function chooseCombatTarget(e, player, covers, enemies) {
     score += Math.max(0, 900 - d) * 0.025;
     score += blocked ? -32 : 22;
     score += t.exposed ? 10 : -16;
-    if (t === player) score += 28;
-    else score -= 18 + (allyFocus[t.name] || 0) * 42;
+    if (t !== player) score -= (allyFocus[t.name] || 0) * 42;
     score += Math.random() * 20;
     if (score > bestScore) {
       bestScore = score;

@@ -1,5 +1,9 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-66";
-import { weaponCopy } from "./weapons.js?v=20260905-66";
+import {
+  isLineBlocked,
+  getHitChance,
+  getCoverSlot,
+} from "./cover.js?v=20260905-67";
+import { weaponCopy } from "./weapons.js?v=20260905-67";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -7,14 +11,14 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260905-66";
+} from "./combatAI.js?v=20260905-67";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260905-66";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-66";
+} from "./combatStats.js?v=20260905-67";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-67";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -237,6 +241,70 @@ function claimed(choice, a, allies) {
     })
   );
 }
+function advanceToMission(a, mission, covers, friendlies, dt) {
+  if (!mission || !mission.objective) return false;
+  var goal = mission.objective,
+    goalDistance = Math.hypot(goal.x - a.x, goal.y - a.y);
+  if (goalDistance <= goal.radius * 0.72) {
+    a.exposed = false;
+    a.combatState = "covered";
+    a.targetX = a.x;
+    a.targetY = a.y;
+    return true;
+  }
+  if (a.cover && a.combatState === "seeking") {
+    a.exposed = true;
+    if (moveTowardTarget(a, dt, a.aggressiveAdvance ? 1.12 : 1)) {
+      a.x = a.coverAnchorX;
+      a.y = a.coverAnchorY;
+      a.combatState = "covered";
+      a.exposed = false;
+      a.missionPause = 0.5 + Math.random() * 0.35;
+    }
+    return true;
+  }
+  a.missionPause = Math.max(0, (a.missionPause || 0) - dt);
+  if (a.missionPause > 0) return true;
+  var best = null,
+    bestScore = Infinity;
+  covers.forEach(function (cover) {
+    var travel = Math.hypot(cover.x - a.x, cover.y - a.y),
+      remaining = Math.hypot(cover.x - goal.x, cover.y - goal.y);
+    if (travel < 90 || travel > 920 || remaining > goalDistance - 100) return;
+    var choice = {
+      cover: cover,
+      slot: Object.assign(getCoverSlot(cover, a, null), {
+        index: a.coverSlotIndex || 0,
+      }),
+    };
+    if (claimed(choice, a, friendlies)) return;
+    var users = friendlies.filter(function (other) {
+      return other !== a && !other.dead && other.cover === cover;
+    }).length;
+    var score = remaining * 0.55 + travel * 0.3 + users * 260;
+    if (cover.type === "wide" || cover.type === "car") score -= 90;
+    score += Math.random() * 35;
+    if (score < bestScore) {
+      bestScore = score;
+      best = choice;
+    }
+  });
+  if (best) {
+    applyCoverChoice(a, best);
+    a.combatState = "seeking";
+    a.exposed = true;
+    return true;
+  }
+  // The final short crossing is inside the fortified capture perimeter.
+  if (goalDistance < goal.radius + 260) {
+    a.cover = null;
+    a.targetX = goal.x + ((a.coverSlotIndex || 0) - 1) * 72;
+    a.targetY = goal.y + 70 + (a.isMarine ? 75 : 0);
+    moveTowardTarget(a, dt, 1.05);
+    return true;
+  }
+  return true;
+}
 export function updateAllies(
   allies,
   dt,
@@ -303,6 +371,12 @@ export function updateAllies(
     }
     if (a.canRevive !== false && updateRevive(a, friendlyTeam, player, dt))
       return;
+    var mission =
+      typeof window !== "undefined" ? window.__streetMission : null;
+    if (!e && mission) {
+      advanceToMission(a, mission, covers, friendlyTeam, dt);
+      return;
+    }
     if (!e) {
       a.cover = null;
       a.targetX = player.x + (a.coverSlotIndex - 1) * 90;
@@ -310,6 +384,11 @@ export function updateAllies(
       moveTowardTarget(a, dt);
       return;
     }
+    var defendingObjective = !!(
+      a.isMarine &&
+      mission &&
+      mission.captured
+    );
     faceThreat(a, e);
     if (
       squadMode === "FOLLOW" &&
@@ -330,7 +409,17 @@ export function updateAllies(
       a.repositionCooldown <= 0 &&
       squadMode !== "HOLD"
     ) {
-      var choice = pickTacticalCover(a, e, covers, friendlyTeam, {
+      var availableCovers = defendingObjective
+        ? covers.filter(function (cover) {
+            return (
+              Math.hypot(
+                cover.x - mission.objective.x,
+                cover.y - mission.objective.y,
+              ) < 700
+            );
+          })
+        : covers;
+      var choice = pickTacticalCover(a, e, availableCovers, friendlyTeam, {
         maxTravel: aggressiveAdvance ? 1100 : 760,
         desiredRange: aggressiveAdvance
           ? engagementRange
@@ -383,7 +472,11 @@ export function updateAllies(
       }
       return;
     }
-    if (d > engagementRange && squadMode !== "HOLD") {
+    if (
+      d > engagementRange &&
+      squadMode !== "HOLD" &&
+      !defendingObjective
+    ) {
       a.targetX = e.x;
       a.targetY = e.y;
       moveTowardTarget(a, dt, aggressiveAdvance ? 1.18 : 1);

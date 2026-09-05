@@ -1,47 +1,57 @@
-import { createGameLoop } from "./gameLoop.js?v=20260905-66";
+import { createGameLoop } from "./gameLoop.js?v=20260905-67";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260905-66";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-66";
+} from "./geometry.js?v=20260905-67";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-67";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260905-66";
-import { updateSquadHud } from "./squadHud.js?v=20260905-66";
-import { updateCombatHud } from "./combatHud.js?v=20260905-66";
-import { updatePlayerHud } from "./player.js?v=20260905-66";
-import { resetSquadCommands } from "./allyCore2.js?v=20260905-66";
-import "./squadDrawer.js?v=20260905-66";
-import { createPlayer, drawPlayer } from "./player.js?v=20260905-66";
+} from "./bloodEffects.js?v=20260905-67";
+import { updateSquadHud } from "./squadHud.js?v=20260905-67";
+import { updateCombatHud } from "./combatHud.js?v=20260905-67";
+import { updatePlayerHud } from "./player.js?v=20260905-67";
+import { resetSquadCommands } from "./allyCore2.js?v=20260905-67";
+import "./squadDrawer.js?v=20260905-67";
+import { createPlayer, drawPlayer } from "./player.js?v=20260905-67";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260905-66";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-66";
+} from "./enemy.js?v=20260905-67";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-67";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260905-66";
+} from "./marines.js?v=20260905-67";
+import {
+  createStreetMission,
+  updateStreetMission,
+  captureSecondsRemaining,
+} from "./streetMission.js?v=20260905-67";
+import {
+  createSupportVehicle,
+  updateSupportVehicle,
+  drawSupportVehicle,
+} from "./supportVehicle.js?v=20260905-67";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260905-66";
+} from "./cover.js?v=20260905-67";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260905-66";
-import { initTactical } from "./tactical.js?v=20260905-66";
+} from "./input.js?v=20260905-67";
+import { initTactical } from "./tactical.js?v=20260905-67";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -85,10 +95,12 @@ var world = {
   cameraY: 0,
   minX: -2300,
   maxX: 2300,
-  minY: -1900,
+  minY: -6600,
   maxY: 1900,
 };
-var player = createPlayer(),
+var mission = createStreetMission(),
+  supportVehicle = null,
+  player = createPlayer(),
   covers = createCover(),
   enemies = createWaveEnemies(),
   allies = createAllies(),
@@ -100,6 +112,8 @@ window.__battleEnemies = enemies;
 window.__battleAllies = allies;
 window.__battleMarines = marines;
 window.__battleCovers = covers;
+window.__streetMission = mission;
+window.__supportVehicle = supportVehicle;
 window.__waveDefense = true;
 window.__wave = wave;
 function resize() {
@@ -376,22 +390,31 @@ function attemptFire() {
     }
   }
 }
-function chooseAutoPosition(e) {
+function chooseAutoPosition(e, strategicGoal) {
   var best = null,
     bestCover = null,
     bestScore = 1e9,
-    desired = Math.min(player.weapon.range * 0.72, 760);
+    desired = Math.min(player.weapon.range * 0.72, 760),
+    currentGoalDistance = strategicGoal
+      ? distance(player, strategicGoal)
+      : Infinity;
   covers.forEach(function (c) {
     var cd = distance(player, c),
-      ed = distance(e, c);
-    if (cd > 1250 || ed < 240 || ed > player.weapon.range * 0.95) return;
+      ed = e ? distance(e, c) : desired,
+      goalDistance = strategicGoal ? distance(strategicGoal, c) : 0;
+    if (cd > 1250) return;
+    if (e && (ed < 240 || ed > player.weapon.range * 0.98)) return;
+    if (strategicGoal && goalDistance > currentGoalDistance - 90) return;
     var slot = getCoverSlot(c, player, e),
-      protectedSpot = isLineBlocked({ x: slot.x, y: slot.y }, e, [c]),
+      protectedSpot = e
+        ? isLineBlocked({ x: slot.x, y: slot.y }, e, [c])
+        : true,
       score =
-        cd +
-        Math.abs(ed - desired) * 0.55 +
+        cd * (strategicGoal ? 0.35 : 1) +
+        Math.abs(ed - desired) * (strategicGoal ? 0.25 : 0.55) +
+        goalDistance * (strategicGoal ? 0.48 : 0) +
         (protectedSpot ? -190 : 180) +
-        (c.type === "wide" ? -45 : 0);
+        (c.type === "wide" || c.type === "car" ? -65 : 0);
     if (score < bestScore) {
       bestScore = score;
       best = slot;
@@ -410,7 +433,8 @@ function chooseAutoPosition(e) {
 }
 function updateAutoPlayer(dt) {
   if (!autoPlay || gameOver || paused || player.dead || player.downed) return;
-  var e = target && !target.dead ? target : nearestEnemy();
+  var e = target && !target.dead ? target : nearestEnemy(),
+    strategicGoal = mission && !mission.captured ? mission.objective : null;
   if (shouldRecover(player)) {
     recoverInCover(player, e, covers, allies, dt);
     // Recovery moves directly; do not also pursue an old tap-to-move destination.
@@ -418,7 +442,29 @@ function updateAutoPlayer(dt) {
     player.ty = player.y;
     return;
   }
-  if (!e) return;
+  if (!e) {
+    if (!strategicGoal) return;
+    autoMoveTimer -= dt;
+    if (distance(player, strategicGoal) <= strategicGoal.radius * 0.68) {
+      player.tx = player.x;
+      player.ty = player.y;
+      return;
+    }
+    if (autoMoveTimer <= 0) {
+      autoMoveTimer = 0.45;
+      if (!chooseAutoPosition(null, strategicGoal)) {
+        var gx = strategicGoal.x - player.x,
+          gy = strategicGoal.y - player.y,
+          gl = Math.hypot(gx, gy) || 1;
+        player.setDestination(
+          clamp(player.x + (gx / gl) * 180, world.minX, world.maxX),
+          clamp(player.y + (gy / gl) * 180, world.minY, world.maxY),
+          null,
+        );
+      }
+    }
+    return;
+  }
   if (target !== e) setTarget(e);
   var d = distance(player, e),
     blocked = isLineBlocked(player, e, covers),
@@ -434,7 +480,7 @@ function updateAutoPlayer(dt) {
   if (d > engage) {
     if (autoMoveTimer <= 0) {
       autoMoveTimer = 0.45;
-      if (!chooseAutoPosition(e)) {
+      if (!chooseAutoPosition(e, strategicGoal)) {
         var dx = e.x - player.x,
           dy = e.y - player.y,
           len = Math.hypot(dx, dy) || 1,
@@ -451,7 +497,7 @@ function updateAutoPlayer(dt) {
   if (blocked || d < 280) {
     if (autoMoveTimer <= 0) {
       autoMoveTimer = 0.35;
-      chooseAutoPosition(e);
+      chooseAutoPosition(e, strategicGoal);
     }
     if (blocked && !player.cover) return;
   }
@@ -571,8 +617,8 @@ function finishFailure() {
   hudDirty = true;
   fireHeld = false;
   fireButton.classList.remove("active");
-  messageTitle.textContent = "DEFENSE BROKEN";
-  messageText.textContent = "The position was overrun on wave " + wave + ".";
+  messageTitle.textContent = "ADVANCE HALTED";
+  messageText.textContent = "The street push was overrun on wave " + wave + ".";
   message.classList.remove("hidden");
 }
 function updateWaveDefense(dt) {
@@ -595,6 +641,10 @@ function updateWaveDefense(dt) {
 }
 function reset() {
   player.reset();
+  mission = createStreetMission();
+  supportVehicle = null;
+  window.__streetMission = mission;
+  window.__supportVehicle = supportVehicle;
   covers = createCover();
   window.__battleCovers = covers;
   allies = createAllies();
@@ -674,6 +724,19 @@ function update(dt) {
     marine.x = clamp(marine.x, world.minX, world.maxX);
     marine.y = clamp(marine.y, world.minY, world.maxY);
   });
+  updateStreetMission(mission, dt, player, allies);
+  if (mission.justCaptured && !supportVehicle) {
+    supportVehicle = createSupportVehicle(mission.objective);
+    window.__supportVehicle = supportVehicle;
+    rebuildLayers();
+  }
+  updateSupportVehicle(
+    supportVehicle,
+    dt,
+    enemies,
+    covers,
+    spawnAllyProjectile,
+  );
   enemies.forEach(function (e) {
     if (
       !e.enteredWorld &&
@@ -769,6 +832,7 @@ function drawStreetLamp(x, y) {
   ctx.restore();
 }
 function drawCrosswalk(y) {
+  if (!onScreen(0, y, 520)) return;
   for (var x = -380; x <= 380; x += 58)
     worldPoly(
       [
@@ -827,26 +891,61 @@ function drawMapDecor() {
       ],
       "#c0a64d99",
     );
-  [-1500, -900, -320, 300, 920, 1500].forEach(drawCrosswalk);
-  var outerRows = [-1650, -1100, -550, 0, 550, 1100, 1650];
-  outerRows.forEach(function (y) {
+  for (var crossY = world.minY + 300; crossY < world.maxY; crossY += 620)
+    drawCrosswalk(crossY);
+  for (var outerY = world.minY + 260; outerY < world.maxY; outerY += 540) {
+    var y = outerY;
     drawBuilding(-1650, y, 470, 330, "#404644");
     drawBuilding(1650, y, 470, 330, "#454947");
-  });
-  var innerRows = [-1200, -600, 0, 600, 1200];
-  innerRows.forEach(function (y) {
+  }
+  for (var innerY = world.minY + 120; innerY < world.maxY; innerY += 560) {
+    var y = innerY;
     drawBuilding(-980, y, 320, 250, "#3e4442");
     drawBuilding(980, y, 320, 250, "#424744");
-  });
-  for (var ly = -1700; ly <= 1700; ly += 360) {
+  }
+  for (var ly = world.minY + 120; ly <= world.maxY; ly += 360) {
     drawStreetLamp(-430, ly);
     drawStreetLamp(430, ly);
   }
+}
+function drawStreetObjective() {
+  var objective = mission.objective,
+    center = iso(objective.x, objective.y),
+    radiusX = objective.radius * world.scaleX * Math.SQRT2,
+    radiusY = objective.radius * world.scaleY * Math.SQRT2,
+    color = mission.captured ? "#6fd77e" : "#e7c64d";
+  ctx.save();
+  ctx.globalAlpha = mission.captured ? 0.34 : mission.capturing ? 0.55 : 0.28;
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.setLineDash(mission.captured ? [] : [9, 7]);
+  ctx.beginPath();
+  ctx.ellipse(center[0], center[1], radiusX, radiusY, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = "#242b28";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(center[0], center[1] - 8);
+  ctx.lineTo(center[0], center[1] - 62);
+  ctx.stroke();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(center[0] + 2, center[1] - 61);
+  ctx.lineTo(center[0] + 31, center[1] - 51);
+  ctx.lineTo(center[0] + 2, center[1] - 42);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 }
 function drawWorld() {
   ctx.fillStyle = "#4b514c";
   ctx.fillRect(0, 0, W, H);
   drawMapDecor();
+  drawStreetObjective();
   if (target && !target.dead) {
     var a = iso(player.x, player.y),
       b = iso(target.x, target.y);
@@ -890,10 +989,10 @@ function drawMissionUI() {
   ctx.moveTo(x + 12, y);
   ctx.lineTo(x + boxW - 12, y);
   ctx.quadraticCurveTo(x + boxW, y, x + boxW, y + 12);
-  ctx.lineTo(x + boxW, y + 70);
-  ctx.quadraticCurveTo(x + boxW, y + 82, x + boxW - 12, y + 82);
-  ctx.lineTo(x + 12, y + 82);
-  ctx.quadraticCurveTo(x, y + 82, x, y + 70);
+  ctx.lineTo(x + boxW, y + 91);
+  ctx.quadraticCurveTo(x + boxW, y + 103, x + boxW - 12, y + 103);
+  ctx.lineTo(x + 12, y + 103);
+  ctx.quadraticCurveTo(x, y + 103, x, y + 91);
   ctx.lineTo(x, y + 12);
   ctx.quadraticCurveTo(x, y, x + 12, y);
   ctx.closePath();
@@ -902,10 +1001,14 @@ function drawMissionUI() {
   ctx.fillStyle = "#8fb7c8";
   ctx.font = "800 10px system-ui";
   ctx.textAlign = "left";
-  ctx.fillText("WAVE DEFENSE", x + 14, y + 18);
+  ctx.fillText("STREET PUSH", x + 14, y + 18);
   ctx.fillStyle = "#fff";
   ctx.font = "900 15px system-ui";
-  ctx.fillText("HOLD THE BLOCK", x + 14, y + 41);
+  ctx.fillText(
+    mission.captured ? "FORTIFICATION SECURED" : "CAPTURE THE FORT",
+    x + 14,
+    y + 41,
+  );
   ctx.fillStyle = "#8fb7c8";
   ctx.font = "800 10px system-ui";
   var alive = enemies.filter(function (e) {
@@ -914,6 +1017,13 @@ function drawMissionUI() {
     marineStrength = marines.filter(function (marine) {
       return !marine.dead;
     }).length,
+    objectiveLine = mission.captured
+      ? "OBJECTIVE SECURE  •  TURRET ACTIVE"
+      : mission.capturing
+        ? "CAPTURING  •  " + captureSecondsRemaining(mission).toFixed(1) + "s"
+        : "DISTANCE  •  " +
+          Math.max(0, Math.round(distance(player, mission.objective) / 10)) +
+          "m",
     line =
       waveState === "cleared"
         ? "WAVE " +
@@ -927,7 +1037,9 @@ function drawMissionUI() {
           alive +
           "  •  MARINES " +
           marineStrength;
-  ctx.fillText(line, x + 14, y + 63);
+  ctx.fillText(objectiveLine, x + 14, y + 63);
+  ctx.fillStyle = "#b8c5c9";
+  ctx.fillText(line, x + 14, y + 84);
   ctx.restore();
 }
 function onScreen(x, y, margin = 110) {
@@ -946,6 +1058,7 @@ function rebuildLayers() {
     [allies, "ally"],
     [marines, "marine"],
     [enemies, "enemy"],
+    [supportVehicle ? [supportVehicle] : [], "vehicle"],
     [[player], "player"],
   ]) {
     for (const o of objects) layers.push({ o, y: o.x + o.y, type });
@@ -967,6 +1080,7 @@ function draw(now) {
     else if (v.type === "ally") drawAlly(ctx, v.o, iso);
     else if (v.type === "marine") drawMarine(ctx, v.o, iso);
     else if (v.type === "enemy") drawBandit(ctx, v.o, iso, target === v.o);
+    else if (v.type === "vehicle") drawSupportVehicle(ctx, v.o, iso);
     else drawPlayer(ctx, v.o, iso);
   });
   drawFeedback();
@@ -1001,6 +1115,7 @@ function draw(now) {
     (player.cover ? " • IN COVER" : "") +
     (target && !target.dead ? " • TARGET LOCKED" : "") +
     (autoPlay ? " • AI PILOT" : "") +
+    (mission.captured ? " • FORT SECURE" : mission.capturing ? " • CAPTURING" : "") +
     (paused ? " • PAUSED" : "");
   const nextHint = paused
     ? "GAME PAUSED"
@@ -1008,6 +1123,10 @@ function draw(now) {
       ? "WAIT FOR A REVIVE"
       : player.dead
         ? "SOLDIER KIA"
+        : mission.capturing
+          ? "HOLD THE FORTIFICATION — " +
+            captureSecondsRemaining(mission).toFixed(1) +
+            " SECONDS"
         : waveState === "cleared"
           ? "WAVE CLEAR — PREPARE FOR CONTACT"
           : player.reloading
