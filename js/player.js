@@ -1,6 +1,6 @@
 import { getHitChance } from './cover.js?v=20260904-35';
 import { weaponCopy } from './weapons.js';
-import { drawSoldier } from './soldierAssets.js?v=20260905-50';
+import { drawSoldier } from './soldierAssets.js?v=20260905-58';
 import { CHARACTER_STATS, mitigateDamage, finalAccuracy, attackDamage } from './combatStats.js?v=20260905-50';
 let shotHud=null,weaponHud=null;
 function showChance(){var old=document.getElementById('hitChance');if(old&&old.parentElement===document.body)old.remove()}
