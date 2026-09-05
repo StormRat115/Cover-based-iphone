@@ -1,46 +1,46 @@
-import { createGameLoop } from "./gameLoop.js?v=20260905-64";
+import { createGameLoop } from "./gameLoop.js?v=20260905-65";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260905-64";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-64";
+} from "./geometry.js?v=20260905-65";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-65";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260905-64";
-import { updateSquadHud } from "./squadHud.js?v=20260905-64";
-import { updateCombatHud } from "./combatHud.js?v=20260905-64";
-import { updatePlayerHud } from "./player.js?v=20260905-64";
-import { resetSquadCommands } from "./allyCore2.js?v=20260905-64";
-import "./squadDrawer.js?v=20260905-64";
-import { createPlayer, drawPlayer } from "./player.js?v=20260905-64";
+} from "./bloodEffects.js?v=20260905-65";
+import { updateSquadHud } from "./squadHud.js?v=20260905-65";
+import { updateCombatHud } from "./combatHud.js?v=20260905-65";
+import { updatePlayerHud } from "./player.js?v=20260905-65";
+import { resetSquadCommands } from "./allyCore2.js?v=20260905-65";
+import "./squadDrawer.js?v=20260905-65";
+import { createPlayer, drawPlayer } from "./player.js?v=20260905-65";
 import {
   createBandits,
   updateBandits,
   drawBandit,
-} from "./enemy.js?v=20260905-64";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-64";
+} from "./enemy.js?v=20260905-65";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-65";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260905-64";
+} from "./marines.js?v=20260905-65";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260905-64";
+} from "./cover.js?v=20260905-65";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260905-64";
-import { initTactical } from "./tactical.js?v=20260905-64";
+} from "./input.js?v=20260905-65";
+import { initTactical } from "./tactical.js?v=20260905-65";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),

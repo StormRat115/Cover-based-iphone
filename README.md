@@ -87,3 +87,10 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - Marines fight enemies and coordinate cover with the squad, but ignore squad commands and do not occupy squad slots.
 - Marines have no health regeneration, downed state, revival, or mid-mission respawn; a Marine who reaches zero health is permanently KIA for that mission.
 - Enemy target selection and the mission display now account for surviving Marines.
+
+## Enemy monster animations: 20260905-65
+
+- Riflemen, shotgunners, heavies, and snipers now use their own transparent monster animation sheets.
+- Each monster supports idle, running, low-cover, tall-cover, firing, hit-reaction, and permanent death animation rows.
+- All four sheets download and decode during the loading screen so enemy art cannot pop in after a mission begins.
+- Marksman, SMG, and pistol enemies retain the original monster sprite as a safe fallback.

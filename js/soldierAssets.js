@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260905-64";
+import { loadImage } from "./assets.js?v=20260905-65";
 export const soldierSource = new Image();
 soldierSource.src =
   "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-60";
@@ -7,6 +7,34 @@ enemySource.src =
   "./assets/198C101B-E186-4852-A270-3F04D83451ED.png?v=20260905-60";
 export const deathSource = new Image();
 deathSource.src = "./assets/soldier_death_sheet.png?v=20260905-60";
+
+const ENEMY_MONSTER_SHEET_WIDTH = 1536,
+  ENEMY_MONSTER_SHEET_HEIGHT = 1022,
+  ENEMY_MONSTER_FRAME_WIDTH = 256,
+  ENEMY_MONSTER_FRAME_HEIGHT = 146,
+  ENEMY_MONSTER_FRAMES = 6;
+const ENEMY_MONSTER_ROWS = {
+  idle: 0,
+  run: 1,
+  lowCover: 2,
+  tallCover: 3,
+  shoot: 4,
+  hit: 5,
+  death: 6,
+};
+const ENEMY_MONSTER_FILES = {
+  rifleman: "enemy-ashfang-rifleman-sheet.png",
+  shotgunner: "enemy-mawbreaker-breacher-sheet.png",
+  heavy: "enemy-ironhide-heavy-sheet.png",
+  sniper: "enemy-paleeye-stalker-sheet.png",
+};
+const enemyMonsterSources = Object.fromEntries(
+  Object.entries(ENEMY_MONSTER_FILES).map(function ([type, file]) {
+    const image = new Image();
+    image.src = "./assets/generated/enemies/" + file + "?v=20260905-65";
+    return [type, image];
+  }),
+);
 
 const SOURCE_W = 1448,
   SOURCE_H = 1086,
@@ -199,6 +227,9 @@ export function preloadSoldierAssets(onProgress) {
     loadImage(soldierSource),
     loadImage(enemySource),
     loadImage(deathSource),
+    ...Object.values(enemyMonsterSources).map(function (image) {
+      return loadImage(image);
+    }),
   ]).then(function (imgs) {
     onProgress(0.68, "BUILDING CHARACTER ANIMATIONS");
     if (imgs.some((image) => !image))
@@ -331,6 +362,98 @@ function teamFilter(team) {
     return "sepia(.28) saturate(1.2) hue-rotate(55deg) brightness(.94)";
   return "none";
 }
+
+export function getEnemyMonsterSheet(type) {
+  const source = enemyMonsterSources[type];
+  if (!source) return null;
+  return {
+    type: type,
+    file: ENEMY_MONSTER_FILES[type],
+    source: source,
+    width: ENEMY_MONSTER_SHEET_WIDTH,
+    height: ENEMY_MONSTER_SHEET_HEIGHT,
+    frameWidth: ENEMY_MONSTER_FRAME_WIDTH,
+    frameHeight: ENEMY_MONSTER_FRAME_HEIGHT,
+    frames: ENEMY_MONSTER_FRAMES,
+    rows: ENEMY_MONSTER_ROWS,
+  };
+}
+
+function enemyMonsterState(actor) {
+  if (zeroHealth(actor)) return "death";
+  if (actor.hit > 0) return "hit";
+  if (shooting(actor)) return "shoot";
+  if (actor.cover) return lowCover(actor) ? "lowCover" : "tallCover";
+  if (moving(actor)) return "run";
+  return "idle";
+}
+
+function enemyMonsterFrame(actor, state) {
+  if (state === "death") {
+    const duration = Math.max(0.01, actor.deathDuration || 0.8),
+      progress = Math.min(0.999, Math.max(0, (actor.deathTimer || 0) / duration));
+    return Math.min(ENEMY_MONSTER_FRAMES - 1, Math.floor(progress * 6));
+  }
+  if (state === "hit") {
+    const progress = Math.min(0.999, Math.max(0, 1 - (actor.hit || 0) / 0.22));
+    return Math.min(ENEMY_MONSTER_FRAMES - 1, Math.floor(progress * 6));
+  }
+  if (state === "shoot") {
+    const progress = Math.min(
+      0.999,
+      Math.max(0, 1 - (actor.muzzle || 0) / 0.13),
+    );
+    return Math.min(ENEMY_MONSTER_FRAMES - 1, Math.floor(progress * 6));
+  }
+  const fps = state === "run" ? 10 : 6;
+  return Math.floor((nowMs() / 1000) * fps) % ENEMY_MONSTER_FRAMES;
+}
+
+export function drawEnemyMonster(ctx, actor, options) {
+  const sheet = getEnemyMonsterSheet(actor && actor.type),
+    source = sheet && sheet.source;
+  if (!source || !source.complete || !source.naturalWidth) return false;
+  options = options || {};
+  const state = enemyMonsterState(actor),
+    frame = enemyMonsterFrame(actor, state),
+    row = ENEMY_MONSTER_ROWS[state],
+    baseScale = options.scale == null ? 0.38 : options.scale * 1.27,
+    scale = baseScale * (actor.scale || 1),
+    dw = ENEMY_MONSTER_FRAME_WIDTH * scale,
+    dh = ENEMY_MONSTER_FRAME_HEIGHT * scale,
+    flip = stableFacing(actor, state),
+    bob = state === "run" ? Math.sin(nowMs() * 0.018) * 0.65 : 0;
+  ctx.save();
+  ctx.translate(options.x || 0, (options.y || 0) + bob);
+  ctx.globalAlpha = options.alpha == null ? 1 : options.alpha;
+  ctx.fillStyle = "#0007";
+  ctx.beginPath();
+  ctx.ellipse(
+    0,
+    2,
+    Math.max(8, dw * 0.22),
+    Math.max(2, dh * 0.05),
+    0,
+    0,
+    Math.PI * 2,
+  );
+  ctx.fill();
+  ctx.scale(flip, 1);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(
+    source,
+    frame * ENEMY_MONSTER_FRAME_WIDTH,
+    row * ENEMY_MONSTER_FRAME_HEIGHT,
+    ENEMY_MONSTER_FRAME_WIDTH,
+    ENEMY_MONSTER_FRAME_HEIGHT,
+    -dw * 0.5,
+    -dh,
+    dw,
+    dh,
+  );
+  ctx.restore();
+  return true;
+}
 function drawDeath(ctx, actor, options, scale, flip) {
   if (!deathSource.complete || !deathSource.naturalWidth) return false;
   var d = deathFrame(actor),
@@ -423,6 +546,13 @@ export function getSoldierAtlasInfo() {
     deathDuration: DEATH_DURATION,
     deathScale: DEATH_SCALE,
     enemySource: "198C101B-E186-4852-A270-3F04D83451ED.png",
+    enemyMonsterSheets: Object.assign({}, ENEMY_MONSTER_FILES),
+    enemyMonsterFrame: {
+      width: ENEMY_MONSTER_FRAME_WIDTH,
+      height: ENEMY_MONSTER_FRAME_HEIGHT,
+      columns: ENEMY_MONSTER_FRAMES,
+      rows: ENEMY_MONSTER_ROWS,
+    },
     frameCounts: {
       idle: 5,
       run: 8,

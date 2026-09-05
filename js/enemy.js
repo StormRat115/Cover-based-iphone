@@ -1,8 +1,11 @@
 import {
   createBandits,
   updateBandits as updateBanditsCore,
-} from "./enemyCore.js?v=20260905-64";
-import { drawSoldier } from "./soldierAssets.js?v=20260905-64";
+} from "./enemyCore.js?v=20260905-65";
+import {
+  drawEnemyMonster,
+  drawSoldier,
+} from "./soldierAssets.js?v=20260905-65";
 export { createBandits };
 var ENEMY_LINES = {
   contact: ["CONTACT!", "THERE!", "I SEE THEM!", "MOVE! MOVE!"],
@@ -102,13 +105,15 @@ export function drawBandit(ctx, e, iso, selected) {
     ctx.fill();
     ctx.globalAlpha = 1;
   }
-  drawSoldier(ctx, e, {
+  const spriteOptions = {
     x: 0,
     y: 0,
     team: "enemy",
     scale: 0.3,
     alpha: e.dead ? 0.94 : 1,
-  });
+  };
+  if (!drawEnemyMonster(ctx, e, spriteOptions))
+    drawSoldier(ctx, e, spriteOptions);
   drawBubble(ctx, e);
   ctx.restore();
 }

@@ -34,6 +34,48 @@ test("local module/HTML references exist and use a single cache version", () => 
   }
 });
 
+test("transparent monster sheets map to their matching enemy roles", async () => {
+  const h = createHarness();
+  const sprites = await h.importModule(`js/soldierAssets.js?v=${BUILD}`);
+  const expected = {
+    rifleman: "enemy-ashfang-rifleman-sheet.png",
+    shotgunner: "enemy-mawbreaker-breacher-sheet.png",
+    heavy: "enemy-ironhide-heavy-sheet.png",
+    sniper: "enemy-paleeye-stalker-sheet.png",
+  };
+  for (const [type, file] of Object.entries(expected)) {
+    const sheet = sprites.getEnemyMonsterSheet(type),
+      png = readFileSync(resolve("assets/generated/enemies", file));
+    assert.equal(sheet.file, file);
+    assert.equal(sheet.frameWidth, 256);
+    assert.equal(sheet.frameHeight, 146);
+    assert.equal(png[25], 6, `${file} must be an RGBA PNG`);
+    const actor = {
+      type,
+      x: 0,
+      y: 0,
+      targetX: 0,
+      targetY: 0,
+      hp: 60,
+      maxHp: 60,
+      scale: 1,
+      facingX: 1,
+      facingY: 0,
+      muzzle: 0,
+      hit: 0,
+      dead: false,
+    };
+    assert.equal(
+      sprites.drawEnemyMonster(
+        h.document.createElement("canvas").getContext("2d"),
+        actor,
+      ),
+      true,
+    );
+  }
+  assert.equal(sprites.getEnemyMonsterSheet("marksman"), null);
+});
+
 test("world/screen round trips stay accurate as camera moves and viewport changes", async () => {
   const h = createHarness();
   const geometry = await h.importModule(`js/geometry.js?v=${BUILD}`);
@@ -500,8 +542,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    5,
-    "three character sources plus two environment atlases",
+    9,
+    "seven character sources plus two environment atlases",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
