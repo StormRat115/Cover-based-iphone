@@ -1,14 +1,14 @@
-import { createPlayer, drawPlayer } from './player.js?v=20260905-50';
-import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260905-50';
-import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260905-50';
-import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260905-50';
+import { createPlayer, drawPlayer } from './player.js?v=20260905-58';
+import { createBandits, updateBandits, drawBandit } from './enemy.js?v=20260905-58';
+import { createAllies, updateAllies, drawAlly } from './ally.js?v=20260905-58';
+import { createCover, findCoverForPoint, getCoverSlot, drawCover, isLineBlocked } from './cover.js?v=20260905-58';
 import { initKeyboard, getKeyboardMove } from './input.js';
-import { initTactical } from './tactical.js?v=20260905-50';
+import { initTactical } from './tactical.js?v=20260905-58';
 var canvas=document.querySelector('#game'),ctx=canvas.getContext('2d'),status=document.querySelector('#status'),hint=document.querySelector('#hint'),fireButton=document.querySelector('#fire'),reloadButton=document.querySelector('#reload'),autoPlayButton=document.querySelector('#autoPlay'),pauseButton=document.querySelector('#pause'),pauseMenu=document.querySelector('#pauseMenu'),resumeButton=document.querySelector('#resumeButton'),pauseRestart=document.querySelector('#pauseRestart'),message=document.querySelector('#message'),messageTitle=document.querySelector('#messageTitle'),messageText=document.querySelector('#messageText'),messageButton=document.querySelector('#messageButton');
 var W=0,H=0,dpr=1,last=0,gameOver=false,paused=false,target=null,kills=0,hitMarker=0,damagePops=[],fireHeld=false,playerHitFlash=0,autoPlay=false,autoMoveTimer=0,wave=1,waveState='active',waveTimer=0;
 var world={scaleX:.25,scaleY:.125,offsetY:-40,cameraX:0,cameraY:0,minX:-2300,maxX:2300,minY:-1900,maxY:1900};
 var player=createPlayer(),covers=createCover(),enemies=createBandits(wave),allies=createAllies(),projectiles=[];
-initTactical();window.__battlePlayer=player;window.__battleEnemies=enemies;window.__battleAllies=allies;window.__waveDefense=true;window.__wave=wave;
+initTactical();window.__battlePlayer=player;window.__battleEnemies=enemies;window.__battleAllies=allies;window.__battleCovers=covers;window.__waveDefense=true;window.__wave=wave;
 function resize(){dpr=Math.min(window.devicePixelRatio||1,2);W=window.innerWidth;H=window.innerHeight;canvas.width=W*dpr;canvas.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}window.addEventListener('resize',resize);resize();
 function clamp(v,a,b){return Math.max(a,Math.min(b,v))}function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}function rand(a,b){return a+Math.random()*(b-a)}
 function updateCamera(){world.cameraX+=(clamp(player.x,world.minX+430,world.maxX-430)-world.cameraX)*.09;world.cameraY+=(clamp(player.y,world.minY+330,world.maxY-330)-world.cameraY)*.09}
