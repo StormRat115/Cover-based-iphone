@@ -1,8 +1,8 @@
 import {
   createBandits,
   updateBandits as updateBanditsCore,
-} from "./enemyCore.js?v=20260905-62";
-import { drawSoldier } from "./soldierAssets.js?v=20260905-62";
+} from "./enemyCore.js?v=20260905-63";
+import { drawSoldier } from "./soldierAssets.js?v=20260905-63";
 export { createBandits };
 var ENEMY_LINES = {
   contact: ["CONTACT!", "THERE!", "I SEE THEM!", "MOVE! MOVE!"],

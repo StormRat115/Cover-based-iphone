@@ -1,41 +1,41 @@
-import { createGameLoop } from "./gameLoop.js?v=20260905-62";
+import { createGameLoop } from "./gameLoop.js?v=20260905-63";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260905-62";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-62";
+} from "./geometry.js?v=20260905-63";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-63";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260905-62";
-import { updateSquadHud } from "./squadHud.js?v=20260905-62";
-import { updateCombatHud } from "./combatHud.js?v=20260905-62";
-import { updatePlayerHud } from "./player.js?v=20260905-62";
-import { resetSquadCommands } from "./allyCore2.js?v=20260905-62";
-import "./squadDrawer.js?v=20260905-62";
-import { createPlayer, drawPlayer } from "./player.js?v=20260905-62";
+} from "./bloodEffects.js?v=20260905-63";
+import { updateSquadHud } from "./squadHud.js?v=20260905-63";
+import { updateCombatHud } from "./combatHud.js?v=20260905-63";
+import { updatePlayerHud } from "./player.js?v=20260905-63";
+import { resetSquadCommands } from "./allyCore2.js?v=20260905-63";
+import "./squadDrawer.js?v=20260905-63";
+import { createPlayer, drawPlayer } from "./player.js?v=20260905-63";
 import {
   createBandits,
   updateBandits,
   drawBandit,
-} from "./enemy.js?v=20260905-62";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-62";
+} from "./enemy.js?v=20260905-63";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-63";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260905-62";
+} from "./cover.js?v=20260905-63";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260905-62";
-import { initTactical } from "./tactical.js?v=20260905-62";
+} from "./input.js?v=20260905-63";
+import { initTactical } from "./tactical.js?v=20260905-63";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -578,6 +578,8 @@ function updateWaveDefense(dt) {
 }
 function reset() {
   player.reset();
+  covers = createCover();
+  window.__battleCovers = covers;
   allies = createAllies();
   window.__battleAllies = allies;
   resetSquadCommands();
@@ -981,6 +983,8 @@ export function startGame() {
   // Release menu focus so held keyboard controls reach the battlefield.
   document.activeElement?.blur?.();
   clearKeyboard();
+  covers = createCover();
+  window.__battleCovers = covers;
   started = true;
   rebuildLayers();
   runtime.start();

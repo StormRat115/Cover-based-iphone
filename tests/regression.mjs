@@ -67,6 +67,43 @@ test("world/screen round trips stay accurate as camera moves and viewport change
   }
 });
 
+test("mission cover layouts are unique, reproducible, and keep spawn lanes clear", async () => {
+  const h = createHarness();
+  const city = await h.importModule(`js/cityMap.js?v=${BUILD}`);
+  const seeded = (seed) => () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  const first = city.createCityCoverLayout(seeded(17));
+  const repeat = city.createCityCoverLayout(seeded(17));
+  const different = city.createCityCoverLayout(seeded(91));
+  assert.deepEqual(first, repeat, "a supplied seed should reproduce a layout");
+  assert.notDeepEqual(
+    first,
+    different,
+    "different missions need different layouts",
+  );
+  assert.ok(first.length >= 27 && first.length <= 33);
+  for (const cover of first) {
+    assert.ok(
+      Math.hypot(cover.x, cover.y - 190) >=
+        330 + Math.max(cover.w, cover.h) / 2,
+      "squad spawn must stay clear",
+    );
+  }
+  for (let i = 0; i < first.length; i++) {
+    for (let j = i + 1; j < first.length; j++) {
+      const a = first[i];
+      const b = first[j];
+      assert.ok(
+        Math.abs(a.x - b.x) >= (a.w + b.w) / 2 + 90 ||
+          Math.abs(a.y - b.y) >= (a.h + b.h) / 2 + 72,
+        "procedural cover must not overlap",
+      );
+    }
+  }
+});
+
 test("optimized cover checks match the original 35-sample rule", async () => {
   const h = createHarness();
   const { sampledLineIntersectsRect } = await h.importModule(

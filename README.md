@@ -74,3 +74,9 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - Added a 164 KB runtime atlas containing 12 selected cover sprites to keep mobile startup lightweight.
 - Expanded the battlefield with straight, corner, curved, U-shaped, vehicle, container, pipe, crate, brick, and planter cover.
 - Added compound collision segments for corner, curved, and U-shaped cover so tactical movement follows their silhouettes.
+
+## Procedural missions: 20260905-63
+
+- Each mission now generates a different selection and arrangement of 27–33 cover objects across balanced inner, middle, and outer combat rings.
+- Placement protects squad and enemy spawn zones, avoids decorative props, and prevents cover overlap.
+- Starting or restarting a mission creates a fresh battlefield while preserving accurate compound collision shapes.

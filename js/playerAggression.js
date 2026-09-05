@@ -1,5 +1,5 @@
-import { isLineBlocked } from "./cover.js?v=20260905-62";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-62";
+import { isLineBlocked } from "./cover.js?v=20260905-63";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-63";
 
 var burstUntil = 0,
   burstPauseUntil = 0,

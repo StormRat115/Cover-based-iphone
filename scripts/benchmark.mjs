@@ -33,12 +33,13 @@ console.log(
 );
 const oldCover = await before.importModule("js/cover.js?v=20260905-58");
 const newCover = await after.importModule(`js/cover.js?v=${version}`);
-const oldLayout = oldCover.createCover(),
-  newLayout = newCover.createCover();
-const originalIds = new Set(oldLayout.map((cover) => cover.id));
-const equivalentNewLayout = newLayout.filter((cover) =>
-  originalIds.has(cover.id),
-);
+const oldLayout = oldCover.createCover();
+// The current map is procedural, so benchmark the optimized rule against an
+// exact clone of the original geometry instead of comparing two random maps.
+const equivalentNewLayout = oldLayout.map((cover) => ({
+  ...cover,
+  segments: cover.segments?.map((segment) => ({ ...segment })) || null,
+}));
 const point = () => ({
   x: after.random() * 4600 - 2300,
   y: after.random() * 3800 - 1900,

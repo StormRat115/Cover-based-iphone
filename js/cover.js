@@ -1,11 +1,11 @@
-import { sampledLineIntersectsRect } from "./geometry.js?v=20260905-62";
+import { sampledLineIntersectsRect } from "./geometry.js?v=20260905-63";
 const collisionPieces = new WeakMap();
-import { drawCityAsset } from "./cityAssets.js?v=20260905-62";
-import { createCityCoverLayout } from "./cityMap.js?v=20260905-62";
+import { drawCityAsset } from "./cityAssets.js?v=20260905-63";
+import { createCityCoverLayout } from "./cityMap.js?v=20260905-63";
 
 /* Tactical cover driven by the city battlefield atlas, with threat-aware cover sides. */
-export function createCover() {
-  const layout = createCityCoverLayout().map(function (item) {
+export function createCover(random) {
+  const layout = createCityCoverLayout(random).map(function (item) {
     return {
       id: item.id,
       x: item.x,
