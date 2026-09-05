@@ -409,6 +409,27 @@ test("player range ring follows weapon range and auto play fires bright yellow t
     ),
     "range ring should match equipped weapon range",
   );
+
+  const coverRules = await h.importModule(`js/cover.js?v=${BUILD}`);
+  const cover = h.window.__battleCovers[0];
+  player.x = cover.x;
+  player.y = cover.y + cover.h / 2 + 28;
+  player.tx = player.x;
+  player.ty = player.y;
+  enemies[0].x = cover.x;
+  enemies[0].y = cover.y - 300;
+  enemies[0].dead = false;
+  enemies[0].hp = enemies[0].maxHp;
+  enemies[0].exposed = false;
+  assert.equal(coverRules.isLineBlocked(player, enemies[0], [cover]), true);
+  player.cover = cover;
+  player.weapon.fireCooldown = 0;
+  const coveredAmmo = player.weapon.ammo;
+  h.advance(2);
+  assert.ok(
+    player.weapon.ammo < coveredAmmo,
+    "auto play should peek and fire instead of idling behind its own cover",
+  );
 });
 
 test("complete boot reaches menu and PLAY without duplicate atlas modules or timers", async () => {

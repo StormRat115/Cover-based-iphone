@@ -1,41 +1,41 @@
-import { createGameLoop } from "./gameLoop.js?v=20260905-60";
+import { createGameLoop } from "./gameLoop.js?v=20260905-61";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260905-60";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-60";
+} from "./geometry.js?v=20260905-61";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-61";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260905-60";
-import { updateSquadHud } from "./squadHud.js?v=20260905-60";
-import { updateCombatHud } from "./combatHud.js?v=20260905-60";
-import { updatePlayerHud } from "./player.js?v=20260905-60";
-import { resetSquadCommands } from "./allyCore2.js?v=20260905-60";
-import "./squadDrawer.js?v=20260905-60";
-import { createPlayer, drawPlayer } from "./player.js?v=20260905-60";
+} from "./bloodEffects.js?v=20260905-61";
+import { updateSquadHud } from "./squadHud.js?v=20260905-61";
+import { updateCombatHud } from "./combatHud.js?v=20260905-61";
+import { updatePlayerHud } from "./player.js?v=20260905-61";
+import { resetSquadCommands } from "./allyCore2.js?v=20260905-61";
+import "./squadDrawer.js?v=20260905-61";
+import { createPlayer, drawPlayer } from "./player.js?v=20260905-61";
 import {
   createBandits,
   updateBandits,
   drawBandit,
-} from "./enemy.js?v=20260905-60";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-60";
+} from "./enemy.js?v=20260905-61";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-61";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260905-60";
+} from "./cover.js?v=20260905-61";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260905-60";
-import { initTactical } from "./tactical.js?v=20260905-60";
+} from "./input.js?v=20260905-61";
+import { initTactical } from "./tactical.js?v=20260905-61";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -316,6 +316,12 @@ function reload() {
   )
     player.startReload();
 }
+function canPlayerEngage(e) {
+  if (!e || e.dead || distance(player, e) > player.weapon.range) return false;
+  // A covered player fires by peeking around their current cover. Checking only
+  // the actor's center makes that same cover look like an obstruction.
+  return !isLineBlocked(player, e, covers) || e.exposed || !!player.cover;
+}
 function attemptFire() {
   if (
     !started ||
@@ -330,12 +336,11 @@ function attemptFire() {
     return;
   var e = target && !target.dead ? target : nearestEnemy();
   if (!e) return;
-  if (distance(player, e) > player.weapon.range) return;
+  if (!canPlayerEngage(e)) return;
   if (player.weapon.ammo <= 0) {
     reload();
     return;
   }
-  if (isLineBlocked(player, e, covers) && !e.exposed && !player.cover) return;
   var before = player.weapon.ammo,
     hit = player.fireAt(e);
   if (player.weapon.ammo < before) {
@@ -406,9 +411,9 @@ function updateAutoPlayer(dt) {
     return;
   }
   autoMoveTimer -= dt;
-  // Fire at the weapon's full range while advancing. Movement decisions use a
-  // shorter preferred engagement distance, but no longer suppress valid shots.
-  if (!blocked && d <= player.weapon.range) attemptFire();
+  // Fire at the weapon's full range while advancing or peeking from cover.
+  // Movement decisions use a shorter preferred engagement distance.
+  if (canPlayerEngage(e)) attemptFire();
   if (d > engage) {
     if (autoMoveTimer <= 0) {
       autoMoveTimer = 0.45;
@@ -431,10 +436,9 @@ function updateAutoPlayer(dt) {
       autoMoveTimer = 0.35;
       chooseAutoPosition(e);
     }
-    if (blocked) return;
+    if (blocked && !player.cover) return;
   }
-  if (blocked) return;
-  if (d <= player.weapon.range) attemptFire();
+  if (canPlayerEngage(e)) attemptFire();
 }
 autoPlayButton.addEventListener("pointerdown", function (e) {
   e.preventDefault();
