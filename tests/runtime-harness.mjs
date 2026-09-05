@@ -9,12 +9,21 @@ export function createHarness({
   width = 390,
   height = 844,
   revision = null,
+  imagesReady = true,
 } = {}) {
   const nodes = new Map(),
     frames = [],
     timers = new Map(),
-    modules = new Map();
-  const metrics = { draws: 0, htmlWrites: 0, intervals: 0, images: 0 };
+    modules = new Map(),
+    images = [];
+  const metrics = {
+    draws: 0,
+    htmlWrites: 0,
+    intervals: 0,
+    images: 0,
+    strokes: [],
+    ellipses: [],
+  };
   let now = 0,
     timerId = 0,
     seed = 123456;
@@ -117,6 +126,13 @@ export function createHarness({
             get(target, key) {
               if (key in target) return target[key];
               return (...args) => {
+                if (key === "ellipse") metrics.ellipses.push(args);
+                if (key === "stroke")
+                  metrics.strokes.push({
+                    strokeStyle: target.strokeStyle,
+                    lineWidth: target.lineWidth,
+                    shadowBlur: target.shadowBlur,
+                  });
                 if (
                   [
                     "fill",
@@ -164,15 +180,19 @@ export function createHarness({
     constructor() {
       super();
       metrics.images++;
-      this.complete = true;
-      this.naturalWidth = 1448;
-      this.naturalHeight = 1086;
+      images.push(this);
+      this.complete = imagesReady;
+      this.naturalWidth = imagesReady ? 1448 : 0;
+      this.naturalHeight = imagesReady ? 1086 : 0;
     }
     set src(value) {
       this._src = value;
     }
     get src() {
       return this._src;
+    }
+    decode() {
+      return this.decodePromise || Promise.resolve();
     }
   }
   const window = new Events();
@@ -266,6 +286,7 @@ export function createHarness({
     frames,
     timers,
     modules,
+    images,
     metrics,
     importModule,
     frame,

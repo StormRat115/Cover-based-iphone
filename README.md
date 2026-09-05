@@ -59,4 +59,11 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - Removed approximately 1,248 ground-tile draw calls that were covered by the map; culled offscreen scenery/actors and reused depth-sort records.
 - Throttled HUD refreshes, avoided unchanged panel rebuilds, bounded blood stains, and rendered effects with the game camera.
 - Preserved the previous 35-sample cover-blocking rule with equivalent interval calculations and cached static collision pieces; deferred enemy accuracy checks until a shot is due.
-- Removed duplicate module URLs and redundant preload requests; failed images settle to the existing fallback instead of leaving loading stuck.
+- Removed duplicate module URLs and redundant preload requests.
+
+## Visibility and asset fix: 20260905-60
+
+- Required character and environment art now finishes decoding before the game opens, with retry and a visible load failure instead of silently starting without sprites.
+- Player bullets use bright yellow, longer, glowing tracers in manual and auto play.
+- Auto play fires whenever a clear target is inside the equipped weapon's full range while continuing to advance.
+- A player-only yellow engagement ring scales to the range of the currently equipped weapon.

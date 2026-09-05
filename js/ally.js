@@ -2,8 +2,8 @@ import {
   createAllies,
   updateAllies as updateAlliesCore,
   SQUAD_MODES,
-} from "./allyCore2.js?v=20260905-59";
-import { drawSoldier } from "./soldierAssets.js?v=20260905-59";
+} from "./allyCore2.js?v=20260905-60";
+import { drawSoldier } from "./soldierAssets.js?v=20260905-60";
 export { createAllies, SQUAD_MODES };
 var ALLY_LINES = {
   contact: ["CONTACT!", "ENEMY SPOTTED!", "I SEE THEM!", "EYES UP!"],

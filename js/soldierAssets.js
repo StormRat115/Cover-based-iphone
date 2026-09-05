@@ -1,12 +1,12 @@
-import { loadImage } from "./assets.js?v=20260905-59";
+import { loadImage } from "./assets.js?v=20260905-60";
 export const soldierSource = new Image();
 soldierSource.src =
-  "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-58";
+  "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-60";
 export const enemySource = new Image();
 enemySource.src =
-  "./assets/198C101B-E186-4852-A270-3F04D83451ED.png?v=20260905-58";
+  "./assets/198C101B-E186-4852-A270-3F04D83451ED.png?v=20260905-60";
 export const deathSource = new Image();
-deathSource.src = "./assets/soldier_death_sheet.png?v=20260905-58";
+deathSource.src = "./assets/soldier_death_sheet.png?v=20260905-60";
 
 const SOURCE_W = 1448,
   SOURCE_H = 1086,
@@ -201,24 +201,16 @@ export function preloadSoldierAssets(onProgress) {
     loadImage(deathSource),
   ]).then(function (imgs) {
     onProgress(0.68, "BUILDING CHARACTER ANIMATIONS");
-    try {
-      runtimeAtlas = imgs[0] ? buildAtlas(soldierSource, FRAME_BOXES) : null;
-      runtimeEnemyAtlas = imgs[1]
-        ? buildAtlas(enemySource, ENEMY_FRAME_BOXES)
-        : null;
-      var ready =
-        (runtimeAtlas ? "SOLDIERS" : "") +
-        (runtimeAtlas && runtimeEnemyAtlas ? " + " : "") +
-        (runtimeEnemyAtlas ? "MONSTERS" : "");
-      onProgress(1, ready ? ready + " READY" : "CHARACTER FALLBACK READY");
-      return runtimeAtlas || runtimeEnemyAtlas;
-    } catch (e) {
-      console.warn("Character atlas processing fallback", e);
-      runtimeAtlas = null;
-      runtimeEnemyAtlas = null;
-      onProgress(1, "CHARACTER FALLBACK READY");
-      return null;
-    }
+    if (imgs.some((image) => !image))
+      throw new Error("Character images are not ready");
+    // Publish both atlases together only after every source has decoded and both
+    // canvases have been built. A partial atlas set cannot start the mission.
+    const soldierAtlas = buildAtlas(soldierSource, FRAME_BOXES);
+    const monsterAtlas = buildAtlas(enemySource, ENEMY_FRAME_BOXES);
+    runtimeAtlas = soldierAtlas;
+    runtimeEnemyAtlas = monsterAtlas;
+    onProgress(1, "SOLDIERS + MONSTERS READY");
+    return { soldierAtlas, monsterAtlas };
   });
 }
 function moving(actor) {

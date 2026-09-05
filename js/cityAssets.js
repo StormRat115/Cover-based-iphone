@@ -1,17 +1,14 @@
-import { loadImage } from "./assets.js?v=20260905-59";
+import { loadImage } from "./assets.js?v=20260905-60";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
-  "./assets/C226AF9A-3862-4A3E-BA10-1F43A16A3D8A.PNG?v=20260904-31";
+  "./assets/C226AF9A-3862-4A3E-BA10-1F43A16A3D8A.PNG?v=20260905-60";
 
 export function preloadCityAssets(onProgress) {
   onProgress = onProgress || function () {};
   onProgress(0.1, "LOADING CITY ASSETS");
   return loadImage(cityAtlas).then(function (img) {
-    if (!img) {
-      onProgress(1, "CITY ASSET FALLBACK READY");
-      return null;
-    }
+    if (!img) throw new Error("City environment image is not ready");
     onProgress(1, "CITY ASSETS READY");
     return cityAtlas;
   });

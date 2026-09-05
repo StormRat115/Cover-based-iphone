@@ -1,41 +1,41 @@
-import { createGameLoop } from "./gameLoop.js?v=20260905-59";
+import { createGameLoop } from "./gameLoop.js?v=20260905-60";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260905-59";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-59";
+} from "./geometry.js?v=20260905-60";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-60";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260905-59";
-import { updateSquadHud } from "./squadHud.js?v=20260905-59";
-import { updateCombatHud } from "./combatHud.js?v=20260905-59";
-import { updatePlayerHud } from "./player.js?v=20260905-59";
-import { resetSquadCommands } from "./allyCore2.js?v=20260905-59";
-import "./squadDrawer.js?v=20260905-59";
-import { createPlayer, drawPlayer } from "./player.js?v=20260905-59";
+} from "./bloodEffects.js?v=20260905-60";
+import { updateSquadHud } from "./squadHud.js?v=20260905-60";
+import { updateCombatHud } from "./combatHud.js?v=20260905-60";
+import { updatePlayerHud } from "./player.js?v=20260905-60";
+import { resetSquadCommands } from "./allyCore2.js?v=20260905-60";
+import "./squadDrawer.js?v=20260905-60";
+import { createPlayer, drawPlayer } from "./player.js?v=20260905-60";
 import {
   createBandits,
   updateBandits,
   drawBandit,
-} from "./enemy.js?v=20260905-59";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-59";
+} from "./enemy.js?v=20260905-60";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-60";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260905-59";
+} from "./cover.js?v=20260905-60";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260905-59";
-import { initTactical } from "./tactical.js?v=20260905-59";
+} from "./input.js?v=20260905-60";
+import { initTactical } from "./tactical.js?v=20260905-60";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -220,33 +220,40 @@ function drawProjectiles() {
       dx = tx - x,
       dy = ty - y,
       d = Math.hypot(dx, dy) || 1,
+      isPlayerShot = p.owner === "player",
       tracer =
         p.owner === "enemy"
           ? "#ff8d62"
           : p.owner === "ally"
             ? "#71b9ff"
-            : "#ffe36b",
+            : "#ffd400",
       tip =
         p.owner === "enemy"
           ? "#ffd0a8"
           : p.owner === "ally"
             ? "#c8e7ff"
-            : "#fff7b0";
+            : "#fffbd1";
     ctx.save();
-    ctx.globalAlpha = Math.max(0.62, 1 - p.life / p.maxLife);
+    ctx.globalAlpha = Math.max(
+      isPlayerShot ? 0.88 : 0.62,
+      1 - p.life / p.maxLife,
+    );
     ctx.strokeStyle = tracer;
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = isPlayerShot ? 4 : 2.2;
     ctx.lineCap = "round";
     ctx.shadowColor = tracer;
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = isPlayerShot ? 13 : 6;
     ctx.beginPath();
-    ctx.moveTo(x - (dx / d) * 34, y - (dy / d) * 34);
+    ctx.moveTo(
+      x - (dx / d) * (isPlayerShot ? 66 : 34),
+      y - (dy / d) * (isPlayerShot ? 66 : 34),
+    );
     ctx.lineTo(x, y);
     ctx.stroke();
     ctx.shadowBlur = 0;
     ctx.fillStyle = tip;
     ctx.beginPath();
-    ctx.arc(x, y, 2, 0, Math.PI * 2);
+    ctx.arc(x, y, isPlayerShot ? 3.2 : 2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   });
@@ -399,6 +406,9 @@ function updateAutoPlayer(dt) {
     return;
   }
   autoMoveTimer -= dt;
+  // Fire at the weapon's full range while advancing. Movement decisions use a
+  // shorter preferred engagement distance, but no longer suppress valid shots.
+  if (!blocked && d <= player.weapon.range) attemptFire();
   if (d > engage) {
     if (autoMoveTimer <= 0) {
       autoMoveTimer = 0.45;
@@ -423,6 +433,7 @@ function updateAutoPlayer(dt) {
     }
     if (blocked) return;
   }
+  if (blocked) return;
   if (d <= player.weapon.range) attemptFire();
 }
 autoPlayButton.addEventListener("pointerdown", function (e) {
@@ -792,6 +803,24 @@ function drawWorld() {
     ctx.restore();
   }
 }
+function drawPlayerEngagementRange() {
+  if (!player || player.dead || !player.weapon) return;
+  const center = iso(player.x, player.y);
+  const radius = player.weapon.range;
+  const radiusX = radius * world.scaleX * Math.SQRT2;
+  const radiusY = radius * world.scaleY * Math.SQRT2;
+  ctx.save();
+  ctx.globalAlpha = autoPlay ? 0.62 : 0.42;
+  ctx.strokeStyle = "#ffd400";
+  ctx.lineWidth = autoPlay ? 2.4 : 1.7;
+  ctx.setLineDash(autoPlay ? [] : [9, 8]);
+  ctx.shadowColor = "#ffd400";
+  ctx.shadowBlur = autoPlay ? 9 : 4;
+  ctx.beginPath();
+  ctx.ellipse(center[0], center[1], radiusX, radiusY, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
 function drawMissionUI() {
   ctx.save();
   var boxW = Math.min(235, W - 24),
@@ -858,6 +887,7 @@ function rebuildLayers() {
 }
 function draw(now) {
   drawWorld();
+  drawPlayerEngagementRange();
   drawBlood(ctx, iso);
   drawProjectiles();
   for (const layer of layers) layer.y = layer.o.x + layer.o.y;

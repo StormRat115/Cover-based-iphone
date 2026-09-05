@@ -328,7 +328,7 @@ test("held fire and movement release on blur; form inputs remain usable", async 
   assert.equal(input.getKeyboardMove(), null);
 });
 
-test("preloading reuses images and failed images eventually resolve to fallback", async () => {
+test("preloading waits for decode and rejects failed required art", async () => {
   const h = createHarness();
   const { loadImage } = await h.importModule(`js/assets.js?v=${BUILD}`);
   const image = new h.Image();
@@ -338,10 +338,77 @@ test("preloading reuses images and failed images eventually resolve to fallback"
   const failed = new h.Image();
   failed.src = "missing.png";
   failed.naturalWidth = 0;
-  const pending = loadImage(failed);
-  h.advance(8, 10000);
-  assert.equal(await pending, null);
+  const pending = loadImage(failed, { timeoutMs: 10, maxAttempts: 2 });
+  const rejected = assert.rejects(pending, /Could not prepare missing.png/);
+  h.advance(3, 10);
+  await rejected;
   assert.equal(h.timers.size, 0);
+});
+
+test("boot cannot reach READY until every required image has decoded", async () => {
+  const h = createHarness({ imagesReady: false });
+  await h.importModule(`js/boot.js?v=${BUILD}`);
+  for (let i = 0; i < 100; i++) await Promise.resolve();
+  assert.notEqual(h.nodes.get("loadingStatus").textContent, "READY");
+  assert.equal(h.nodes.get("startGame").classList.contains("ready"), false);
+  for (const image of h.images) {
+    image.complete = true;
+    image.naturalWidth = 1448;
+    image.naturalHeight = 1086;
+    image.emit("load");
+  }
+  for (let i = 0; i < 200; i++) await Promise.resolve();
+  assert.equal(
+    h.nodes.get("loadingStatus").textContent,
+    "READY",
+    h.nodes.get("runtimeError").textContent,
+  );
+  assert.equal(h.nodes.get("startGame").classList.contains("ready"), true);
+});
+
+test("player range ring follows weapon range and auto play fires bright yellow tracers", async () => {
+  const h = createHarness();
+  const game = await h.importModule(entry);
+  game.startGame();
+  const player = h.window.__battlePlayer;
+  const enemies = h.window.__battleEnemies;
+  enemies.forEach((enemy, index) => {
+    enemy.dead = index !== 0;
+    if (index === 0)
+      Object.assign(enemy, {
+        x: player.x + 300,
+        y: player.y,
+        spawnTimer: 0,
+        cover: null,
+        exposed: true,
+      });
+  });
+  player.weapon.range = 1000;
+  const ammo = player.weapon.ammo;
+  h.nodes.get("autoPlay").emit("pointerdown");
+  h.frame();
+  h.advance(30);
+  assert.ok(
+    player.weapon.ammo < ammo,
+    "auto play should fire repeatedly at a clear in-range target",
+  );
+  assert.ok(
+    h.metrics.strokes.some(
+      (stroke) =>
+        stroke.strokeStyle === "#ffd400" &&
+        stroke.lineWidth >= 4 &&
+        stroke.shadowBlur >= 10,
+    ),
+    "player tracer should be bright yellow",
+  );
+  assert.ok(
+    h.metrics.ellipses.some(
+      (ellipse) =>
+        Math.abs(ellipse[2] - 1000 * 0.25 * Math.SQRT2) < 0.001 &&
+        Math.abs(ellipse[3] - 1000 * 0.125 * Math.SQRT2) < 0.001,
+    ),
+    "range ring should match equipped weapon range",
+  );
 });
 
 test("complete boot reaches menu and PLAY without duplicate atlas modules or timers", async () => {
