@@ -1,11 +1,11 @@
 import {
   createBandits,
   updateBandits as updateBanditsCore,
-} from "./enemyCore.js?v=20260905-65";
+} from "./enemyCore.js?v=20260905-66";
 import {
   drawEnemyMonster,
   drawSoldier,
-} from "./soldierAssets.js?v=20260905-65";
+} from "./soldierAssets.js?v=20260905-66";
 export { createBandits };
 var ENEMY_LINES = {
   contact: ["CONTACT!", "THERE!", "I SEE THEM!", "MOVE! MOVE!"],
@@ -63,6 +63,50 @@ function drawBubble(ctx, e) {
   ctx.textBaseline = "middle";
   ctx.fillText(text, 0, by - 8);
   ctx.restore();
+}
+export function drawSniperLasers(ctx, enemies, iso, now) {
+  var drawn = 0,
+    pulse = 0.72 + Math.sin((now || 0) * 0.012) * 0.18;
+  enemies.forEach(function (enemy) {
+    var target = enemy.combatTarget;
+    if (
+      enemy.type !== "sniper" ||
+      enemy.dead ||
+      enemy.downed ||
+      enemy.spawnTimer > 0 ||
+      enemy.weapon.reloading ||
+      !enemy.exposed ||
+      !target ||
+      target.dead ||
+      target.downed ||
+      target.hp <= 0
+    )
+      return;
+    var from = iso(enemy.x, enemy.y),
+      to = iso(target.x, target.y);
+    ctx.save();
+    ctx.globalAlpha = pulse;
+    ctx.strokeStyle = "#ff1f2f55";
+    ctx.lineWidth = 3;
+    ctx.shadowColor = "#ff1028";
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.moveTo(from[0], from[1] - 24);
+    ctx.lineTo(to[0], to[1] - 19);
+    ctx.stroke();
+    ctx.globalAlpha = 0.92;
+    ctx.strokeStyle = "#ff3948";
+    ctx.lineWidth = 0.9;
+    ctx.shadowBlur = 3;
+    ctx.stroke();
+    ctx.fillStyle = "#ff2638";
+    ctx.beginPath();
+    ctx.arc(to[0], to[1] - 19, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    drawn++;
+  });
+  return drawn;
 }
 export function drawBandit(ctx, e, iso, selected) {
   var p = iso(e.x, e.y),

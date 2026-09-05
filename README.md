@@ -94,3 +94,10 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - Each monster supports idle, running, low-cover, tall-cover, firing, hit-reaction, and permanent death animation rows.
 - All four sheets download and decode during the loading screen so enemy art cannot pop in after a mission begins.
 - Marksman, SMG, and pistol enemies retain the original monster sprite as a safe fallback.
+
+## Northeast assault waves: 20260905-66
+
+- Monster animation states now use per-enemy clocks, calmer frame rates, and held firing/hit reactions instead of racing through six-frame rows.
+- Waves receive 6–12 additional monsters and enter primarily from just beyond the northeast street edge rather than appearing inside the viewport.
+- Snipers project a pulsing red targeting laser toward their current exposed target.
+- Marine defense is 20; Marines charge toward enemies, advance through closer cover, and fire from aggressive positions.

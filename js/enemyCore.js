@@ -1,5 +1,5 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-65";
-import { weaponCopy } from "./weapons.js?v=20260905-65";
+import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-66";
+import { weaponCopy } from "./weapons.js?v=20260905-66";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -7,13 +7,13 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260905-65";
+} from "./combatAI.js?v=20260905-66";
 import {
   ENEMY_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260905-65";
+} from "./combatStats.js?v=20260905-66";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -24,31 +24,61 @@ var TYPES = {
   smg: { weapon: "smg", hp: 52, speed: 235, scale: 0.98 },
   pistol: { weapon: "pistol", hp: 45, speed: 220, scale: 0.95 },
 };
-var SPAWNS = [
-  [-1500, -1180],
-  [-980, -1320],
-  [-280, -1350],
-  [500, -1330],
-  [1240, -1160],
-  [1490, -560],
-  [1540, 180],
-  [1380, 920],
-  [760, 1260],
-  [40, 1320],
-  [-700, 1240],
-  [-1320, 900],
-  [-1510, 230],
-  [-1420, -590],
-];
 function rand(a, b) {
   return a + Math.random() * (b - a);
 }
-export function createBandits(wave) {
+export function createNortheastSpawnPoints(count, view) {
+  view = view || {};
+  var world = view.world || view,
+    width = Math.max(320, view.width || 390),
+    height = Math.max(568, view.height || 844),
+    scaleX = world.scaleX || 0.25,
+    scaleY = world.scaleY || 0.125,
+    offsetY = world.offsetY == null ? -40 : world.offsetY,
+    cameraX = world.cameraX || 0,
+    cameraY = world.cameraY || 0,
+    points = [];
+  for (var i = 0; i < count; i++) {
+    var rank = Math.floor(i / 5),
+      lane = i % 5,
+      fromTop = lane === 4,
+      screenX = fromTop
+        ? width * 0.68 + (rank % 3) * 72
+        : width + 140 + rank * 52,
+      screenY = fromTop
+        ? -140 - rank * 34
+        : Math.min(height * 0.38, 30 + lane * 70 + rank * 16),
+      horizontal = (screenX - width / 2) / scaleX,
+      vertical = (screenY - height / 2 - offsetY) / scaleY;
+    points.push({
+      x: cameraX + (horizontal + vertical) / 2,
+      y: cameraY + (vertical - horizontal) / 2,
+      screenX: screenX,
+      screenY: screenY,
+      lane: lane,
+    });
+  }
+  return points;
+}
+export function enemyCountForWave(wave, random, extraCount) {
+  wave = Math.max(1, wave || 1);
+  random = random || Math.random;
+  var baseCount = Math.min(14, 5 + wave * 2),
+    reinforcements =
+      extraCount == null
+        ? 6 + Math.floor(random() * 7)
+        : Math.max(6, Math.min(12, Math.floor(extraCount)));
+  return baseCount + reinforcements;
+}
+export function createBandits(wave, options) {
   wave = wave || 1;
-  var count = Math.min(SPAWNS.length, 5 + wave * 2);
-  return SPAWNS.slice(0, count).map(function (pos, i) {
-    var x = pos[0],
-      y = pos[1],
+  options = options || {};
+  var random = options.random || Math.random,
+    count = enemyCountForWave(wave, random, options.extraCount),
+    spawns = createNortheastSpawnPoints(count, options.spawnView);
+  return spawns.map(function (pos, i) {
+    var x = pos.x,
+      y = pos.y,
       type = "rifleman";
     if (wave >= 2 && i % 5 === 1) type = "shotgunner";
     if (wave >= 2 && i % 6 === 3) type = "heavy";
@@ -80,6 +110,10 @@ export function createBandits(wave) {
       targetY: y,
       moveTimer: 0.35 + i * 0.06,
       spawnTimer: 1.8 + (i % 3) * 0.28,
+      spawnScreenX: pos.screenX,
+      spawnScreenY: pos.screenY,
+      spawnLane: pos.lane,
+      enteredWorld: false,
       cover: null,
       coverSlotIndex: i % 3,
       speed: s.speed,

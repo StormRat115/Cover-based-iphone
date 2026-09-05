@@ -1,6 +1,6 @@
-import { updateAllies as updateFriendlyAI } from "./allyCore2.js?v=20260905-65";
-import { weaponCopy } from "./weapons.js?v=20260905-65";
-import { drawSoldier } from "./soldierAssets.js?v=20260905-65";
+import { updateAllies as updateFriendlyAI } from "./allyCore2.js?v=20260905-66";
+import { weaponCopy } from "./weapons.js?v=20260905-66";
+import { drawSoldier } from "./soldierAssets.js?v=20260905-66";
 
 const MARINE_STARTS = [
   [-240, 255],
@@ -21,7 +21,7 @@ export function createMarines() {
       y: position[1],
       hp: 90,
       maxHp: 90,
-      defense: 25,
+      defense: 20,
       accuracy: 0,
       damageBonus: 0,
       dead: false,
@@ -38,7 +38,7 @@ export function createMarines() {
       targetY: position[1],
       cover: null,
       coverSlotIndex: index % 3,
-      speed: 195,
+      speed: index === 4 ? 205 : 220,
       facingX: 1,
       facingY: 0,
       timeSinceDamage: 99,
@@ -58,6 +58,7 @@ export function createMarines() {
       repositionCooldown: index * 0.12,
       recovering: false,
       isMarine: true,
+      aggressiveAdvance: true,
     };
   });
   window.__battleMarines = marines;

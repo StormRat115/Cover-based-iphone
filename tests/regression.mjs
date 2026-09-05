@@ -74,6 +74,134 @@ test("transparent monster sheets map to their matching enemy roles", async () =>
     );
   }
   assert.equal(sprites.getEnemyMonsterSheet("marksman"), null);
+
+  const actor = {
+    type: "rifleman",
+    x: 0,
+    y: 0,
+    targetX: 0,
+    targetY: 0,
+    hp: 60,
+    maxHp: 60,
+    scale: 1,
+    facingX: 1,
+    facingY: 0,
+    muzzle: 0.13,
+    hit: 0,
+    dead: false,
+  };
+  const context = h.document.createElement("canvas").getContext("2d");
+  sprites.drawEnemyMonster(context, actor);
+  const firstFrame = h.metrics.drawImages.at(-1)[1];
+  h.frame(40);
+  actor.muzzle = 0.09;
+  sprites.drawEnemyMonster(context, actor);
+  assert.equal(
+    h.metrics.drawImages.at(-1)[1],
+    firstFrame,
+    "monster firing animation must not race through frames",
+  );
+  h.frame(100);
+  actor.muzzle = 0;
+  sprites.drawEnemyMonster(context, actor);
+  assert.notEqual(h.metrics.drawImages.at(-1)[1], firstFrame);
+});
+
+test("waves enter off-screen from the northeast street with 6-12 reinforcements", async () => {
+  const h = createHarness();
+  const enemies = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
+  const geometry = await h.importModule(`js/geometry.js?v=${BUILD}`);
+  const world = {
+    cameraX: 0,
+    cameraY: 0,
+    scaleX: 0.25,
+    scaleY: 0.125,
+    offsetY: -40,
+  };
+  const points = enemies.createNortheastSpawnPoints(24, {
+    world,
+    width: 390,
+    height: 844,
+  });
+  let rightEntries = 0;
+  for (const point of points) {
+    const screen = geometry.worldToScreen(point.x, point.y, world, 390, 844);
+    assert.ok(
+      screen[0] > 390 + 110 || screen[1] < -110,
+      "every monster must begin beyond the visible screen",
+    );
+    if (screen[0] > 390) rightEntries++;
+  }
+  assert.ok(rightEntries >= points.length * 0.75);
+  assert.equal(enemies.enemyCountForWave(1, () => 0), 13);
+  assert.equal(enemies.enemyCountForWave(1, () => 0.999), 19);
+  assert.equal(enemies.enemyCountForWave(5, () => 0), 20);
+  assert.equal(enemies.enemyCountForWave(5, () => 0.999), 26);
+});
+
+test("snipers paint valid targets with a red aiming laser", async () => {
+  const h = createHarness();
+  const { drawSniperLasers } = await h.importModule(`js/enemy.js?v=${BUILD}`);
+  const target = { x: 10, y: 20, hp: 100, dead: false, downed: false };
+  const sniper = {
+    type: "sniper",
+    x: 100,
+    y: -50,
+    hp: 55,
+    dead: false,
+    downed: false,
+    exposed: true,
+    spawnTimer: 0,
+    weapon: { reloading: false },
+    combatTarget: target,
+  };
+  const context = h.document.createElement("canvas").getContext("2d");
+  assert.equal(drawSniperLasers(context, [sniper], (x, y) => [x, y], 100), 1);
+  assert.ok(
+    h.metrics.strokes.some((stroke) => stroke.strokeStyle === "#ff3948"),
+  );
+});
+
+test("Marines use 20 defense and aggressively advance into firing cover", async () => {
+  const h = createHarness();
+  const marineModule = await h.importModule(`js/marines.js?v=${BUILD}`);
+  const coverModule = await h.importModule(`js/cover.js?v=${BUILD}`);
+  const marines = marineModule.createMarines(),
+    enemy = {
+      x: 1350,
+      y: -250,
+      hp: 5000,
+      maxHp: 5000,
+      defense: 20,
+      dead: false,
+      hit: 0,
+    },
+    player = { x: 0, y: 0, hp: 100, dead: false, downed: false },
+    startingDistance = Math.hypot(
+      marines[0].x - enemy.x,
+      marines[0].y - enemy.y,
+    );
+  assert.ok(
+    marines.every(
+      (marine) => marine.defense === 20 && marine.aggressiveAdvance,
+    ),
+  );
+  const covers = coverModule.createCover();
+  for (let i = 0; i < 120; i++)
+    marineModule.updateMarines(
+      marines,
+      1 / 60,
+      player,
+      covers,
+      [enemy],
+      null,
+      [],
+    );
+  assert.ok(marines.some((marine) => marine.cover));
+  assert.ok(
+    Math.hypot(marines[0].x - enemy.x, marines[0].y - enemy.y) <
+      startingDistance,
+  );
 });
 
 test("world/screen round trips stay accurate as camera moves and viewport changes", async () => {
@@ -285,12 +413,23 @@ test("actual game handles combat, pause, restart, tab hiding and waves", async (
   h.frame();
   assert.equal(h.frames.length, 1);
   assert.ok(h.nodes.has("combatHud") && h.nodes.has("squadHealthHud"));
+  assert.ok(
+    h.window.__battleEnemies.length >= 13 &&
+      h.window.__battleEnemies.length <= 19,
+  );
+  assert.ok(
+    h.window.__battleEnemies.every(
+      (enemy) => enemy.spawnScreenX > 390 || enemy.spawnScreenY < 0,
+    ),
+  );
   const player = h.window.__battlePlayer;
   assert.equal(h.window.__battleMarines.length, 5);
   assert.ok(
     h.window.__battleMarines.every(
       (marine) =>
         marine.permanentDeath &&
+        marine.defense === 20 &&
+        marine.aggressiveAdvance &&
         marine.regenRate === 0 &&
         marine.canBeRevived === false &&
         marine.canRevive === false,
@@ -588,12 +727,13 @@ test("sustained simulated play stays finite at mobile and desktop sizes", async 
             Number.isFinite(actor.y) &&
             Number.isFinite(actor.hp),
         );
-        assert.ok(
-          actor.x >= -2300 &&
-            actor.x <= 2300 &&
-            actor.y >= -1900 &&
-            actor.y <= 1900,
-        );
+        if (actor.enteredWorld !== false)
+          assert.ok(
+            actor.x >= -2300 &&
+              actor.x <= 2300 &&
+              actor.y >= -1900 &&
+              actor.y <= 1900,
+          );
       }
     }
     assert.equal(h.frames.length, 1);

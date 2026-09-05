@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260905-65";
+import { loadImage } from "./assets.js?v=20260905-66";
 export const soldierSource = new Image();
 soldierSource.src =
   "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-60";
@@ -379,34 +379,65 @@ export function getEnemyMonsterSheet(type) {
   };
 }
 
-function enemyMonsterState(actor) {
+function enemyMonsterState(actor, now) {
   if (zeroHealth(actor)) return "death";
-  if (actor.hit > 0) return "hit";
-  if (shooting(actor)) return "shoot";
-  if (actor.cover) return lowCover(actor) ? "lowCover" : "tallCover";
-  if (moving(actor)) return "run";
-  return "idle";
+  var hit = Math.max(0, actor.hit || 0),
+    muzzle = Math.max(0, actor.muzzle || 0);
+  if (hit > (actor.__monsterLastHit || 0) + 0.025)
+    actor.__monsterHitUntil = now + 460;
+  if (muzzle > (actor.__monsterLastMuzzle || 0) + 0.025)
+    actor.__monsterShootUntil = now + 520;
+  actor.__monsterLastHit = hit;
+  actor.__monsterLastMuzzle = muzzle;
+  var desired =
+      now < (actor.__monsterHitUntil || 0)
+        ? "hit"
+        : now < (actor.__monsterShootUntil || 0)
+          ? "shoot"
+          : actor.cover
+            ? lowCover(actor)
+              ? "lowCover"
+              : "tallCover"
+            : moving(actor)
+              ? "run"
+              : "idle",
+    urgent = desired === "hit" || desired === "shoot";
+  if (!actor.__monsterVisualState) {
+    actor.__monsterVisualState = desired;
+    actor.__monsterStateStart = now;
+    actor.__monsterStateLockUntil = now + 120;
+  } else if (
+    actor.__monsterVisualState !== desired &&
+    (urgent || now >= (actor.__monsterStateLockUntil || 0))
+  ) {
+    actor.__monsterVisualState = desired;
+    actor.__monsterStateStart = now;
+    actor.__monsterStateLockUntil = now + (urgent ? 180 : 120);
+  }
+  return actor.__monsterVisualState;
 }
 
-function enemyMonsterFrame(actor, state) {
+function enemyMonsterFrame(actor, state, now) {
   if (state === "death") {
     const duration = Math.max(0.01, actor.deathDuration || 0.8),
       progress = Math.min(0.999, Math.max(0, (actor.deathTimer || 0) / duration));
     return Math.min(ENEMY_MONSTER_FRAMES - 1, Math.floor(progress * 6));
   }
-  if (state === "hit") {
-    const progress = Math.min(0.999, Math.max(0, 1 - (actor.hit || 0) / 0.22));
-    return Math.min(ENEMY_MONSTER_FRAMES - 1, Math.floor(progress * 6));
-  }
-  if (state === "shoot") {
-    const progress = Math.min(
-      0.999,
-      Math.max(0, 1 - (actor.muzzle || 0) / 0.13),
-    );
-    return Math.min(ENEMY_MONSTER_FRAMES - 1, Math.floor(progress * 6));
-  }
-  const fps = state === "run" ? 10 : 6;
-  return Math.floor((nowMs() / 1000) * fps) % ENEMY_MONSTER_FRAMES;
+  var stateStart = Number.isFinite(actor.__monsterStateStart)
+      ? actor.__monsterStateStart
+      : now,
+    elapsed = Math.max(0, (now - stateStart) / 1000),
+    fps =
+      state === "run"
+        ? 8
+        : state === "shoot"
+          ? 10
+          : state === "hit"
+            ? 9
+            : 4,
+    frame = Math.floor(elapsed * fps);
+  if (state === "hit") return Math.min(ENEMY_MONSTER_FRAMES - 1, frame);
+  return frame % ENEMY_MONSTER_FRAMES;
 }
 
 export function drawEnemyMonster(ctx, actor, options) {
@@ -414,17 +445,17 @@ export function drawEnemyMonster(ctx, actor, options) {
     source = sheet && sheet.source;
   if (!source || !source.complete || !source.naturalWidth) return false;
   options = options || {};
-  const state = enemyMonsterState(actor),
-    frame = enemyMonsterFrame(actor, state),
+  const now = nowMs(),
+    state = enemyMonsterState(actor, now),
+    frame = enemyMonsterFrame(actor, state, now),
     row = ENEMY_MONSTER_ROWS[state],
     baseScale = options.scale == null ? 0.38 : options.scale * 1.27,
     scale = baseScale * (actor.scale || 1),
     dw = ENEMY_MONSTER_FRAME_WIDTH * scale,
     dh = ENEMY_MONSTER_FRAME_HEIGHT * scale,
-    flip = stableFacing(actor, state),
-    bob = state === "run" ? Math.sin(nowMs() * 0.018) * 0.65 : 0;
+    flip = stableFacing(actor, state);
   ctx.save();
-  ctx.translate(options.x || 0, (options.y || 0) + bob);
+  ctx.translate(options.x || 0, options.y || 0);
   ctx.globalAlpha = options.alpha == null ? 1 : options.alpha;
   ctx.fillStyle = "#0007";
   ctx.beginPath();

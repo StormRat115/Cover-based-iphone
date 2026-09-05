@@ -1,5 +1,5 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-65";
-import { weaponCopy } from "./weapons.js?v=20260905-65";
+import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-66";
+import { weaponCopy } from "./weapons.js?v=20260905-66";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -7,14 +7,14 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260905-65";
+} from "./combatAI.js?v=20260905-66";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260905-65";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-65";
+} from "./combatStats.js?v=20260905-66";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-66";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -291,7 +291,11 @@ export function updateAllies(
       a.hp = Math.min(a.maxHp, a.hp + a.regenRate * dt);
     var pick = nearestEnemy(a, enemies),
       e = pick.target,
-      d = pick.dist;
+      d = pick.dist,
+      aggressiveAdvance = !!a.aggressiveAdvance && squadMode === "ASSAULT",
+      engagementRange = aggressiveAdvance
+        ? Math.min(a.weapon.range * 0.48, 760)
+        : a.weapon.range * 0.82;
     if (a.canRecover !== false && shouldRecover(a)) {
       if (e) faceThreat(a, e);
       recoverInCover(a, e, covers, friendlyTeam, dt);
@@ -319,19 +323,30 @@ export function updateAllies(
     }
     var blocked = isLineBlocked(a, e, covers);
     if (
-      (!a.cover || !coverStillUseful(a, e, covers) || blocked) &&
+      (!a.cover ||
+        !coverStillUseful(a, e, covers) ||
+        blocked ||
+        (aggressiveAdvance && d > engagementRange * 1.28)) &&
       a.repositionCooldown <= 0 &&
       squadMode !== "HOLD"
     ) {
       var choice = pickTacticalCover(a, e, covers, friendlyTeam, {
-        maxTravel: 760,
-        desiredRange: Math.min(a.weapon.range * 0.68, 1050),
+        maxTravel: aggressiveAdvance ? 1100 : 760,
+        desiredRange: aggressiveAdvance
+          ? engagementRange
+          : Math.min(a.weapon.range * 0.68, 1050),
         flankSide: a.flankSide,
+        flankWeight: aggressiveAdvance ? 230 : 150,
+        forceNew: aggressiveAdvance && d > engagementRange * 1.28,
       });
       if (choice && !claimed(choice, a, friendlyTeam)) {
         applyCoverChoice(a, choice);
         a.combatState = "seeking";
-        a.repositionCooldown = 1.1;
+        a.repositionCooldown = aggressiveAdvance ? 0.65 : 1.1;
+      } else if (aggressiveAdvance && d > engagementRange * 1.28) {
+        a.cover = null;
+        a.combatState = "seeking";
+        a.exposed = true;
       }
     }
     if (a.cover && a.combatState === "seeking") {
@@ -368,10 +383,10 @@ export function updateAllies(
       }
       return;
     }
-    if (d > a.weapon.range * 0.82 && squadMode !== "HOLD") {
+    if (d > engagementRange && squadMode !== "HOLD") {
       a.targetX = e.x;
       a.targetY = e.y;
-      moveTowardTarget(a, dt);
+      moveTowardTarget(a, dt, aggressiveAdvance ? 1.18 : 1);
     } else shoot(a, e, spawnProjectile, covers);
   });
 }

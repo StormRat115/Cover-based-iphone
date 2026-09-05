@@ -1,46 +1,47 @@
-import { createGameLoop } from "./gameLoop.js?v=20260905-65";
+import { createGameLoop } from "./gameLoop.js?v=20260905-66";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260905-65";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-65";
+} from "./geometry.js?v=20260905-66";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-66";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260905-65";
-import { updateSquadHud } from "./squadHud.js?v=20260905-65";
-import { updateCombatHud } from "./combatHud.js?v=20260905-65";
-import { updatePlayerHud } from "./player.js?v=20260905-65";
-import { resetSquadCommands } from "./allyCore2.js?v=20260905-65";
-import "./squadDrawer.js?v=20260905-65";
-import { createPlayer, drawPlayer } from "./player.js?v=20260905-65";
+} from "./bloodEffects.js?v=20260905-66";
+import { updateSquadHud } from "./squadHud.js?v=20260905-66";
+import { updateCombatHud } from "./combatHud.js?v=20260905-66";
+import { updatePlayerHud } from "./player.js?v=20260905-66";
+import { resetSquadCommands } from "./allyCore2.js?v=20260905-66";
+import "./squadDrawer.js?v=20260905-66";
+import { createPlayer, drawPlayer } from "./player.js?v=20260905-66";
 import {
   createBandits,
   updateBandits,
   drawBandit,
-} from "./enemy.js?v=20260905-65";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-65";
+  drawSniperLasers,
+} from "./enemy.js?v=20260905-66";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-66";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260905-65";
+} from "./marines.js?v=20260905-66";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260905-65";
+} from "./cover.js?v=20260905-66";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260905-65";
-import { initTactical } from "./tactical.js?v=20260905-65";
+} from "./input.js?v=20260905-66";
+import { initTactical } from "./tactical.js?v=20260905-66";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -89,7 +90,7 @@ var world = {
 };
 var player = createPlayer(),
   covers = createCover(),
-  enemies = createBandits(wave),
+  enemies = createWaveEnemies(),
   allies = createAllies(),
   marines = createMarines(),
   projectiles = [];
@@ -131,6 +132,15 @@ function updateCamera() {
 }
 export function iso(x, y) {
   return worldToScreen(x, y, world, W, H);
+}
+function createWaveEnemies() {
+  return createBandits(wave, {
+    spawnView: {
+      world: world,
+      width: W || 390,
+      height: H || 844,
+    },
+  });
 }
 function nearestEnemy() {
   return nearestLivingEnemy(player, enemies);
@@ -547,7 +557,7 @@ initKeyboard({
 function beginNextWave() {
   wave++;
   window.__wave = wave;
-  enemies = createBandits(wave);
+  enemies = createWaveEnemies();
   window.__battleEnemies = enemies;
   waveState = "active";
   waveTimer = 0;
@@ -601,7 +611,9 @@ function reset() {
   window.__wave = wave;
   waveState = "active";
   waveTimer = 0;
-  enemies = createBandits(wave);
+  world.cameraX = 0;
+  world.cameraY = 0;
+  enemies = createWaveEnemies();
   window.__battleEnemies = enemies;
   projectiles.length = 0;
   damagePops.length = 0;
@@ -617,8 +629,6 @@ function reset() {
   autoPlayButton.classList.remove("active");
   autoPlayButton.textContent = "AUTO PLAY";
   gameOver = false;
-  world.cameraX = 0;
-  world.cameraY = 0;
   pauseMenu.classList.add("hidden");
   pauseButton.textContent = "Ⅱ";
   message.classList.add("hidden");
@@ -660,9 +670,23 @@ function update(dt) {
     a.x = clamp(a.x, world.minX, world.maxX);
     a.y = clamp(a.y, world.minY, world.maxY);
   });
+  marines.forEach(function (marine) {
+    marine.x = clamp(marine.x, world.minX, world.maxX);
+    marine.y = clamp(marine.y, world.minY, world.maxY);
+  });
   enemies.forEach(function (e) {
-    e.x = clamp(e.x, world.minX, world.maxX);
-    e.y = clamp(e.y, world.minY, world.maxY);
+    if (
+      !e.enteredWorld &&
+      e.x >= world.minX &&
+      e.x <= world.maxX &&
+      e.y >= world.minY &&
+      e.y <= world.maxY
+    )
+      e.enteredWorld = true;
+    if (e.enteredWorld) {
+      e.x = clamp(e.x, world.minX, world.maxX);
+      e.y = clamp(e.y, world.minY, world.maxY);
+    }
   });
   updateProjectiles(dt);
   updateFeedback(dt);
@@ -929,6 +953,7 @@ function rebuildLayers() {
 }
 function draw(now) {
   drawWorld();
+  drawSniperLasers(ctx, enemies, iso, now);
   drawPlayerEngagementRange();
   drawBlood(ctx, iso);
   drawProjectiles();
@@ -1027,6 +1052,8 @@ export function startGame() {
   clearKeyboard();
   covers = createCover();
   window.__battleCovers = covers;
+  enemies = createWaveEnemies();
+  window.__battleEnemies = enemies;
   started = true;
   rebuildLayers();
   runtime.start();

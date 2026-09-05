@@ -21,6 +21,7 @@ export function createHarness({
     htmlWrites: 0,
     intervals: 0,
     images: 0,
+    drawImages: [],
     strokes: [],
     ellipses: [],
   };
@@ -127,6 +128,7 @@ export function createHarness({
               if (key in target) return target[key];
               return (...args) => {
                 if (key === "ellipse") metrics.ellipses.push(args);
+                if (key === "drawImage") metrics.drawImages.push(args);
                 if (key === "stroke")
                   metrics.strokes.push({
                     strokeStyle: target.strokeStyle,
