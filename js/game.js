@@ -1,43 +1,43 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-107";
+import { createGameLoop } from "./gameLoop.js?v=20260906-108";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-107";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-107";
+} from "./geometry.js?v=20260906-108";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-108";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-107";
-import { updateSquadHud } from "./squadHud.js?v=20260906-107";
-import { updateCombatHud } from "./combatHud.js?v=20260906-107";
-import { updatePlayerHud } from "./player.js?v=20260906-107";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-107";
-import "./squadDrawer.js?v=20260906-107";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-107";
+} from "./bloodEffects.js?v=20260906-108";
+import { updateSquadHud } from "./squadHud.js?v=20260906-108";
+import { updateCombatHud } from "./combatHud.js?v=20260906-108";
+import { updatePlayerHud } from "./player.js?v=20260906-108";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-108";
+import "./squadDrawer.js?v=20260906-108";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-108";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-107";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-107";
+} from "./enemy.js?v=20260906-108";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-108";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-107";
+} from "./marines.js?v=20260906-108";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-107";
+} from "./streetMission.js?v=20260906-108";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-107";
+} from "./supportVehicle.js?v=20260906-108";
 import {
   createCover,
   findCoverForPoint,
@@ -46,75 +46,75 @@ import {
   isLineBlocked,
   firstCoverOnSegment,
   registerCover,
-} from "./cover.js?v=20260906-107";
+} from "./cover.js?v=20260906-108";
 import {
   isCoverFull,
   nearestFreeSlot,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260906-107";
+} from "./coverSlots.js?v=20260906-108";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-107";
-import { initTactical } from "./tactical.js?v=20260906-107";
-import { AudioBus } from "./audio.js?v=20260906-107";
+} from "./input.js?v=20260906-108";
+import { initTactical } from "./tactical.js?v=20260906-108";
+import { AudioBus } from "./audio.js?v=20260906-108";
 import {
   segmentWave,
   updateWaveSegments,
   waveFullyCleared,
   pendingHostiles,
-} from "./waveSegments.js?v=20260906-107";
+} from "./waveSegments.js?v=20260906-108";
 import {
   grantKillXp,
   grantWaveXp,
   getTeamProgress,
-} from "./teamProgress.js?v=20260906-107";
+} from "./teamProgress.js?v=20260906-108";
 import {
   updateGrenades,
   drawGrenades,
   trySquadGrenades,
   resetGrenades,
-} from "./grenades.js?v=20260906-107";
+} from "./grenades.js?v=20260906-108";
 import {
   applyRunModifiers,
   updateMarineReinforcements,
   resetMarineTimer,
-} from "./runModifiers.js?v=20260906-107";
+} from "./runModifiers.js?v=20260906-108";
 import {
   drawWartornAtmosphere,
   drawWartornDressing,
   drawWartornStreetSurface,
-} from "./wartornCity.js?v=20260906-107";
+} from "./wartornCity.js?v=20260906-108";
 import {
   updateSquadDialog,
   drawDialogBubbles,
   resetSquadDialog,
-} from "./squadDialog.js?v=20260906-107";
+} from "./squadDialog.js?v=20260906-108";
 import {
   unstickOverlappingUnits,
   resetUnitUnstick,
-} from "./unitCollision.js?v=20260906-107";
+} from "./unitCollision.js?v=20260906-108";
 import {
   camModeLabel,
   cameraLookAt,
   easeCameraToward,
-} from "./frontLineCam.js?v=20260906-107";
+} from "./frontLineCam.js?v=20260906-108";
 import {
   spraySuppression,
-} from "./suppression.js?v=20260906-107";
+} from "./suppression.js?v=20260906-108";
 import {
   updateAmmoDrops,
   drawAmmoDrops,
   spawnKillAmmo,
   spawnWaveAmmo,
-} from "./ammoEconomy.js?v=20260906-107";
+} from "./ammoEconomy.js?v=20260906-108";
 import {
   damageCover,
   tickCoverVisuals,
-} from "./destructibleCover.js?v=20260906-107";
+} from "./destructibleCover.js?v=20260906-108";
 import {
   createStreetObjectives,
   resetStreetObjectives,
@@ -122,7 +122,7 @@ import {
   currentPushGoal,
   objectiveStatusLine,
   drawStreetTask,
-} from "./streetObjectives.js?v=20260906-107";
+} from "./streetObjectives.js?v=20260906-108";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -164,8 +164,8 @@ var W = 0,
   waveTimer = 0,
   waveDirector = null;
 var world = {
-  scaleX: 0.25,
-  scaleY: 0.125,
+  scaleX: 0.23,
+  scaleY: 0.115,
   offsetY: -40,
   cameraX: 0,
   cameraY: 0,
@@ -611,7 +611,9 @@ function updateAutoPlayer(dt) {
     autoTargetTimer = 0.48;
   }
   var e = target,
-    strategicGoal = mission && !mission.captured ? mission.objective : null;
+    strategicGoal = currentPushGoal(mission, streetTasks);
+  if (mission.captured && (!streetTasks || !streetTasks.current))
+    strategicGoal = null;
   if (shouldRecover(player)) {
     recoverInCover(player, e, covers, allies, dt);
     // Recovery moves directly; do not also pursue an old tap-to-move destination.
@@ -647,7 +649,15 @@ function updateAutoPlayer(dt) {
   player.objectiveAdvancePaused = true;
   var d = distance(player, e),
     blocked = isLineBlocked(player, e, covers),
-    engage = Math.min(player.weapon.range * 0.86, 900);
+    engage = Math.min(player.weapon.range * 0.86, 900),
+    objectivePush =
+      strategicGoal &&
+      strategicGoal.source === "street" &&
+      player.hp >= player.maxHp * 0.55 &&
+      (player.timeSinceDamage == null || player.timeSinceDamage > 1.1) &&
+      d > 560 &&
+      (blocked || d > Math.min(1050, e.weapon.range * 0.85));
+  player.objectiveAdvancePaused = !objectivePush;
   player.tacticalState = d < 320 ? "DANGER CLOSE" : "ENGAGING FROM COVER";
   if (
     player.cover &&
@@ -667,6 +677,13 @@ function updateAutoPlayer(dt) {
   // Fire at the weapon's full range while advancing or peeking from cover.
   // Movement decisions use a shorter preferred engagement distance.
   if (canPlayerEngage(e)) attemptFire();
+  if (objectivePush && autoMoveTimer <= 0) {
+    autoMoveTimer = 0.4;
+    if (chooseAutoPosition(e, strategicGoal)) {
+      player.tacticalState = "OBJECTIVE PUSH";
+      return;
+    }
+  }
   if (d > engage) {
     if (autoMoveTimer <= 0) {
       autoMoveTimer = 0.45;

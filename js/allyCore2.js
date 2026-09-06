@@ -1,9 +1,9 @@
 import {
   isLineBlocked,
   getHitChance,
-} from "./cover.js?v=20260906-107";
-import { weaponCopy } from "./weapons.js?v=20260906-107";
-import { AudioBus } from "./audio.js?v=20260906-107";
+} from "./cover.js?v=20260906-108";
+import { weaponCopy } from "./weapons.js?v=20260906-108";
+import { AudioBus } from "./audio.js?v=20260906-108";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -11,29 +11,29 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-107";
+} from "./combatAI.js?v=20260906-108";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260906-107";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-107";
+} from "./combatStats.js?v=20260906-108";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-108";
 import {
   isCoverFull,
   occupancyPenalty,
   occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260906-107";
+} from "./coverSlots.js?v=20260906-108";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260906-107";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-107";
-import { currentPushGoal } from "./streetObjectives.js?v=20260906-107";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-107";
+} from "./suppression.js?v=20260906-108";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-108";
+import { currentPushGoal } from "./streetObjectives.js?v=20260906-108";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-108";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -291,12 +291,14 @@ function claimed(choice, a, allies) {
   if (isCoverFull(choice.cover, allies, a)) return true;
   return false;
 }
-function advanceToMission(a, mission, covers, friendlies, dt) {
+function advanceToMission(a, mission, covers, friendlies, dt, threats) {
   var street =
     typeof window !== "undefined" ? window.__streetObjectives : null;
   var goal = currentPushGoal(mission, street) || (mission && mission.objective);
   if (!goal) return false;
   var goalDistance = Math.hypot(goal.x - a.x, goal.y - a.y);
+  threats = (threats || []).filter(activeEnemy);
+  var primaryThreat = threats[0] || null;
   if (goalDistance <= goal.radius * 0.72) {
     a.exposed = false;
     a.combatState = "covered";
@@ -324,13 +326,19 @@ function advanceToMission(a, mission, covers, friendlies, dt) {
     var travel = Math.hypot(cover.x - a.x, cover.y - a.y),
       remaining = Math.hypot(cover.x - goal.x, cover.y - goal.y);
     if (travel < 90 || travel > 920 || remaining > goalDistance - 100) return;
-    var slot = reserveCoverSlot(cover, a, null, friendlies);
+    var slot = reserveCoverSlot(cover, a, primaryThreat, friendlies);
     if (!slot) return;
     var choice = { cover: cover, slot: slot };
     if (claimed(choice, a, friendlies)) return;
+    var exposedTo = 0;
+    threats.forEach(function (threat) {
+      if (!isLineBlocked(slot, threat, [cover])) exposedTo++;
+    });
     var score =
       remaining * 0.55 + travel * 0.3 + occupancyPenalty(cover, friendlies, a);
     if (cover.type === "wide" || cover.type === "car") score -= 90;
+    score += exposedTo * 260;
+    if (primaryThreat && isLineBlocked(slot, primaryThreat, [cover])) score -= 140;
     score += Math.random() * 35;
     if (score < bestScore) {
       bestScore = score;
@@ -352,6 +360,17 @@ function advanceToMission(a, mission, covers, friendlies, dt) {
     return true;
   }
   return true;
+}
+function shouldPressStreetObjective(a, e, d, covers, goal) {
+  if (!goal || goal.source !== "street" || a.isMarine) return false;
+  if (squadMode === "HOLD") return false;
+  if (a.hp < a.maxHp * 0.55) return false;
+  if ((a.suppressionTimer || 0) > 0.2 || a.timeSinceDamage < 1.2) return false;
+  if (!e) return true;
+  if (d < 560) return false;
+  var blocked = isLineBlocked(a, e, covers);
+  var hostileRange = e.weapon && e.weapon.range ? e.weapon.range : 1000;
+  return blocked || d > Math.min(1050, hostileRange * 0.85);
 }
 export function updateAllies(
   allies,
@@ -422,7 +441,13 @@ export function updateAllies(
       engagementRange = aggressiveAdvance
         ? Math.min(a.weapon.range * 0.48, 760)
         : a.weapon.range * 0.82;
-    a.objectiveAdvancePaused = !!e;
+    var mission =
+        typeof window !== "undefined" ? window.__streetMission : null,
+      street =
+        typeof window !== "undefined" ? window.__streetObjectives : null,
+      activeGoal = currentPushGoal(mission, street),
+      objectivePush = shouldPressStreetObjective(a, e, d, covers, activeGoal);
+    a.objectiveAdvancePaused = !!e && !objectivePush;
     if (!Object.prototype.hasOwnProperty.call(a, "combatTarget"))
       Object.defineProperty(a, "combatTarget", {
         value: e,
@@ -447,10 +472,15 @@ export function updateAllies(
       updateRevive(a, friendlyTeam, player, dt)
     )
       return;
-    var mission =
-      typeof window !== "undefined" ? window.__streetMission : null;
-    if (!e && mission) {
-      advanceToMission(a, mission, covers, friendlyTeam, dt);
+    if ((!e || objectivePush) && mission) {
+      advanceToMission(
+        a,
+        mission,
+        covers,
+        friendlyTeam,
+        dt,
+        objectivePush ? enemies : [],
+      );
       return;
     }
     if (!e) {
