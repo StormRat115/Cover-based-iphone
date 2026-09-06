@@ -1,22 +1,22 @@
-import { isLineBlocked } from "./cover.js?v=20260906-104";
+import { isLineBlocked } from "./cover.js?v=20260906-107";
 import {
   resolveSolidMove,
   updateVault,
   findDetour,
   firstCoverOnSegment,
   ignoreCoverFor,
-} from "./coverCollision.js?v=20260906-104";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-104";
+} from "./coverCollision.js?v=20260906-107";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-107";
 import {
   coverSlotCount,
   isCoverFull,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260906-104";
+} from "./coverSlots.js?v=20260906-107";
 import {
   suppressionPeekScale,
   suppressionMoveScale,
-} from "./suppression.js?v=20260906-104";
+} from "./suppression.js?v=20260906-107";
 function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
@@ -42,10 +42,12 @@ export function coverProtects(cover, slot, threat) {
 export function pickTacticalCover(actor, threat, covers, friendlies, options) {
   options = options || {};
   if (!actor || !threat || !covers || !covers.length) return null;
-  var desired = options.desiredRange || 560,
-    maxTravel = options.maxTravel || 1150,
-    minThreat = options.minThreat || 220,
-    maxThreat = options.maxThreat || Math.max(desired * 1.9, 1100),
+  var slotPriority = !!options.slotPriority,
+    allowUnprotected = !!options.allowUnprotected || slotPriority,
+    desired = options.desiredRange || 560,
+    maxTravel = options.maxTravel || (slotPriority ? 1600 : 1150),
+    minThreat = options.minThreat || (slotPriority ? 50 : 220),
+    maxThreat = options.maxThreat || Math.max(desired * 1.9, slotPriority ? 2400 : 1100),
     flankSide = options.flankSide || 0,
     flankWeight = options.flankWeight == null ? 150 : options.flankWeight,
     anchor = options.anchor || null,
@@ -67,8 +69,14 @@ export function pickTacticalCover(actor, threat, covers, friendlies, options) {
     var protection = coverProtects(c, slot, threat),
       midpoint = { x: (actor.x + slot.x) * 0.5, y: (actor.y + slot.y) * 0.5 },
       routeCovered = isLineBlocked(midpoint, threat, covers);
-    var score = travel * 0.62 + Math.abs(threatDist - desired) * 0.38;
-    score += protection ? -330 : 420;
+    var score = travel * (slotPriority ? 0.48 : 0.62) + Math.abs(threatDist - desired) * 0.38;
+    score += protection ? -330 : allowUnprotected ? 90 : 420;
+    if (!actor.cover) score -= slotPriority ? 420 : 80;
+    if (options.advance) {
+      var startThreat = Math.hypot(actor.x - threat.x, actor.y - threat.y);
+      score += Math.max(0, threatDist - desired) * 0.72;
+      score -= Math.min(280, Math.max(0, startThreat - threatDist) * 0.55);
+    }
     if (!routeCovered && travel > 170) score += Math.min(260, travel * 0.26);
     if (routeCovered) score -= 45;
     score += occupancyPenalty(c, friendlies || [], actor);

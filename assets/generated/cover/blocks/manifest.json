@@ -127,6 +127,186 @@
       "bytes": 1720,
       "material": "rubble",
       "role": "accent"
+    },
+    {
+      "file": "iso-concrete-block.webp",
+      "width": 96,
+      "height": 63,
+      "bytes": 2512,
+      "material": "concrete",
+      "role": "iso-block",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-concrete-block-long.webp",
+      "width": 96,
+      "height": 65,
+      "bytes": 2576,
+      "material": "concrete",
+      "role": "iso-long",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-sandbags-block.webp",
+      "width": 96,
+      "height": 63,
+      "bytes": 3758,
+      "material": "sandbags",
+      "role": "iso-block",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-sandbags-block-long.webp",
+      "width": 96,
+      "height": 65,
+      "bytes": 3752,
+      "material": "sandbags",
+      "role": "iso-long",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-crate-block.webp",
+      "width": 96,
+      "height": 70,
+      "bytes": 3848,
+      "material": "crates",
+      "role": "iso-block",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-crate-block-long.webp",
+      "width": 96,
+      "height": 71,
+      "bytes": 3930,
+      "material": "crates",
+      "role": "iso-long",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-rubble-block.webp",
+      "width": 96,
+      "height": 61,
+      "bytes": 3976,
+      "material": "rubble",
+      "role": "iso-block",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-rubble-block-long.webp",
+      "width": 96,
+      "height": 64,
+      "bytes": 3912,
+      "material": "rubble",
+      "role": "iso-long",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-concrete-top.webp",
+      "width": 80,
+      "height": 61,
+      "bytes": 2142,
+      "material": "concrete",
+      "role": "iso-top",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-concrete-mid.webp",
+      "width": 80,
+      "height": 70,
+      "bytes": 2496,
+      "material": "concrete",
+      "role": "iso-mid",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-concrete-full.webp",
+      "width": 80,
+      "height": 79,
+      "bytes": 2616,
+      "material": "concrete",
+      "role": "iso-full",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-sandbags-top.webp",
+      "width": 80,
+      "height": 57,
+      "bytes": 1966,
+      "material": "sandbags",
+      "role": "iso-top",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-sandbags-mid.webp",
+      "width": 80,
+      "height": 70,
+      "bytes": 3376,
+      "material": "sandbags",
+      "role": "iso-mid",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-sandbags-full.webp",
+      "width": 80,
+      "height": 70,
+      "bytes": 3688,
+      "material": "sandbags",
+      "role": "iso-full",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-crate-top.webp",
+      "width": 80,
+      "height": 60,
+      "bytes": 1942,
+      "material": "crates",
+      "role": "iso-top",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-crate-mid.webp",
+      "width": 80,
+      "height": 70,
+      "bytes": 2634,
+      "material": "crates",
+      "role": "iso-mid",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-crate-full.webp",
+      "width": 80,
+      "height": 70,
+      "bytes": 2780,
+      "material": "crates",
+      "role": "iso-full",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-rubble-top.webp",
+      "width": 80,
+      "height": 61,
+      "bytes": 2736,
+      "material": "rubble",
+      "role": "iso-top",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-rubble-mid.webp",
+      "width": 80,
+      "height": 73,
+      "bytes": 4282,
+      "material": "rubble",
+      "role": "iso-mid",
+      "faces": "top+sides"
+    },
+    {
+      "file": "iso-rubble-full.webp",
+      "width": 80,
+      "height": 72,
+      "bytes": 4154,
+      "material": "rubble",
+      "role": "iso-full",
+      "faces": "top+sides"
     }
   ],
   "tile_size": 64,

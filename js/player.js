@@ -1,35 +1,36 @@
-import { getHitChance } from "./cover.js?v=20260906-104";
+import { getHitChance } from "./cover.js?v=20260906-107";
 import {
   resolveSolidMove,
   updateVault,
   planRoute,
   continueRoute,
-} from "./coverCollision.js?v=20260906-104";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-104";
-import { weaponCopy } from "./weapons.js?v=20260906-104";
-import { AudioBus } from "./audio.js?v=20260906-104";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-104";
+} from "./coverCollision.js?v=20260906-107";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-107";
+import { weaponCopy } from "./weapons.js?v=20260906-107";
+import { AudioBus } from "./audio.js?v=20260906-107";
+import { drawSoldier } from "./soldierAssets.js?v=20260906-107";
+import { drawCoverShield } from "./coverSlots.js?v=20260906-107";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260906-104";
+} from "./combatStats.js?v=20260906-107";
 import {
   finishReload,
   canReloadFromReserve,
   isPrimaryDry,
   getSidearm,
   shouldSwapToSidearm,
-} from "./ammoEconomy.js?v=20260906-104";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-104";
+} from "./ammoEconomy.js?v=20260906-107";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-107";
 import {
   tickSuppression,
   suppressionAccuracyDelta,
   isHardSuppressed,
-} from "./suppression.js?v=20260906-104";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-104";
+} from "./suppression.js?v=20260906-107";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-107";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,
@@ -198,6 +199,8 @@ export function createPlayer() {
       this.keyboardMove = null;
       this.cover = null;
       this.coverTarget = cover || null;
+      this.coverAnchorX = cover ? x : undefined;
+      this.coverAnchorY = cover ? y : undefined;
       this.tx = x;
       this.ty = y;
       this.routeGoalX = x;
@@ -491,6 +494,8 @@ export function createPlayer() {
             if (this.coverTarget) {
               this.cover = this.coverTarget;
               this.coverBlend = 1;
+              this.coverAnchorX = this.tx;
+              this.coverAnchorY = this.ty;
             }
           }
         }
@@ -517,5 +522,6 @@ export function drawPlayer(ctx, p, iso) {
     scale: 0.31,
     alpha: p.dead ? 0.94 : p.downed ? 0.74 : 1,
   });
+  drawCoverShield(ctx, p, -56);
   ctx.restore();
 }

@@ -6,7 +6,7 @@ import {
   cloneBlockCover,
   coverTypeForTheme,
   makeBlockCover,
-} from "./coverBlocks.js?v=20260906-104";
+} from "./coverBlocks.js?v=20260906-107";
 
 const MAP_SCALE = 1.7;
 
@@ -98,6 +98,10 @@ const TEMPLATE_SPECS = [
   { id: "e2", x: 125, y: 95, shape: "line", theme: "crates" },
   { id: "e3", x: -360, y: -330, shape: "T", theme: "sandbags", facing: 180 },
   { id: "e4", x: 360, y: -330, shape: "U", theme: "crates", facing: 0 },
+  { id: "w1", x: -180, y: -820, shape: "wall", theme: "jersey", facing: 0 },
+  { id: "w2", x: 210, y: -1680, shape: "halfwall", theme: "sandbags", facing: 90 },
+  { id: "w3", x: -520, y: -2680, shape: "wall", theme: "jersey", facing: 90 },
+  { id: "w4", x: 490, y: -3480, shape: "halfwall", theme: "crates", facing: 0 },
   { id: "g1", x: -1050, y: 620, shape: "rect", theme: "jersey" },
   { id: "g2", x: 950, y: 650, shape: "L", theme: "jersey", facing: 180 },
   { id: "g3", x: 0, y: 950, shape: "T", theme: "jersey", facing: 0 },
@@ -169,9 +173,9 @@ export const STREET_COVER_HALF = 720;
 export const STREET_COVER_LANES = [-580, 0, 580];
 export const STREET_COVER_Y0 = -320;
 export const STREET_COVER_Y1 = -5180;
-export const STREET_COVER_GAP_X = 200;
-export const STREET_COVER_GAP_Y = 280;
-export const STREET_COVER_MIN_DIST = 400;
+export const STREET_COVER_GAP_X = 180;
+export const STREET_COVER_GAP_Y = 250;
+export const STREET_COVER_MIN_DIST = 360;
 
 export function isFortCover(cover) {
   return !!(cover && cover.id && String(cover.id).indexOf("fort-") === 0);
@@ -232,7 +236,7 @@ function cloneCover(template, id, x, y) {
 
 export function createCityCoverLayout(random = Math.random) {
   const templates = shuffled(createCityCoverTemplates(random), random);
-  const targetCount = 22 + Math.floor(random() * 4);
+  const targetCount = 24 + Math.floor(random() * 4);
   const placed = [];
   const lanes = STREET_COVER_LANES;
   const rows = Math.max(1, Math.ceil(targetCount / lanes.length));
@@ -267,7 +271,7 @@ export function createCityCoverLayout(random = Math.random) {
     }
   }
 
-  // Fill holes so street + fort stay in the 26–32 piece band.
+  // Fill holes so street + fort stay in the 28–32 piece band.
   let extra = 0;
   while (placed.length < targetCount && extra < 220) {
     const template = templates[extra % templates.length];
@@ -278,6 +282,36 @@ export function createCityCoverLayout(random = Math.random) {
     tryPlace(template, placed.length, x, y);
     extra++;
   }
+  function ensureShape(shape, theme, hintX, hintY) {
+    if (placed.length >= 32) return;
+    if (placed.some((cover) => cover.shape === shape)) return;
+    const template = makeShapedCover({
+      id: "need-" + shape,
+      x: 0,
+      y: 0,
+      shape: shape,
+      theme: theme,
+      random: random,
+    });
+    let extraTries = 0;
+    while (extraTries < 80) {
+      const laneX = lanes[extraTries % lanes.length];
+      const t = ((extraTries * 0.211) + 0.18) % 1;
+      if (
+        tryPlace(
+          template,
+          "need-" + shape + extraTries,
+          laneX + hintX,
+          STREET_COVER_Y0 - t * (STREET_COVER_Y0 - STREET_COVER_Y1) + hintY,
+        )
+      )
+        return;
+      extraTries++;
+    }
+  }
+  ensureShape("wall", "jersey", 0, 0);
+  ensureShape("halfwall", "sandbags", 24, 0);
+  ensureShape("U", "sandbags", -18, 0);
   placed.push(
     makeShapedCover({
       id: "fort-front",

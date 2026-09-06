@@ -1,6 +1,6 @@
-import { loadImage } from "./assets.js?v=20260906-104";
-import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-104";
-import { preloadWartornAssets } from "./wartornCity.js?v=20260906-104";
+import { loadImage } from "./assets.js?v=20260906-107";
+import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-107";
+import { preloadWartornAssets } from "./wartornCity.js?v=20260906-107";
 import {
   COVER_BLOCK_SIZE,
   E,
@@ -9,8 +9,9 @@ import {
   blockMap,
   livingBlocks,
   neighborMask,
-  pickCoverBlockSkin,
-} from "./coverBlocks.js?v=20260906-104";
+  pickCoverBlockFaceSkin,
+  pickCoverIsoTile,
+} from "./coverBlocks.js?v=20260906-107";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
@@ -24,7 +25,7 @@ coverShapeAtlas.src =
 export const coverBlockSkins = {};
 allCoverSkinFiles().forEach(function (file) {
   var image = new Image();
-  image.src = "./assets/generated/cover/blocks/" + file + "?v=20260906-104";
+  image.src = "./assets/generated/cover/blocks/" + file + "?v=20260906-107";
   coverBlockSkins[file] = image;
 });
 export const coverBlockAtlas = coverBlockSkins["concrete-center.webp"];
@@ -122,8 +123,10 @@ function fillPoly(ctx, pts, fill, stroke, width) {
   ctx.moveTo(pts[0][0], pts[0][1]);
   for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
   ctx.closePath();
-  ctx.fillStyle = fill;
-  ctx.fill();
+  if (fill) {
+    ctx.fillStyle = fill;
+    ctx.fill();
+  }
   if (stroke) {
     ctx.strokeStyle = stroke;
     ctx.lineWidth = width == null ? 1 : width;
@@ -135,11 +138,11 @@ function prismHeight(cover, segment) {
   var type = cover.type || "low";
   var theme = cover.theme || "jersey";
   var long = Math.max(segment.w, segment.h);
-  var base = type === "low" ? 13 : type === "car" ? 16 : 24;
-  if (theme === "jersey") base = Math.max(base, 26);
-  if (theme === "sandbags") base = Math.min(base, 15);
-  if (theme === "crates" || cover.shape === "square") base = Math.max(base, 18);
-  if (theme === "wreck") base = 15;
+  var base = type === "low" ? 16 : type === "car" ? 18 : 28;
+  if (theme === "jersey" || cover.shape === "wall") base = Math.max(base, 30);
+  if (theme === "sandbags" || cover.shape === "halfwall") base = Math.min(22, Math.max(base, 16));
+  if (theme === "crates" || cover.shape === "square") base = Math.max(base, 22);
+  if (theme === "wreck") base = 17;
   return base + Math.min(5, long * 0.015);
 }
 
@@ -181,35 +184,139 @@ function drawPrism(ctx, iso, x, y, w, h, z, palette, mask) {
   return { a: a, b: b, c: c, d: d, A: A, B: B, C: C, D: D, z: z };
 }
 
-function stampBlockSkin(ctx, prism, theme, mask, shape) {
-  var file = pickCoverBlockSkin(theme, mask, shape);
+function skinTile(theme, mask, shape, face) {
+  var file = pickCoverBlockFaceSkin(theme, mask, shape, face);
   var tile = coverBlockSkins[file];
-  if (!tile || !tile.complete || !tile.naturalWidth || !prism) return false;
-  var minX = Math.min(prism.A[0], prism.B[0], prism.C[0], prism.D[0]);
-  var maxX = Math.max(prism.A[0], prism.B[0], prism.C[0], prism.D[0]);
-  var minY = Math.min(prism.A[1], prism.B[1], prism.C[1], prism.D[1]);
-  var maxY = Math.max(prism.A[1], prism.B[1], prism.C[1], prism.D[1]);
-  ctx.save();
+  if (!tile || !tile.complete || !tile.naturalWidth) return null;
+  return tile;
+}
+
+function facePath(ctx, p00, p10, p11, p01) {
   ctx.beginPath();
-  ctx.moveTo(prism.A[0], prism.A[1]);
-  ctx.lineTo(prism.B[0], prism.B[1]);
-  ctx.lineTo(prism.C[0], prism.C[1]);
-  ctx.lineTo(prism.D[0], prism.D[1]);
+  ctx.moveTo(p00[0], p00[1]);
+  ctx.lineTo(p10[0], p10[1]);
+  ctx.lineTo(p11[0], p11[1]);
+  ctx.lineTo(p01[0], p01[1]);
   ctx.closePath();
+}
+
+function stampTexturedQuad(ctx, tile, p00, p10, p01, shade) {
+  if (!tile || !ctx || !p00 || !p10 || !p01) return false;
+  var w = tile.naturalWidth,
+    h = tile.naturalHeight,
+    p11 = [p10[0] + (p01[0] - p00[0]), p10[1] + (p01[1] - p00[1])],
+    minX = Math.min(p00[0], p10[0], p11[0], p01[0]),
+    maxX = Math.max(p00[0], p10[0], p11[0], p01[0]),
+    minY = Math.min(p00[1], p10[1], p11[1], p01[1]),
+    maxY = Math.max(p00[1], p10[1], p11[1], p01[1]);
+  if (w < 2 || h < 2 || maxX - minX < 2 || maxY - minY < 2) return false;
+  ctx.save();
+  facePath(ctx, p00, p10, p11, p01);
   ctx.clip();
-  ctx.imageSmoothingEnabled = true;
-  ctx.globalAlpha = 0.96;
+  ctx.imageSmoothingEnabled = false;
+  ctx.globalAlpha = 1;
   ctx.drawImage(
     tile,
     0,
     0,
-    tile.naturalWidth,
-    tile.naturalHeight,
+    w,
+    h,
     minX,
     minY,
-    Math.max(4, maxX - minX),
-    Math.max(4, maxY - minY),
+    Math.max(3, maxX - minX),
+    Math.max(3, maxY - minY),
   );
+  ctx.restore();
+  ctx.save();
+  facePath(ctx, p00, p10, p11, p01);
+  if (shade) {
+    ctx.fillStyle = shade;
+    ctx.fill();
+  }
+  ctx.strokeStyle = "#0d0b09";
+  ctx.lineWidth = 1.15;
+  ctx.stroke();
+  ctx.restore();
+  return true;
+}
+
+function stampBlockFaces(ctx, prism, theme, mask, shape) {
+  if (!prism) return false;
+  var hideSouth = (mask & S) !== 0,
+    hideEast = (mask & E) !== 0,
+    top = skinTile(theme, mask, shape, "top"),
+    south = hideSouth ? null : skinTile(theme, mask, shape, "south"),
+    east = hideEast ? null : skinTile(theme, mask, shape, "east"),
+    painted = 0;
+  if (!hideSouth && south)
+    painted += stampTexturedQuad(
+      ctx,
+      south,
+      prism.D,
+      prism.C,
+      prism.d,
+      "rgba(18,12,8,0.38)",
+    )
+      ? 1
+      : 0;
+  if (!hideEast && east)
+    painted += stampTexturedQuad(
+      ctx,
+      east,
+      prism.C,
+      prism.B,
+      prism.c,
+      "rgba(6,8,10,0.52)",
+    )
+      ? 1
+      : 0;
+  if (top)
+    painted += stampTexturedQuad(
+      ctx,
+      top,
+      prism.A,
+      prism.B,
+      prism.D,
+      "rgba(255,252,235,0.1)",
+    )
+      ? 1
+      : 0;
+  return painted > 0;
+}
+
+function isoSkinTile(file) {
+  var tile = coverBlockSkins[file];
+  if (!tile || !tile.complete || !tile.naturalWidth) return null;
+  return tile;
+}
+
+function blitIsoCube(ctx, iso, x, y, size, tile) {
+  var half = size / 2;
+  var nw = iso(x - half, y - half),
+    ne = iso(x + half, y - half),
+    se = iso(x + half, y + half),
+    sw = iso(x - half, y + half);
+  var minX = Math.min(nw[0], ne[0], se[0], sw[0]),
+    maxX = Math.max(nw[0], ne[0], se[0], sw[0]),
+    maxY = Math.max(nw[1], ne[1], se[1], sw[1]);
+  var tw = tile.naturalWidth,
+    th = tile.naturalHeight;
+  if (tw < 2 || th < 2 || maxX - minX < 2) return false;
+  var dw = Math.max(46, (maxX - minX) * 2.7),
+    dh = dw * (th / tw);
+  var destX = (minX + maxX) / 2 - dw / 2,
+    destY = maxY - dh + 1;
+  ctx.save();
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.beginPath();
+  ctx.moveTo(nw[0], nw[1] + 2);
+  ctx.lineTo(ne[0], ne[1] + 2);
+  ctx.lineTo(se[0], se[1] + 2);
+  ctx.lineTo(sw[0], sw[1] + 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(tile, 0, 0, tw, th, destX, destY, dw, dh);
   ctx.restore();
   return true;
 }
@@ -232,13 +339,17 @@ function drawBlockCover(ctx, cover, iso) {
   for (var i = 0; i < ordered.length; i++) {
     var block = ordered[i].block;
     var theme = block.theme || cover.theme || "jersey";
-    var palette = THEME[theme] || THEME.jersey;
     var mask = neighborMask(block, map, true);
     var x = cover.x + block.dx;
     var y = cover.y + block.dy;
+    var tile = isoSkinTile(
+      pickCoverIsoTile(theme, mask, cover.shape, cover.type),
+    );
+    if (tile && blitIsoCube(ctx, iso, x, y, size, tile)) continue;
+    var palette = THEME[theme] || THEME.jersey;
     var z = prismHeight(cover, { w: size, h: size });
     var prism = drawPrism(ctx, iso, x, y, size, size, z, palette, mask);
-    if (!stampBlockSkin(ctx, prism, theme, mask, cover.shape) && (mask & 15) !== 15)
+    if (!stampBlockFaces(ctx, prism, theme, mask, cover.shape) && (mask & 15) !== 15)
       decorateSegment(ctx, prism, cover, { w: size, h: size });
   }
   return true;

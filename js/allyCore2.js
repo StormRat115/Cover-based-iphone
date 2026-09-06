@@ -1,9 +1,9 @@
 import {
   isLineBlocked,
   getHitChance,
-} from "./cover.js?v=20260906-104";
-import { weaponCopy } from "./weapons.js?v=20260906-104";
-import { AudioBus } from "./audio.js?v=20260906-104";
+} from "./cover.js?v=20260906-107";
+import { weaponCopy } from "./weapons.js?v=20260906-107";
+import { AudioBus } from "./audio.js?v=20260906-107";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -11,28 +11,29 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-104";
+} from "./combatAI.js?v=20260906-107";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260906-104";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-104";
+} from "./combatStats.js?v=20260906-107";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-107";
 import {
   isCoverFull,
   occupancyPenalty,
+  occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260906-104";
+} from "./coverSlots.js?v=20260906-107";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260906-104";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-104";
-import { currentPushGoal } from "./streetObjectives.js?v=20260906-104";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-104";
+} from "./suppression.js?v=20260906-107";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-107";
+import { currentPushGoal } from "./streetObjectives.js?v=20260906-107";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-107";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -465,8 +466,13 @@ export function updateAllies(
       mission.captured
     );
     faceThreat(a, e);
+    var inSlot = occupiesCoverSlot(a, 58);
+    if (a.cover && a.cover.destroyed) {
+      a.cover = null;
+      inSlot = false;
+    }
     if (
-      a.cover &&
+      inSlot &&
       !a.reloading &&
       a.weapon.ammo <= Math.ceil(a.weapon.magazine * 0.3) &&
       d > 380
@@ -476,61 +482,82 @@ export function updateAllies(
       a.combatState = "covered";
       return;
     }
-    var blocked = isLineBlocked(a, e, covers);
+    var availableCovers = defendingObjective
+      ? covers.filter(function (cover) {
+          return (
+            Math.hypot(
+              cover.x - mission.objective.x,
+              cover.y - mission.objective.y,
+            ) < 700
+          );
+        })
+      : covers;
+    var useful = inSlot && coverStillUseful(a, e, covers, 80, 2000);
+    var headingToSlot = !!(a.cover && !inSlot && Number.isFinite(a.coverAnchorX));
+    var shouldLeap =
+      inSlot &&
+      aggressiveAdvance &&
+      squadMode !== "HOLD" &&
+      d > engagementRange * 1.45;
     if (
-      (!a.cover ||
-        !coverStillUseful(a, e, covers) ||
-        blocked ||
-        (aggressiveAdvance && d > engagementRange * 1.28)) &&
-      a.repositionCooldown <= 0 &&
-      squadMode !== "HOLD"
+      ((!inSlot && !headingToSlot) ||
+        shouldLeap ||
+        (!useful && inSlot && squadMode !== "HOLD")) &&
+      a.repositionCooldown <= 0
     ) {
-      var availableCovers = defendingObjective
-        ? covers.filter(function (cover) {
-            return (
-              Math.hypot(
-                cover.x - mission.objective.x,
-                cover.y - mission.objective.y,
-              ) < 700
-            );
-          })
-        : covers;
       var choice = pickTacticalCover(a, e, availableCovers, friendlyTeam, {
-        maxTravel: aggressiveAdvance ? 1100 : 760,
+        maxTravel: 1500,
+        minThreat: 50,
+        maxThreat: 2400,
         desiredRange: aggressiveAdvance
           ? engagementRange
           : Math.min(a.weapon.range * 0.68, 1050),
         flankSide: a.flankSide,
         flankWeight: aggressiveAdvance ? 230 : 150,
-        forceNew: aggressiveAdvance && d > engagementRange * 1.28,
+        forceNew: shouldLeap || (!useful && inSlot),
+        slotPriority: true,
+        allowUnprotected: true,
+        advance: aggressiveAdvance,
         threats: enemies.filter(activeEnemy),
       });
       if (choice && !claimed(choice, a, friendlyTeam)) {
         applyCoverChoice(a, choice);
         a.combatState = "seeking";
-        a.repositionCooldown = aggressiveAdvance ? 0.65 : 1.1;
+        a.repositionCooldown = aggressiveAdvance ? 0.55 : 0.85;
+        inSlot = false;
       }
     }
-    if (a.cover && a.combatState === "seeking") {
-      moveTowardTarget(a, dt);
-      if (Math.hypot(a.x - a.coverAnchorX, a.y - a.coverAnchorY) < 18) {
+    if (a.cover && !inSlot) {
+      a.combatState = "seeking";
+      a.exposed = true;
+      moveTowardTarget(a, dt, 1.18);
+      if (occupiesCoverSlot(a, 18)) {
         a.x = a.coverAnchorX;
         a.y = a.coverAnchorY;
         a.combatState = "covered";
         a.exposed = false;
-        a.combatTimer = 0.4;
+        a.combatTimer = 0.45;
       }
       return;
     }
-    if (a.cover) {
+    if (inSlot) {
+      if (a.combatState === "seeking" || !a.combatState) {
+        if (Number.isFinite(a.coverAnchorX)) {
+          a.x = a.coverAnchorX;
+          a.y = a.coverAnchorY;
+        }
+        a.combatState = "covered";
+        a.exposed = false;
+        a.combatTimer = 0.45;
+      }
       a.combatTimer -= dt;
       if (a.combatState === "covered" && a.combatTimer <= 0) {
         a.combatState = "exposed";
         a.exposed = true;
-        a.combatTimer = 0.8;
+        a.combatTimer = 0.7;
         a.shotsLeft = 3 + Math.floor(Math.random() * 3);
       } else if (a.combatState === "exposed") {
-        var pp = peekPoint(a, e, 48);
+        var pp = peekPoint(a, e, 36);
         a.targetX = pp.x;
         a.targetY = pp.y;
         moveTowardTarget(a, dt);
@@ -540,8 +567,12 @@ export function updateAllies(
           a.exposed = false;
           a.targetX = a.coverAnchorX;
           a.targetY = a.coverAnchorY;
-          a.combatTimer = 0.5;
+          a.combatTimer = 0.55;
         }
+      } else {
+        a.targetX = a.coverAnchorX;
+        a.targetY = a.coverAnchorY;
+        moveTowardTarget(a, dt, 1.08);
       }
       return;
     }

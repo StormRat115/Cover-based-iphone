@@ -151,19 +151,27 @@ Wartorn street composition lock (TMNT arcade beat-em-up read, kept on the establ
 
 Phone Art street-edge pack (from `chore/street-edge-accents`) stamps lamps and sidewalk props on the curb band only: intact/bent/fallen posts, curb chunks, hydrant/manhole, wrecked bus shelter, tipped trash, dead planter. They are clipped off the playable asphalt so they cannot become mid-road plates.
 
-### Pages verify (BUILD 20260906-104)
+### Pages verify (BUILD 20260906-107)
 
 1. Open https://stormrat115.github.io/Cover-based-iphone/
-2. Confirm the stamp reads **BUILD 20260906-104**.
-3. Start a mission. Cover is built from uniform square blocks wearing Phone Art skins (concrete/jersey, sandbags, crates, rubble). Adjacent same-skin blocks should seam into one solid piece.
-4. Shapes should vary: rectangles, L / T / U, lines, and small clusters — still spaced on the asphalt, not mid-road buildings.
-5. Exclusive cover slots sit on the outer edges of each shape. Soft cover still vaults and can break; jersey stays up. LOS follows the block grid.
+2. Confirm the stamp reads **BUILD 20260906-107**.
+3. Start a mission. Cover cubes blit Phone Art true-isometric tiles (`iso-*-block` / `block-long` / `top` / `mid` / `full`) with faces already painted on the sprite — not flat brown cubes. Concrete, sandbags, crates, and rubble should read as 3D blocks.
+4. U pieces are wide (5+ blocks across). Occasional 5–8 block full walls and half-walls appear. Street cover is slightly denser but still spaced, not clumped.
+5. Friendlies in a cover slot show a small green shield above the head: full green for full cover, half-full for half cover. Squad mates and Marines prioritize getting into and staying in exclusive slots during firefights.
 6. The player (and allies) use Phone Art’s solid `player-solid-atlas` v4. Bodies are opaque. Animation list: idle, run, standShoot, crouchShoot, reload, death.
 7. Sidewalks and lamps stay on the edges. Buildings stay a far backdrop. Squad KILLS still tick.
 
+## True isometric cover faces: 20260906-107
+
+Phone Art `chore/cover-iso-faces` tiles (20 iso sprites, `faces: "top+sides"`) are drawn as cubes. Isolated / half-cover pieces use `iso-*-block` or `iso-*-full`; long runs use `iso-*-mid` / `iso-*-block-long`; exposed north ends use `iso-*-top`. The 16 flat 64×64 skins stay for fallback. U kits are 5–6 blocks wide. Layouts add 5–8 long walls / half-walls and a slightly denser spaced street. A green shield icon marks friendlies occupying a slot (full vs half). Squad and Marine AI treat taking and holding a slot as high priority over standing exposed.
+
+## Faced block cover, wide Us, and cover shields: 20260906-105
+
+Phone Art skins now stamp onto every visible isometric face (top, south, east) with affine mapping and side shading, so cubes read as Minecraft-style blocks instead of brown prisms. U kits are 5–6 blocks wide. Layouts add 5–8 long walls / half-walls and a slightly denser spaced street. A green shield icon marks friendlies occupying a slot (full vs half). Squad and Marine AI treat taking and holding a slot as high priority over standing exposed.
+
 ## Minecraft-style block cover: 20260906-104
 
-Street cover is assembled from one uniform block size. Each piece is a connected random shape (rect, L, T, U, line, cluster) wearing a Phone Art material skin from `chore/block-cover-skins`. Same-skin neighbors pick center/edge/corner tiles so the shape seams into one barricade. Collision, exclusive slots, vault, LOS, and soft-cover breaks all run on that block grid. Sixteen 64×64 WebP skins live in `assets/generated/cover/blocks/` (concrete, sandbags, crates, rubble). Rebased onto BUILD 102 Phone Art soldier atlas.
+Street cover is assembled from one uniform block size. Each piece is a connected random shape (rect, L, T, U, line, cluster, wall, halfwall) wearing a Phone Art material skin from `chore/block-cover-skins`. Same-skin neighbors pick center/edge/corner tiles so the shape seams into one barricade. Collision, exclusive slots, vault, LOS, and soft-cover breaks all run on that block grid. Sixteen 64×64 WebP skins live in `assets/generated/cover/blocks/` (concrete, sandbags, crates, rubble). Rebased onto BUILD 102 Phone Art soldier atlas.
 
 ## Phone Art solid player atlas: 20260906-102
 

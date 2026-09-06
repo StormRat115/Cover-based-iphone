@@ -2,9 +2,10 @@ import {
   createAllies,
   updateAllies as updateAlliesCore,
   SQUAD_MODES,
-} from "./allyCore2.js?v=20260906-104";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-104";
-import { speak } from "./squadDialog.js?v=20260906-104";
+} from "./allyCore2.js?v=20260906-107";
+import { drawSoldier } from "./soldierAssets.js?v=20260906-107";
+import { drawCoverShield } from "./coverSlots.js?v=20260906-107";
+import { speak } from "./squadDialog.js?v=20260906-107";
 export { createAllies, SQUAD_MODES };
 var ALLY_LINES = {
   contact: ["CONTACT!", "ENEMY SPOTTED!", "I SEE THEM!", "EYES UP!"],
@@ -106,5 +107,6 @@ export function drawAlly(ctx, a, iso) {
   ctx.shadowColor = "#000";
   ctx.shadowBlur = 3;
   ctx.fillText((a.name || "ALLY") + " · " + a.weapon.short, 0, -44);
+  drawCoverShield(ctx, a, -62);
   ctx.restore();
 }

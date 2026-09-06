@@ -366,15 +366,42 @@ test("cover pieces are uniform blocks assembled into random playable shapes", as
   );
   assert.ok(existsSync("assets/generated/cover/blocks/manifest.json"));
   assert.ok(existsSync("assets/generated/cover/blocks/atlas-preview.png"));
+  assert.ok(existsSync("assets/generated/cover/blocks/iso-preview.png"));
+  const manifest = JSON.parse(
+    readFileSync("assets/generated/cover/blocks/manifest.json", "utf8"),
+  );
+  assert.equal(manifest.tiles.length, 36);
+  assert.equal(
+    manifest.tiles.filter((tile) => tile.faces === "top+sides").length,
+    20,
+  );
   blocks.allCoverSkinFiles().forEach((file) => {
     assert.ok(
       existsSync("assets/generated/cover/blocks/" + file),
       "missing Phone Art skin " + file,
     );
   });
-  assert.equal(blocks.allCoverSkinFiles().length, 16);
+  assert.equal(blocks.allCoverSkinFiles().length, 36);
   assert.equal(typeof assets.coverBlockSkins, "object");
-  assert.equal(Object.keys(assets.coverBlockSkins).length, 16);
+  assert.equal(Object.keys(assets.coverBlockSkins).length, 36);
+  assert.equal(blocks.pickCoverIsoTile("jersey", 0, "square", "wide"), "iso-concrete-full.webp");
+  assert.equal(blocks.pickCoverIsoTile("crates", 0, "square", "low"), "iso-crate-block.webp");
+  assert.equal(
+    blocks.pickCoverIsoTile("jersey", blocks.E | blocks.W, "wall", "wide"),
+    "iso-concrete-mid.webp",
+  );
+  assert.equal(
+    blocks.pickCoverIsoTile("jersey", blocks.E | blocks.W, "halfwall", "low"),
+    "iso-concrete-block-long.webp",
+  );
+  assert.equal(
+    blocks.pickCoverIsoTile("sandbags", 0, "U", "low"),
+    "iso-sandbags-block.webp",
+  );
+  assert.equal(
+    blocks.pickCoverIsoTile("wreck", 0, "cluster", "car"),
+    "iso-rubble-block.webp",
+  );
   assert.equal(
     blocks.pickCoverBlockSkin("jersey", blocks.E | blocks.W),
     "concrete-center.webp",
@@ -392,6 +419,101 @@ test("cover pieces are uniform blocks assembled into random playable shapes", as
     "crate-corner-a.webp",
   );
   assert.equal(blocks.skinMaterialForTheme("jersey"), "concrete");
+  assert.equal(
+    blocks.pickCoverBlockFaceSkin("jersey", blocks.E | blocks.W, "rect", "top"),
+    "concrete-center.webp",
+  );
+  assert.equal(
+    blocks.pickCoverBlockFaceSkin("jersey", 0, "rect", "south"),
+    "concrete-edge-vert.webp",
+  );
+  assert.equal(
+    blocks.pickCoverBlockFaceSkin("jersey", 0, "rect", "east"),
+    "concrete-edge-right.webp",
+  );
+  assert.equal(
+    blocks.pickCoverBlockFaceSkin("crates", 0, "square", "east"),
+    "crate-face.webp",
+  );
+  assert.ok(city.COVER_SHAPES.includes("wall"));
+  assert.ok(city.COVER_SHAPES.includes("halfwall"));
+  const wideU = city.makeShapedCover({
+    id: "wide-u",
+    x: 0,
+    y: 0,
+    shape: "U",
+    theme: "sandbags",
+  });
+  const uSpan =
+    Math.max(...wideU.blocks.map((b) => b.gx)) -
+    Math.min(...wideU.blocks.map((b) => b.gx)) +
+    1;
+  assert.ok(uSpan >= 5, "U pieces must span at least 5 blocks");
+  const wall = city.makeShapedCover({
+    id: "wall",
+    x: 0,
+    y: 0,
+    shape: "wall",
+    theme: "jersey",
+    random: () => 0.4,
+  });
+  assert.ok(wall.blocks.length >= 5 && wall.blocks.length <= 8);
+  assert.equal(wall.type, "wide");
+  const halfwall = city.makeShapedCover({
+    id: "halfwall",
+    x: 0,
+    y: 0,
+    shape: "halfwall",
+    theme: "jersey",
+    random: () => 0.8,
+  });
+  assert.ok(halfwall.blocks.length >= 5 && halfwall.blocks.length <= 8);
+  assert.equal(halfwall.type, "low");
+  assert.ok(
+    layout.some((cover) => cover.shape === "U" && cover.blocks.length >= 9),
+    "street should include a wide U",
+  );
+  assert.ok(
+    layout.some(
+      (cover) =>
+        (cover.shape === "wall" || cover.shape === "halfwall") &&
+        cover.blocks.length >= 5 &&
+        cover.blocks.length <= 8,
+    ),
+    "street should include 5-8 long walls or half-walls",
+  );
+  const iso = (x, y) => [x * 0.25 - y * 0.25, (x + y) * 0.125];
+  const ctx = h.document.createElement("canvas").getContext("2d");
+  const cube = city.makeShapedCover({
+    id: "cube-faces",
+    x: 0,
+    y: 0,
+    theme: "crates",
+    cells: [[0, 0]],
+  });
+  const beforeSkins = h.metrics.drawImages.length;
+  assets.drawShapedCover(ctx, cube, iso);
+  const afterCube = h.metrics.drawImages.slice(beforeSkins);
+  assert.ok(
+    afterCube.length >= 1,
+    "an isolated block must blit a true isometric Phone Art cube",
+  );
+  assert.ok(
+    afterCube.some(
+      (args) => String(args[0] && args[0].src).includes("iso-crate-"),
+    ),
+    "isolated crate cover must draw an iso-crate-* tile, not a flat brown cube",
+  );
+  assets.drawShapedCover(ctx, wideU, iso);
+  const afterU = h.metrics.drawImages.slice(beforeSkins);
+  assert.ok(
+    afterU.length >= cube.blocks.length + wideU.blocks.length,
+    "each block in a shaped piece blits its own iso cube sprite",
+  );
+  assert.ok(
+    afterU.every((args) => String(args[0] && args[0].src).includes("/blocks/iso-")),
+    "shaped pieces draw Phone Art iso tiles (top+sides already in the sprite)",
+  );
 
   const rect = city.makeShapedCover({
     id: "merge",
@@ -1160,8 +1282,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    53,
-    "soldier/vault/monster/charger sources plus cover atlases, 16 Phone Art block skins, and wartorn plates",
+    73,
+    "soldier/vault/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn plates",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
@@ -1792,6 +1914,114 @@ test("cover pieces expose exclusive slots by shape", async () => {
   });
   assert.ok(pick, "a full piece should send seekers to the next free cover");
   assert.notEqual(pick.cover, rect);
+
+  const planted = {
+    x: first.x,
+    y: first.y,
+    cover: rect,
+    coverAnchorX: first.x,
+    coverAnchorY: first.y,
+    combatState: "covered",
+    dead: false,
+    downed: false,
+  };
+  assert.equal(slots.occupiesCoverSlot(planted), true);
+  assert.equal(slots.coverShieldKind(planted), "full");
+  assert.equal(
+    slots.coverShieldKind({
+      x: first.x,
+      y: first.y,
+      cover: square,
+      coverAnchorX: first.x,
+      coverAnchorY: first.y,
+      combatState: "covered",
+      dead: false,
+    }),
+    "half",
+  );
+  assert.equal(
+    slots.coverShieldKind({
+      x: first.x + 400,
+      y: first.y,
+      cover: rect,
+      coverAnchorX: first.x,
+      coverAnchorY: first.y,
+      combatState: "seeking",
+      dead: false,
+    }),
+    null,
+  );
+  const shieldCtx = h.document.createElement("canvas").getContext("2d");
+  const drawsBefore = h.metrics.draws;
+  assert.equal(slots.drawCoverShield(shieldCtx, planted), true);
+  assert.ok(h.metrics.draws > drawsBefore);
+});
+
+test("squad and Marines take exclusive cover slots instead of standing exposed", async () => {
+  const h = createHarness();
+  const alliesModule = await h.importModule(`js/allyCore2.js?v=${BUILD}`);
+  const marineModule = await h.importModule(`js/marines.js?v=${BUILD}`);
+  const map = await h.importModule(`js/cityMap.js?v=${BUILD}`);
+  const slots = await h.importModule(`js/coverSlots.js?v=${BUILD}`);
+  const player = { x: 0, y: 80, hp: 100, dead: false, downed: false };
+  const field = [
+    map.makeShapedCover({ id: "slot-a", x: -180, y: -40, shape: "rect", theme: "jersey" }),
+    map.makeShapedCover({ id: "slot-b", x: 180, y: -50, shape: "U", theme: "sandbags" }),
+    map.makeShapedCover({ id: "slot-c", x: 0, y: -260, shape: "wall", theme: "jersey" }),
+    map.makeShapedCover({ id: "slot-d", x: -220, y: -270, shape: "L", theme: "crates" }),
+    map.makeShapedCover({ id: "slot-e", x: 220, y: -280, shape: "T", theme: "jersey" }),
+    map.makeShapedCover({ id: "slot-f", x: 40, y: -480, shape: "halfwall", theme: "sandbags" }),
+  ];
+  h.window.__battleCovers = field;
+  const allies = alliesModule.createAllies();
+  const marines = marineModule.createMarines();
+  allies.forEach((ally, i) => {
+    ally.x = (i - 1) * 160;
+    ally.y = 90;
+    ally.cover = null;
+    ally.exposed = true;
+    ally.combatState = "seeking";
+  });
+  marines.forEach((marine, i) => {
+    marine.x = (i - 2) * 140;
+    marine.y = 140;
+    marine.cover = null;
+    marine.exposed = true;
+    marine.combatState = "seeking";
+  });
+  const enemy = {
+    type: "rifleman",
+    x: 20,
+    y: -720,
+    hp: 8000,
+    maxHp: 8000,
+    dead: false,
+    downed: false,
+    exposed: true,
+    spawnTimer: 0,
+    defense: 0,
+  };
+  for (let i = 0; i < 420; i++) {
+    alliesModule.updateAllies(
+      allies,
+      1 / 60,
+      player,
+      field,
+      [enemy],
+      null,
+      "FOLLOW",
+      marines,
+    );
+    marineModule.updateMarines(marines, 1 / 60, player, field, [enemy], null, allies);
+  }
+  const living = allies.concat(marines).filter((unit) => !unit.dead);
+  const claimed = living.filter((unit) => unit.cover);
+  const slotted = living.filter((unit) => slots.occupiesCoverSlot(unit, 80));
+  assert.ok(claimed.length === living.length, "every friendly should claim a slot");
+  assert.ok(
+    slotted.length >= Math.ceil(living.length * 0.5),
+    "most friendlies should be planted on their slot during a firefight",
+  );
 });
 
 test("unit collision blocks overlap and unsticks jammed pairs", async () => {
