@@ -151,17 +151,17 @@ Wartorn street composition lock (TMNT arcade beat-em-up read, kept on the establ
 
 Phone Art street-edge pack (from `chore/street-edge-accents`) stamps lamps and sidewalk props on the curb band only: intact/bent/fallen posts, curb chunks, hydrant/manhole, wrecked bus shelter, tipped trash, dead planter. They are clipped off the playable asphalt so they cannot become mid-road plates.
 
-### Pages verify (BUILD 20260906-106)
+### Pages verify (BUILD 20260906-107)
 
 1. Open https://stormrat115.github.io/Cover-based-iphone/
-2. Confirm the stamp reads **BUILD 20260906-106**.
+2. Confirm the stamp reads **BUILD 20260906-107**.
 3. Start a mission. Cover cubes blit Phone Art true-isometric tiles (`iso-*-block` / `block-long` / `top` / `mid` / `full`) with faces already painted on the sprite — not flat brown cubes. Concrete, sandbags, crates, and rubble should read as 3D blocks.
 4. U pieces are wide (5+ blocks across). Occasional 5–8 block full walls and half-walls appear. Street cover is slightly denser but still spaced, not clumped.
 5. Friendlies in a cover slot show a small green shield above the head: full green for full cover, half-full for half cover. Squad mates and Marines prioritize getting into and staying in exclusive slots during firefights.
 6. The player (and allies) use Phone Art’s solid `player-solid-atlas` v4. Bodies are opaque. Animation list: idle, run, standShoot, crouchShoot, reload, death.
 7. Sidewalks and lamps stay on the edges. Buildings stay a far backdrop. Squad KILLS still tick.
 
-## True isometric cover faces: 20260906-106
+## True isometric cover faces: 20260906-107
 
 Phone Art `chore/cover-iso-faces` tiles (20 iso sprites, `faces: "top+sides"`) are drawn as cubes. Isolated / half-cover pieces use `iso-*-block` or `iso-*-full`; long runs use `iso-*-mid` / `iso-*-block-long`; exposed north ends use `iso-*-top`. The 16 flat 64×64 skins stay for fallback. U kits are 5–6 blocks wide. Layouts add 5–8 long walls / half-walls and a slightly denser spaced street. A green shield icon marks friendlies occupying a slot (full vs half). Squad and Marine AI treat taking and holding a slot as high priority over standing exposed.
 

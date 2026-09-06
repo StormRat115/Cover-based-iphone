@@ -1,6 +1,6 @@
-import { loadImage } from "./assets.js?v=20260906-106";
-import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-106";
-import { preloadWartornAssets } from "./wartornCity.js?v=20260906-106";
+import { loadImage } from "./assets.js?v=20260906-107";
+import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-107";
+import { preloadWartornAssets } from "./wartornCity.js?v=20260906-107";
 import {
   COVER_BLOCK_SIZE,
   E,
@@ -11,7 +11,7 @@ import {
   neighborMask,
   pickCoverBlockFaceSkin,
   pickCoverIsoTile,
-} from "./coverBlocks.js?v=20260906-106";
+} from "./coverBlocks.js?v=20260906-107";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
@@ -25,7 +25,7 @@ coverShapeAtlas.src =
 export const coverBlockSkins = {};
 allCoverSkinFiles().forEach(function (file) {
   var image = new Image();
-  image.src = "./assets/generated/cover/blocks/" + file + "?v=20260906-106";
+  image.src = "./assets/generated/cover/blocks/" + file + "?v=20260906-107";
   coverBlockSkins[file] = image;
 });
 export const coverBlockAtlas = coverBlockSkins["concrete-center.webp"];
@@ -302,7 +302,7 @@ function blitIsoCube(ctx, iso, x, y, size, tile) {
   var tw = tile.naturalWidth,
     th = tile.naturalHeight;
   if (tw < 2 || th < 2 || maxX - minX < 2) return false;
-  var dw = Math.max(10, (maxX - minX) * 1.55),
+  var dw = Math.max(46, (maxX - minX) * 2.7),
     dh = dw * (th / tw);
   var destX = (minX + maxX) / 2 - dw / 2,
     destY = maxY - dh + 1;
@@ -315,8 +315,7 @@ function blitIsoCube(ctx, iso, x, y, size, tile) {
   ctx.lineTo(sw[0], sw[1] + 2);
   ctx.closePath();
   ctx.fill();
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
+  ctx.imageSmoothingEnabled = false;
   ctx.drawImage(tile, 0, 0, tw, th, destX, destY, dw, dh);
   ctx.restore();
   return true;
