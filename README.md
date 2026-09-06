@@ -112,6 +112,12 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - All four sheets download and decode during the loading screen so enemy art cannot pop in after a mission begins.
 - Marksman, SMG, and pistol enemies retain the original monster sprite as a safe fallback.
 
+## Shaped cover and sharp street: 20260906-79
+
+- Street asphalt is solid color slabs with a sharp screen-space grain, soft lane washes, and sparse marks. The previous BUILD 78 stretch of one small texture across the whole road is gone, and the diamond/square tile grid stays gone.
+- Cover is authored as square, rectangle, T, U, and L pieces. Collision segments and procedural art (sandbags, jersey barriers, crates, wrecks, rubble) follow those silhouettes.
+- Soldiers and monsters plant against the facing cover edge: closer slots, tall vs low poses, peek/lean offsets, and a slight depth nudge so tucked units sit on the cover silhouette instead of floating through it.
+
 ## Northeast assault waves: 20260905-68
 
 - Monster animation states now use per-enemy clocks, calmer frame rates, and held firing/hit reactions instead of racing through six-frame rows.

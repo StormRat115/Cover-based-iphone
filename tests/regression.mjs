@@ -299,6 +299,69 @@ test("world/screen round trips stay accurate as camera moves and viewport change
   }
 });
 
+test("cover pieces use explicit square/rect/T/U/L segments that match their art", async () => {
+  const h = createHarness();
+  const city = await h.importModule(`js/cityMap.js?v=${BUILD}`);
+  const coverModule = await h.importModule(`js/cover.js?v=${BUILD}`);
+  const sprites = await h.importModule(`js/soldierAssets.js?v=${BUILD}`);
+  const shapes = new Set();
+  for (const cover of city.createCityCoverLayout(() => 0.31)) {
+    assert.ok(
+      city.COVER_SHAPES.includes(cover.shape),
+      cover.id + " needs an explicit cover shape",
+    );
+    assert.ok(cover.theme, cover.id + " needs a fitted theme");
+    assert.ok(cover.segments && cover.segments.length >= 1);
+    shapes.add(cover.shape);
+    if (cover.shape === "square" || cover.shape === "rect")
+      assert.equal(cover.segments.length, 1);
+    if (cover.shape === "T") assert.equal(cover.segments.length, 2);
+    if (cover.shape === "U") assert.equal(cover.segments.length, 3);
+    if (cover.shape === "L") assert.equal(cover.segments.length, 2);
+    const pieces = coverModule.coverPieces(cover);
+    assert.equal(pieces.length, cover.segments.length);
+    const threat = { x: cover.x, y: cover.y + 400 };
+    const slot = coverModule.getCoverSlot(cover, { coverSlotIndex: 0 }, threat);
+    assert.equal(slot.side, "top");
+    const wall = slot.segment;
+    const gap = Math.abs(slot.y - (wall.y - wall.h / 2));
+    assert.ok(gap <= 20, "units must plant against the facing cover edge");
+  }
+  assert.deepEqual([...shapes].sort(), ["L", "T", "U", "rect", "square"]);
+
+  const low = {
+    type: "low",
+    x: 40,
+    y: 0,
+    w: 84,
+    h: 84,
+    shape: "square",
+  };
+  const planted = sprites.coverPlantOffset({
+    x: 40,
+    y: 60,
+    cover: low,
+    exposed: false,
+  });
+  assert.ok(planted.y > 0, "low cover pose should squat onto the silhouette");
+  const peeking = sprites.coverPlantOffset({
+    x: 40,
+    y: 60,
+    cover: low,
+    exposed: true,
+  });
+  assert.ok(peeking.x !== planted.x || peeking.y < planted.y);
+});
+
+test("street asphalt is solid slabs plus sharp grain, not a stretched tile", () => {
+  const source = readFileSync("js/game.js", "utf8");
+  assert.equal(source.includes("stretch one texture"), false);
+  assert.equal(source.includes("groundTile"), false);
+  assert.equal(source.includes("roadSegments"), false);
+  assert.match(source, /getAsphaltGrain/);
+  assert.match(source, /imageSmoothingEnabled = false/);
+});
+
 test("mission cover layouts are unique, reproducible, and keep spawn lanes clear", async () => {
   const h = createHarness();
   const city = await h.importModule(`js/cityMap.js?v=${BUILD}`);
@@ -971,8 +1034,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    9,
-    "seven character sources plus two environment atlases",
+    10,
+    "eight character sources plus two environment atlases",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");

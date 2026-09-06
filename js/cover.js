@@ -1,9 +1,9 @@
-import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-78";
+import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-79";
 const collisionPieces = new WeakMap();
-import { drawCityAsset } from "./cityAssets.js?v=20260906-78";
-import { createCityCoverLayout } from "./cityMap.js?v=20260906-78";
+import { drawShapedCover, drawCityAsset } from "./cityAssets.js?v=20260906-79";
+import { createCityCoverLayout } from "./cityMap.js?v=20260906-79";
 
-/* Tactical cover driven by the city battlefield atlas, with threat-aware cover sides. */
+/* Tactical cover: explicit square / rect / T / U / L segments. */
 export function createCover(random) {
   const layout = createCityCoverLayout(random).map(function (item) {
     return {
@@ -14,15 +14,22 @@ export function createCover(random) {
       h: item.h || 34,
       type: item.coverType || "low",
       asset: item.asset,
+      shape: item.shape || "rect",
+      theme: item.theme || "jersey",
+      facing: item.facing || 0,
       scale: item.scale || 0.24,
       segments: item.segments || null,
     };
   });
-  // Cover geometry is static for a mission; cache its collision rectangles once.
   for (const cover of layout) collisionPieces.set(cover, pieces(cover));
   if (typeof window !== "undefined") window.__battleCovers = layout;
   return layout;
 }
+
+export function coverPieces(c) {
+  return pieces(c);
+}
+
 function pieces(c) {
   const cached = collisionPieces.get(c);
   if (cached) return cached;
@@ -38,11 +45,13 @@ function pieces(c) {
       })
     : [{ x: c.x, y: c.y, w: c.w, h: c.h, type: c.type }];
 }
+
 function inside(p, x, y, padX, padY) {
   return (
     Math.abs(x - p.x) < p.w / 2 + padX && Math.abs(y - p.y) < p.h / 2 + padY
   );
 }
+
 export function findCoverForPoint(x, y, covers) {
   for (const c of covers) {
     const ps = pieces(c);
@@ -50,6 +59,45 @@ export function findCoverForPoint(x, y, covers) {
   }
   return null;
 }
+
+function coverStandoff(c) {
+  return c.type === "low" ? 16 : 18;
+}
+
+function facingSegment(c, side) {
+  const ps = pieces(c);
+  if (ps.length === 1) return ps[0];
+  return ps.reduce(function (best, p) {
+    if (side === "top")
+      return p.y - p.h / 2 < best.y - best.h / 2 ? p : best;
+    if (side === "bottom")
+      return p.y + p.h / 2 > best.y + best.h / 2 ? p : best;
+    if (side === "left")
+      return p.x - p.w / 2 < best.x - best.w / 2 ? p : best;
+    return p.x + p.w / 2 > best.x + best.w / 2 ? p : best;
+  }, ps[0]);
+}
+
+function secondarySegment(c, side, primary) {
+  const ps = pieces(c);
+  if (ps.length < 2) return null;
+  var best = null,
+    bestScore = -Infinity;
+  for (var i = 0; i < ps.length; i++) {
+    var p = ps[i];
+    if (p === primary) continue;
+    var score =
+      side === "top" || side === "bottom"
+        ? Math.abs(p.x - primary.x) + p.h
+        : Math.abs(p.y - primary.y) + p.w;
+    if (score > bestScore) {
+      bestScore = score;
+      best = p;
+    }
+  }
+  return best;
+}
+
 export function getCoverSlot(c, actor, threat) {
   var side = "bottom";
   if (threat) {
@@ -64,46 +112,41 @@ export function getCoverSlot(c, actor, threat) {
     else side = ady < 0 ? "top" : "bottom";
   }
 
-  var inset = c.type === "wide" ? 24 : 18;
   var slot =
     actor && Number.isFinite(actor.coverSlotIndex)
       ? Math.max(0, Math.min(2, actor.coverSlotIndex))
       : 0;
-  var offsets = [-1, 0, 1],
-    x = c.x,
-    y = c.y;
+  var primary = facingSegment(c, side);
+  var wall = slot === 2 ? secondarySegment(c, side, primary) || primary : primary;
+  var inset = c.type === "wide" ? 20 : 16;
+  var standoff = coverStandoff(c);
+  var offsets = [-1, 0, 1];
+  var x = wall.x,
+    y = wall.y;
+
   if (side === "top" || side === "bottom") {
-    var usableX = Math.max(18, c.w / 2 - inset);
+    var usableX = Math.max(14, wall.w / 2 - inset);
     var spreadX =
       c.type === "wide"
-        ? Math.min(58, usableX * 0.78)
-        : Math.min(44, usableX * 0.78);
+        ? Math.min(52, usableX * 0.78)
+        : Math.min(38, usableX * 0.78);
     x = Math.max(
-      c.x - c.w / 2 + inset,
-      Math.min(c.x + c.w / 2 - inset, c.x + offsets[slot] * spreadX),
+      wall.x - wall.w / 2 + inset,
+      Math.min(wall.x + wall.w / 2 - inset, wall.x + offsets[slot] * spreadX),
     );
-    y = side === "top" ? c.y - c.h / 2 - 28 : c.y + c.h / 2 + 28;
+    y = side === "top" ? wall.y - wall.h / 2 - standoff : wall.y + wall.h / 2 + standoff;
   } else {
-    var usableY = Math.max(16, c.h / 2 + 20);
-    var spreadY = Math.min(38, usableY * 0.72);
-    y = c.y + offsets[slot] * spreadY;
-    x = side === "left" ? c.x - c.w / 2 - 28 : c.x + c.w / 2 + 28;
+    var usableY = Math.max(12, wall.h / 2 - 8);
+    var spreadY = Math.min(34, usableY * 0.72);
+    y = Math.max(
+      wall.y - wall.h / 2 + 10,
+      Math.min(wall.y + wall.h / 2 - 10, wall.y + offsets[slot] * spreadY),
+    );
+    x = side === "left" ? wall.x - wall.w / 2 - standoff : wall.x + wall.w / 2 + standoff;
   }
-
-  if (c.segments && c.segments.length > 1 && slot === 2) {
-    var s = c.segments[1],
-      sx = c.x + (s.dx || 0),
-      sy = c.y + (s.dy || 0);
-    if (side === "top" || side === "bottom") {
-      x = sx;
-      y = sy + (side === "top" ? -s.h / 2 - 24 : s.h / 2 + 24);
-    } else {
-      x = sx + (side === "left" ? -s.w / 2 - 24 : s.w / 2 + 24);
-      y = sy;
-    }
-  }
-  return { x: x, y: y, side: side };
+  return { x: x, y: y, side: side, segment: wall };
 }
+
 export function getCoverPeekOptions(c, actor, threat) {
   const anchor = getCoverSlot(c, actor, threat);
   if (!threat)
@@ -153,6 +196,7 @@ export function getCoverPeekOptions(c, actor, threat) {
   }
   return opts;
 }
+
 export function chooseCoverPeek(c, actor, threat, covers) {
   const opts = getCoverPeekOptions(c, actor, threat);
   let best = opts[0],
@@ -173,6 +217,7 @@ export function chooseCoverPeek(c, actor, threat, covers) {
   }
   return best;
 }
+
 export function isLineBlocked(a, b, covers) {
   for (const cover of covers) {
     for (const rect of pieces(cover)) {
@@ -181,6 +226,7 @@ export function isLineBlocked(a, b, covers) {
   }
   return false;
 }
+
 export function getHitChance(shooter, target, covers) {
   if (!target) return 0;
   const d = Math.hypot(target.x - shooter.x, target.y - shooter.y);
@@ -199,16 +245,19 @@ export function getHitChance(shooter, target, covers) {
   if (shooter.cover && !shooter.exposed) chance += 3;
   return Math.round(Math.max(8, Math.min(95, chance)));
 }
+
 export function drawCover(ctx, c, iso) {
-  const q = iso(c.x, c.y),
-    x = q[0],
-    y = q[1];
-  if (c.asset) {
-    drawCityAsset(ctx, c.asset, x, y, { scale: c.scale || 0.24 });
+  if (c.shape || (c.segments && c.segments.length)) {
+    drawShapedCover(ctx, c, iso);
     return;
   }
+  if (c.asset && drawCityAsset(ctx, c.asset, iso(c.x, c.y)[0], iso(c.x, c.y)[1], {
+    scale: c.scale || 0.24,
+  }))
+    return;
+  const q = iso(c.x, c.y);
   ctx.save();
-  ctx.translate(x, y);
+  ctx.translate(q[0], q[1]);
   ctx.fillStyle = c.type === "low" ? "#6f6652" : "#5a6264";
   ctx.fillRect(-c.w * 0.14, -c.h * 0.28, c.w * 0.28, c.h * 0.28);
   ctx.restore();
