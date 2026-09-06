@@ -10,6 +10,8 @@ export const wartornSkyline = plate("wartorn-skyline-backdrop.png");
 export const wartornStreet = plate("wartorn-street-plate.png");
 export const wartornRuin = plate("wartorn-ruin-building-a.png");
 export const wartornRubblePile = plate("wartorn-rubble-pile.png");
+export const wartornRuinCut = plate("wartorn-ruin-building-a-cut.webp");
+export const wartornRubbleCut = plate("wartorn-rubble-pile-cut.webp");
 export const facadeApartment = plate("facade-ruin-apartment.webp");
 export const facadeStorefront = plate("facade-ruin-storefront.webp");
 export const rubbleBrick = plate("rubble-brick.webp");
@@ -167,7 +169,7 @@ function punchDarkPlate(image) {
       b = px[off + 2];
     luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
     chroma = Math.max(r, g, b) - Math.min(r, g, b);
-    if (luma <= 34 && chroma < 20) {
+    if (luma <= 42 && chroma < 24) {
       mark[idx] = 1;
       stack.push(idx);
     } else mark[idx] = 2;
@@ -211,7 +213,7 @@ function punched(image) {
 function spriteForBuilding(kind) {
   if (kind === "apartment") return facadeApartment;
   if (kind === "storefront") return facadeStorefront;
-  return punched(wartornRuin);
+  return ready(wartornRuinCut) ? wartornRuinCut : punched(wartornRuin);
 }
 
 function spriteForRubble(kind) {
@@ -219,7 +221,7 @@ function spriteForRubble(kind) {
   if (kind === "concrete") return rubbleConcrete;
   if (kind === "sandbags") return rubbleSandbags;
   if (kind === "scrap") return rubbleScrap;
-  return punched(wartornRubblePile);
+  return ready(wartornRubbleCut) ? wartornRubbleCut : punched(wartornRubblePile);
 }
 
 function spriteForWreck(kind) {
@@ -307,19 +309,26 @@ function clipSidewalk(ctx, iso, world, side) {
 }
 
 function drawStreetScenes(ctx, iso, world, onScreen) {
-  var i, item, q, dw, dh, side;
-  for (i = 0; i < STREET_SCENES.length; i++) {
-    item = STREET_SCENES[i];
-    if (onScreen && !onScreen(item.x, item.y, 640)) continue;
-    q = iso(item.x, item.y);
-    dw = 460 * item.s;
-    dh = 258 * item.s;
-    side = item.x < 0 ? -1 : 1;
+  var sides, s, i, item, q, tileW, tileH;
+  if (!ready(wartornStreet) || !world || !iso) return;
+  sides = [-1, 1];
+  for (s = 0; s < sides.length; s++) {
     ctx.save();
-    clipSidewalk(ctx, iso, world, side);
-    if (!stamp(ctx, wartornStreet, q[0], q[1] + 18, dw, dh, 0.78)) {
+    if (!clipSidewalk(ctx, iso, world, sides[s])) {
       ctx.restore();
       continue;
+    }
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.globalAlpha = 0.5;
+    for (i = 0; i < STREET_SCENES.length; i++) {
+      item = STREET_SCENES[i];
+      if ((item.x < 0) !== (sides[s] < 0)) continue;
+      if (onScreen && !onScreen(item.x, item.y, 520)) continue;
+      q = iso(item.x, item.y);
+      tileW = 320 * item.s;
+      tileH = 180 * item.s;
+      ctx.drawImage(wartornStreet, q[0] - tileW / 2, q[1] - tileH * 0.55, tileW, tileH);
     }
     ctx.restore();
   }
@@ -333,6 +342,8 @@ export function preloadWartornAssets(onProgress) {
     loadImage(wartornStreet),
     loadImage(wartornRuin),
     loadImage(wartornRubblePile),
+    loadImage(wartornRuinCut),
+    loadImage(wartornRubbleCut),
     loadImage(facadeApartment),
     loadImage(facadeStorefront),
     loadImage(rubbleBrick),
