@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-108";
+import { loadImage } from "./assets.js?v=20260906-109";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
   "./assets/generated/soldier/player-solid-atlas.png?v=20260906-102";
@@ -177,6 +177,7 @@ const ENEMY_FRAME_BOXES = {
 };
 const FRIENDLY_CELL = 192;
 const FRIENDLY_COLS = 4;
+const FRIENDLY_ROWS_COUNT = 6;
 const FRIENDLY_ROWS = {
   idle: 0,
   run: 1,
@@ -210,7 +211,8 @@ export const FRIENDLY_ATLAS_STATES = [
 ];
 const VAULT_COLS = 4;
 const VAULT_CELL = 168;
-let runtimeFriendlyAtlas = null;
+let runtimeFriendlyAtlas = null,
+  runtimeFriendlyFrames = null;
 const ROWS = {
   idle: 0,
   run: 1,
@@ -366,6 +368,47 @@ export function hardenSheetAlpha(source, cut) {
   }
 }
 
+function buildFriendlyFrameCache(source) {
+  if (!source) return null;
+  var frames = [];
+  try {
+    for (var row = 0; row < FRIENDLY_ROWS_COUNT; row++) {
+      frames[row] = [];
+      for (var col = 0; col < FRIENDLY_COLS; col++) {
+        var frame = document.createElement("canvas");
+        frame.width = FRIENDLY_CELL;
+        frame.height = FRIENDLY_CELL;
+        var g = frame.getContext("2d", { willReadFrequently: true });
+        if (!g || typeof g.drawImage !== "function") return null;
+        g.clearRect(0, 0, FRIENDLY_CELL, FRIENDLY_CELL);
+        g.imageSmoothingEnabled = false;
+        g.drawImage(
+          source,
+          col * FRIENDLY_CELL,
+          row * FRIENDLY_CELL,
+          FRIENDLY_CELL,
+          FRIENDLY_CELL,
+          0,
+          0,
+          FRIENDLY_CELL,
+          FRIENDLY_CELL,
+        );
+        // Keep every visible armor pixel fully opaque. A separate frame canvas
+        // also prevents mobile GPU atlas sampling from bleeding between cells.
+        frames[row][col] = hardenSheetAlpha(frame, 40) || frame;
+      }
+    }
+  } catch (_error) {
+    return null;
+  }
+  return frames;
+}
+
+function friendlyFrame(row, col) {
+  if (!runtimeFriendlyFrames || !runtimeFriendlyFrames[row]) return null;
+  return runtimeFriendlyFrames[row][col] || null;
+}
+
 export function isLiveFriendly(actor, team) {
   return !!(
     actor &&
@@ -420,6 +463,7 @@ export function preloadSoldierAssets(onProgress) {
     if (imgs.some((image) => !image))
       throw new Error("Character images are not ready");
     runtimeFriendlyAtlas = hardenSheetAlpha(friendlyAtlasSource) || friendlyAtlasSource;
+    runtimeFriendlyFrames = buildFriendlyFrameCache(runtimeFriendlyAtlas);
     runtimeVaultSheet = hardenSheetAlpha(vaultSheetSource) || vaultSheetSource;
     // Legacy crop atlas kept as fallback; enemies still use monster atlas path.
     const soldierAtlas = buildAtlas(soldierSource, FRAME_BOXES);
@@ -964,7 +1008,7 @@ export function drawSoldier(ctx, actor, options) {
     baseScale = options.scale == null ? 0.28 : options.scale,
     scale = baseScale * (actor && actor.scale ? actor.scale : 1),
     flip = stableFacing(actor, state),
-    bob = state === "run" ? Math.sin(nowMs() * 0.012) * 0.28 : 0,
+    bob = 0,
     plant = coverPlantOffset(actor),
     enemyCorpse = false;
   var vaultLift = actor && actor.vaultZ ? actor.vaultZ : 0;
@@ -973,10 +1017,10 @@ export function drawSoldier(ctx, actor, options) {
     (options.x || 0) + plant.x,
     (options.y || 0) + bob + plant.y - vaultLift,
   );
-  var liveFriendly = isLiveFriendly(actor, team);
+  var solidFriendly = !isEnemy && !!runtimeFriendlyAtlas;
   ctx.globalCompositeOperation = "source-over";
-  ctx.filter = liveFriendly ? "none" : teamFilter(team);
-  ctx.globalAlpha = liveFriendly ? 1 : options.alpha == null ? 1 : options.alpha;
+  ctx.filter = solidFriendly ? "none" : teamFilter(team);
+  ctx.globalAlpha = solidFriendly ? 1 : options.alpha == null ? 1 : options.alpha;
   if (state === "death") {
     if (isEnemy) {
       state = "lowCover";
@@ -1023,17 +1067,19 @@ export function drawSoldier(ctx, actor, options) {
   }
   ctx.scale(flip, 1);
   // Live friendlies: one opaque blit. No filter, no crossfade, no ghost plate.
-  ctx.filter = liveFriendly ? "none" : teamFilter(team);
+  var isolatedFriendlyFrame =
+    useFriendly && !useVault ? friendlyFrame(r.row, r.col) : null;
+  ctx.filter = solidFriendly ? "none" : teamFilter(team);
   ctx.imageSmoothingEnabled = true;
   var drawAtlas = useVault
     ? vaultSrc
     : useFriendly
-      ? runtimeFriendlyAtlas
+      ? isolatedFriendlyFrame || runtimeFriendlyAtlas
       : atlas;
   if (drawAtlas) {
-    var baseAlpha = liveFriendly ? 1 : options.alpha == null ? 1 : options.alpha;
+    var baseAlpha = solidFriendly ? 1 : options.alpha == null ? 1 : options.alpha;
     if (enemyCorpse) baseAlpha *= 0.82;
-    if (liveFriendly) {
+    if (solidFriendly) {
       ctx.globalAlpha = 1;
       ctx.filter = "none";
       ctx.globalCompositeOperation = "source-over";
@@ -1042,8 +1088,8 @@ export function drawSoldier(ctx, actor, options) {
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(
         drawAtlas,
-        r.col * cellW,
-        (useVault ? 0 : r.row) * cellH,
+        isolatedFriendlyFrame ? 0 : r.col * cellW,
+        isolatedFriendlyFrame ? 0 : (useVault ? 0 : r.row) * cellH,
         cellW,
         cellH,
         -dw * 0.5,
