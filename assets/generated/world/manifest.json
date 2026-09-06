@@ -88,5 +88,77 @@
     "bytes": 42424,
     "category": "backdrop",
     "transparent": false
+  },
+  {
+    "file": "lamp-post-bent.webp",
+    "path": "assets/generated/world/lamp-post-bent.webp",
+    "width": 234,
+    "height": 360,
+    "bytes": 14126,
+    "category": "street",
+    "transparent": true
+  },
+  {
+    "file": "lamp-post-intact.webp",
+    "path": "assets/generated/world/lamp-post-intact.webp",
+    "width": 157,
+    "height": 360,
+    "bytes": 8600,
+    "category": "street",
+    "transparent": true
+  },
+  {
+    "file": "sidewalk-curb-edge.webp",
+    "path": "assets/generated/world/sidewalk-curb-edge.webp",
+    "width": 300,
+    "height": 184,
+    "bytes": 13058,
+    "category": "sidewalk",
+    "transparent": true
+  },
+  {
+    "file": "sidewalk-hydrant-manhole.webp",
+    "path": "assets/generated/world/sidewalk-hydrant-manhole.webp",
+    "width": 300,
+    "height": 222,
+    "bytes": 17608,
+    "category": "sidewalk",
+    "transparent": true
+  },
+  {
+    "file": "lamp-post-fallen.webp",
+    "path": "assets/generated/world/lamp-post-fallen.webp",
+    "width": 347,
+    "height": 360,
+    "bytes": 19504,
+    "category": "street",
+    "transparent": true
+  },
+  {
+    "file": "sidewalk-bus-shelter-wreck.webp",
+    "path": "assets/generated/world/sidewalk-bus-shelter-wreck.webp",
+    "width": 300,
+    "height": 388,
+    "bytes": 25572,
+    "category": "sidewalk",
+    "transparent": true
+  },
+  {
+    "file": "sidewalk-trash-bin-tipped.webp",
+    "path": "assets/generated/world/sidewalk-trash-bin-tipped.webp",
+    "width": 274,
+    "height": 300,
+    "bytes": 20514,
+    "category": "sidewalk",
+    "transparent": true
+  },
+  {
+    "file": "sidewalk-planter-dead.webp",
+    "path": "assets/generated/world/sidewalk-planter-dead.webp",
+    "width": 280,
+    "height": 293,
+    "bytes": 21854,
+    "category": "sidewalk",
+    "transparent": true
   }
 ]
