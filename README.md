@@ -151,10 +151,10 @@ Wartorn street composition lock (TMNT arcade beat-em-up read, kept on the establ
 
 Phone Art street-edge pack (from `chore/street-edge-accents`) stamps lamps and sidewalk props on the curb band only: intact/bent/fallen posts, curb chunks, hydrant/manhole, wrecked bus shelter, tipped trash, dead planter. They are clipped off the playable asphalt so they cannot become mid-road plates.
 
-### Pages verify (BUILD 20260906-94)
+### Pages verify (BUILD 20260906-95)
 
 1. Open https://stormrat115.github.io/Cover-based-iphone/
-2. Confirm the stamp reads **BUILD 20260906-94**.
+2. Confirm the stamp reads **BUILD 20260906-95**.
 3. Start a mission. Living player, allies, and Marines must look solid and fully opaque — not milky/ghost-translucent. You should not see the road through their bodies.
 4. Cover should sit on the asphalt corridor with visible gaps between pieces. Fort/set pieces at the far end may stay clustered; most street pieces should not pile on the same XY.
 5. Sidewalks and occasional lamps should read along the edges. Buildings stay a far backdrop.

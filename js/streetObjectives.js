@@ -1,5 +1,5 @@
-import { makeShapedCover } from "./cityMap.js?v=20260906-94";
-import { prepareCoverHp } from "./destructibleCover.js?v=20260906-94";
+import { makeShapedCover } from "./cityMap.js?v=20260906-95";
+import { prepareCoverHp } from "./destructibleCover.js?v=20260906-95";
 
 export const OBJECTIVE_TYPES = ["hold_crosswalk", "clear_blockade", "escort_segment"];
 
