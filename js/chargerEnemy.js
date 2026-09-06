@@ -3,20 +3,22 @@ import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260906-81";
 import { faceThreat } from "./combatAI.js?v=20260906-81";
 
 export const CHARGER_SHEET = {
-  file: "enemy-gorehorn-charger-sheet.png",
-  width: 512,
-  height: 560,
+  file: "enemy-charger-melee-sheet.png",
+  manifest: "enemy-charger-melee.json",
+  name: "Rushblade Charger",
+  width: 640,
+  height: 800,
   columns: 4,
   rows: 5,
-  frameWidth: 128,
-  frameHeight: 112,
+  frameWidth: 160,
+  frameHeight: 160,
   frames: 4,
   animations: {
-    idle: { row: 0, frames: 4, fps: 5 },
-    run: { row: 1, frames: 4, fps: 9 },
+    idle: { row: 0, frames: 4, fps: 4 },
+    run: { row: 1, frames: 4, fps: 10 },
     charge: { row: 2, frames: 4, fps: 12 },
-    melee: { row: 3, frames: 4, fps: 11 },
-    death: { row: 4, frames: 4, fps: 7 },
+    melee: { row: 3, frames: 4, fps: 12 },
+    death: { row: 4, frames: 4, fps: 8 },
   },
 };
 
@@ -41,7 +43,7 @@ export function preloadChargerAssets(onProgress) {
 export function chargerWeapon() {
   return {
     id: "melee",
-    name: "GOREHORN CLAWS",
+    name: "RUSHBLADE",
     short: "MELEE",
     damage: 28,
     range: 72,
@@ -212,7 +214,7 @@ export function drawCharger(ctx, actor, options) {
   }
   var fw = sheet.frameWidth,
     fh = sheet.frameHeight,
-    scale = (options.scale == null ? 0.42 : options.scale) * (actor.scale || 1),
+    scale = (options.scale == null ? 0.5 : options.scale * 1.65) * (actor.scale || 1),
     dw = fw * scale,
     dh = fh * scale,
     flip = (actor.facingX || 0) < 0 ? -1 : 1;

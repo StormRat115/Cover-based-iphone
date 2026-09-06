@@ -1217,11 +1217,24 @@ test("charger uses its own sheet and charges through cover to melee", async () =
   const charger = await h.importModule(`js/chargerEnemy.js?v=${BUILD}`);
   const enemies = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
   const sheet = charger.getChargerSheet();
-  assert.equal(sheet.file, "enemy-gorehorn-charger-sheet.png");
-  assert.equal(sheet.frames, 4);
-  assert.ok(sheet.animations.idle && sheet.animations.charge && sheet.animations.melee && sheet.animations.death);
+  assert.equal(sheet.file, "enemy-charger-melee-sheet.png");
+  assert.equal(sheet.frameWidth, 160);
+  assert.equal(sheet.frameHeight, 160);
+  assert.equal(sheet.columns, 4);
+  assert.equal(sheet.rows, 5);
+  assert.equal(sheet.animations.idle.fps, 4);
+  assert.equal(sheet.animations.run.fps, 10);
+  assert.equal(sheet.animations.charge.fps, 12);
+  assert.equal(sheet.animations.melee.fps, 12);
+  assert.equal(sheet.animations.death.fps, 8);
   const png = readFileSync(resolve("assets/generated/enemies", sheet.file));
   assert.equal(png[25], 6, "charger sheet must be an RGBA PNG");
+  assert.ok(png.length > 100000, "Rushblade atlas should be the Phone Art sheet");
+  const manifest = JSON.parse(
+    readFileSync(resolve("assets/generated/enemies/enemy-charger-melee.json"), "utf8"),
+  );
+  assert.equal(manifest.file, sheet.file);
+  assert.deepEqual(manifest.states, ["idle", "run", "charge", "melee", "death"]);
   const roster = enemies.createBandits(1, { extraCount: 6, random: () => 0 });
   assert.ok(roster.some((e) => e.type === "charger"));
   const gore = roster.find((e) => e.type === "charger");

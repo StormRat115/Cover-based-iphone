@@ -130,7 +130,7 @@ xp to next level   = 70 + 40 * currentLevel
 skill points       = 1 per level gained
 ```
 
-Loadout shows team level, unspent points, a four-branch skill tree (combat / grenades / squad / Marines), and armor that trades defense, hit chance, and move speed. Waves arrive in packs of three. Fodder holds threat-aware cover; Gorehorn chargers ignore cover and melee the closest marine, ally, or player.
+Loadout shows team level, unspent points, a four-branch skill tree (combat / grenades / squad / Marines), and armor that trades defense, hit chance, and move speed. Waves arrive in packs of three. Fodder holds threat-aware cover; Rushblade chargers (Phone Art atlas) ignore cover and melee the closest marine, ally, or player.
 
 ## Northeast assault waves: 20260905-68
 
