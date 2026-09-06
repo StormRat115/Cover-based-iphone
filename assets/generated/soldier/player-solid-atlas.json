@@ -7,6 +7,7 @@
   "facing": "right",
   "opaque": true,
   "alphaHardened": true,
+  "revision": "full-regen-strips-v3-keepbody",
   "states": [
     "idle",
     "run",
