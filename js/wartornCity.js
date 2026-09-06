@@ -1,8 +1,8 @@
-import { loadImage } from "./assets.js?v=20260906-88";
+import { loadImage } from "./assets.js?v=20260906-89";
 
 function plate(file) {
   var image = new Image();
-  image.src = "./assets/generated/world/" + file + "?v=20260906-88";
+  image.src = "./assets/generated/world/" + file + "?v=20260906-89";
   return image;
 }
 
@@ -24,7 +24,22 @@ export const wreckArmored = plate("wreck-burnt-armored.webp");
 export const skylineSmoke = plate("skyline-smoke-backdrop.webp");
 
 var ROAD = 980;
+var WORLD_SCALE_X = 0.25;
+var SHOULDER_GAP = 70;
 var OPAQUE_PLATES = [wartornRuin, wartornRubblePile];
+
+function buildingDrawWidth(kind, s) {
+  return (kind === "ruin" ? 268 : 210) * s;
+}
+
+function buildingHalfWorld(kind, s, scaleX) {
+  return buildingDrawWidth(kind, s) / 2 / (scaleX || WORLD_SCALE_X);
+}
+
+function parkOffRoad(x, kind, s) {
+  var need = ROAD + buildingHalfWorld(kind, s) + SHOULDER_GAP;
+  return x < 0 ? -Math.max(Math.abs(x), need) : Math.max(x, need);
+}
 
 var STREET_SCENES = [
   { x: -1480, y: 720, s: 1.05 },
@@ -68,7 +83,11 @@ var SIDE_DRESSING = [
   { x: 1440, y: -5360, kind: "ruin", s: 0.9 },
   { x: -1280, y: -6080, kind: "apartment", s: 0.84 },
   { x: 1300, y: -6000, kind: "storefront", s: 0.82 },
-];
+].map(function (item) {
+  return Object.assign({}, item, {
+    x: parkOffRoad(item.x, item.kind, item.s),
+  });
+});
 
 var RUBBLE = [
   { x: -1040, y: 640, kind: "pile", s: 0.52 },
@@ -106,8 +125,8 @@ var WRECKS = [
   { x: 640, y: -4020, kind: "pickup", s: 0.52 },
   { x: -480, y: -4680, kind: "armored", s: 0.54 },
   { x: 220, y: -5340, kind: "sedan", s: 0.56 },
-  { x: -1180, y: -5720, kind: "pickup", s: 0.52 },
-  { x: 1220, y: -5660, kind: "armored", s: 0.54 },
+  { x: -540, y: -5720, kind: "pickup", s: 0.52 },
+  { x: 500, y: -5660, kind: "armored", s: 0.54 },
 ];
 
 var SMOKE = [
@@ -469,10 +488,13 @@ export function drawWartornDressing(ctx, iso, world, W, H, onScreen) {
     if (onScreen && !onScreen(item.x, item.y, 420)) continue;
     q = iso(item.x, item.y);
     img = spriteForBuilding(item.kind);
-    dw = item.kind === "ruin" ? 268 * item.s : 210 * item.s;
+    dw = buildingDrawWidth(item.kind, item.s);
     dh = item.kind === "ruin" ? 214 * item.s : 176 * item.s;
+    ctx.save();
+    if (world && iso) clipSidewalk(ctx, iso, world, item.x < 0 ? -1 : 1);
     if (!stamp(ctx, img, q[0], q[1] + 8, dw, dh, 0.96))
       fallbackRuin(ctx, q[0], q[1], dw, dh);
+    ctx.restore();
   }
   for (i = 0; i < WRECKS.length; i++) {
     item = WRECKS[i];
@@ -521,4 +543,9 @@ export function drawWartornDressing(ctx, iso, world, W, H, onScreen) {
 
 export function playableStreetHalfWidth() {
   return ROAD;
+}
+
+export function buildingStaysOffRoad(item, scaleX) {
+  var half = buildingHalfWorld(item.kind, item.s, scaleX);
+  return item.x < 0 ? item.x + half <= -ROAD : item.x - half >= ROAD;
 }

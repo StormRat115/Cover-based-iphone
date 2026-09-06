@@ -1393,15 +1393,20 @@ test("wartorn city plates load and dress the street sides", async () => {
     "ruins stay off the playable street",
   );
   assert.ok(
+    dressing.buildings.every((item) => city.buildingStaysOffRoad(item)),
+    "building footprints stay off the playable asphalt",
+  );
+  assert.ok(
     dressing.streetScenes.every((item) => Math.abs(item.x) > dressing.road),
     "sidewalk street tiles stay off the playable asphalt",
   );
   assert.ok(
-    dressing.wrecks.some((item) => Math.abs(item.x) < dressing.road),
+    dressing.wrecks.every((item) => Math.abs(item.x) < dressing.road),
     "burnt wrecks sit on the street corridor",
   );
   assert.ok(
-    dressing.rubble.some((item) => Math.abs(item.x) < dressing.road),
+    dressing.rubble.filter((item) => Math.abs(item.x) < dressing.road).length >=
+      12,
     "debris piles sit on the street corridor",
   );
   const ctx = h.document.createElement("canvas").getContext("2d");
