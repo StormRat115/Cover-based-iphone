@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { createHarness } from "./runtime-harness.mjs";
@@ -1254,6 +1255,14 @@ test("Phone Art player-solid-atlas is the wired 6-state opaque sheet", () => {
   assert.equal(png[25], 6, "player-solid-atlas must be an RGBA PNG");
   assert.ok(png.length > 200000);
   assert.ok(png.length < 1200000, "keep the official sheet mobile-sized");
+  const framing = spawnSync("python3", ["scripts/verify-player-atlas.py"], {
+    encoding: "utf8",
+  });
+  assert.equal(
+    framing.status,
+    0,
+    framing.stdout + framing.stderr || "run/idle cells must stay upright full-body",
+  );
 });
 
 test("squad HUD shows per-character kill counts", async () => {
