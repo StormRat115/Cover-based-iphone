@@ -14,9 +14,9 @@
     />
     <meta name="theme-color" content="#161410" />
     <title>Cover Shooter — Development</title>
-    <link rel="stylesheet" href="css/game.css?v=20260906-87" />
-    <link rel="stylesheet" href="css/tactical.css?v=20260906-87" />
-    <link rel="stylesheet" href="css/menu.css?v=20260906-87" />
+    <link rel="stylesheet" href="css/game.css?v=20260906-88" />
+    <link rel="stylesheet" href="css/tactical.css?v=20260906-88" />
+    <link rel="stylesheet" href="css/menu.css?v=20260906-88" />
   </head>
   <body>
     <canvas id="game"></canvas>
@@ -47,6 +47,9 @@
       <div id="healthBar"><span></span></div>
       <div id="movePad"><i></i><b>‹</b><b>›</b><b>⌃</b><b>⌄</b></div>
       <button id="autoPlay">AUTO PLAY</button
+      ><button id="camMode" class="hidden" aria-pressed="false">
+        PLAYER CAM
+      </button
       ><button id="reload" class="hidden">RELOAD</button
       ><button id="fire">FIRE</button>
       <div id="pauseMenu" class="hidden">
@@ -66,7 +69,7 @@
       </div>
     </div>
     <div id="runtimeError" class="hidden"></div>
-    <div id="buildStamp">BUILD 20260906-87</div>
+    <div id="buildStamp">BUILD 20260906-88</div>
     <div id="mainMenu" class="hidden">
       <div class="menuPanel">
         <div id="mainMenuHome" class="menuPage">
@@ -95,6 +98,6 @@
         <button id="startGame" type="button">CONTINUE</button>
       </div>
     </div>
-    <script type="module" src="js/boot.js?v=20260906-87"></script>
+    <script type="module" src="js/boot.js?v=20260906-88"></script>
   </body>
 </html>

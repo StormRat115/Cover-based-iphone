@@ -1616,3 +1616,39 @@ test("squad dialog is rate-limited and draws near speakers", async () => {
   dialog.drawDialogBubbles(ctx, (x, y) => [x, y], [marine, ally]);
   assert.match(readFileSync("css/game.css", "utf8"), /#pause \{[\s\S]*right:/);
 });
+
+test("auto play front-line camera tracks furthest-forward friendlies", async () => {
+  const h = createHarness();
+  const cam = await h.importModule(`js/frontLineCam.js?v=${BUILD}`);
+  const world = {
+    cameraX: 0,
+    cameraY: 0,
+    minX: -2300,
+    maxX: 2300,
+    minY: -6600,
+    maxY: 1900,
+  };
+  const player = { x: 20, y: 180, hp: 100, dead: false, downed: false };
+  const ally = { x: -40, y: -2400, hp: 80, dead: false, downed: false };
+  const marine = { x: 80, y: -2280, hp: 90, dead: false, downed: false };
+  const downed = { x: 10, y: -5000, hp: 10, dead: false, downed: true };
+  const hostiles = [{ x: -20, y: -2500, hp: 40, dead: false }];
+  const look = cam.frontLineFocus(player, [ally, downed], [marine], hostiles);
+  assert.ok(look.y < -2000, "front-line look stays with the lead cluster");
+  assert.ok(look.y < player.y - 1500, "sniper hanging back does not pin the cam");
+  const playerCam = cam.cameraLookAt(world, player, [ally], [marine], hostiles, false);
+  assert.equal(playerCam.x, player.x);
+  assert.equal(playerCam.y, player.y);
+  const front = cam.cameraLookAt(world, player, [ally], [marine], hostiles, true);
+  assert.ok(front.y < -1800);
+  cam.easeCameraToward(world, front.x, front.y, 0.09);
+  assert.ok(world.cameraY < 0);
+  assert.ok(world.cameraY > front.y, "camera eases instead of snapping");
+  assert.equal(cam.camModeLabel(false), "PLAYER CAM");
+  assert.equal(cam.camModeLabel(true), "FRONT-LINE");
+  const html = readFileSync("index.html", "utf8");
+  const css = readFileSync("css/game.css", "utf8");
+  assert.match(html, /id="camMode"/);
+  assert.match(css, /#camMode \{/);
+  assert.match(css, /#pause \{[\s\S]*right:/);
+});

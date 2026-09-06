@@ -1,100 +1,105 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-87";
+import { createGameLoop } from "./gameLoop.js?v=20260906-88";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-87";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-87";
+} from "./geometry.js?v=20260906-88";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-88";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-87";
-import { updateSquadHud } from "./squadHud.js?v=20260906-87";
-import { updateCombatHud } from "./combatHud.js?v=20260906-87";
-import { updatePlayerHud } from "./player.js?v=20260906-87";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-87";
-import "./squadDrawer.js?v=20260906-87";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-87";
+} from "./bloodEffects.js?v=20260906-88";
+import { updateSquadHud } from "./squadHud.js?v=20260906-88";
+import { updateCombatHud } from "./combatHud.js?v=20260906-88";
+import { updatePlayerHud } from "./player.js?v=20260906-88";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-88";
+import "./squadDrawer.js?v=20260906-88";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-88";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-87";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-87";
+} from "./enemy.js?v=20260906-88";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-88";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-87";
+} from "./marines.js?v=20260906-88";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-87";
+} from "./streetMission.js?v=20260906-88";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-87";
+} from "./supportVehicle.js?v=20260906-88";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260906-87";
+} from "./cover.js?v=20260906-88";
 import {
   isCoverFull,
   nearestFreeSlot,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260906-87";
+} from "./coverSlots.js?v=20260906-88";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-87";
-import { initTactical } from "./tactical.js?v=20260906-87";
-import { AudioBus } from "./audio.js?v=20260906-87";
+} from "./input.js?v=20260906-88";
+import { initTactical } from "./tactical.js?v=20260906-88";
+import { AudioBus } from "./audio.js?v=20260906-88";
 import {
   segmentWave,
   updateWaveSegments,
   waveFullyCleared,
   pendingHostiles,
-} from "./waveSegments.js?v=20260906-87";
+} from "./waveSegments.js?v=20260906-88";
 import {
   grantKillXp,
   grantWaveXp,
   getTeamProgress,
-} from "./teamProgress.js?v=20260906-87";
+} from "./teamProgress.js?v=20260906-88";
 import {
   updateGrenades,
   drawGrenades,
   trySquadGrenades,
   resetGrenades,
-} from "./grenades.js?v=20260906-87";
+} from "./grenades.js?v=20260906-88";
 import {
   applyRunModifiers,
   updateMarineReinforcements,
   resetMarineTimer,
-} from "./runModifiers.js?v=20260906-87";
+} from "./runModifiers.js?v=20260906-88";
 import {
   drawWartornAtmosphere,
   drawWartornDressing,
   drawWartornStreetSurface,
-} from "./wartornCity.js?v=20260906-87";
+} from "./wartornCity.js?v=20260906-88";
 import {
   updateSquadDialog,
   drawDialogBubbles,
   resetSquadDialog,
-} from "./squadDialog.js?v=20260906-87";
+} from "./squadDialog.js?v=20260906-88";
 import {
   unstickOverlappingUnits,
   resetUnitUnstick,
-} from "./unitCollision.js?v=20260906-87";
+} from "./unitCollision.js?v=20260906-88";
+import {
+  camModeLabel,
+  cameraLookAt,
+  easeCameraToward,
+} from "./frontLineCam.js?v=20260906-88";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -102,6 +107,7 @@ var canvas = document.querySelector("#game"),
   fireButton = document.querySelector("#fire"),
   reloadButton = document.querySelector("#reload"),
   autoPlayButton = document.querySelector("#autoPlay"),
+  camModeButton = document.querySelector("#camMode"),
   pauseButton = document.querySelector("#pause"),
   pauseMenu = document.querySelector("#pauseMenu"),
   resumeButton = document.querySelector("#resumeButton"),
@@ -126,6 +132,7 @@ var W = 0,
   fireHeld = false,
   playerHitFlash = 0,
   autoPlay = false,
+  frontLineCam = false,
   autoMoveTimer = 0,
   autoTargetTimer = 0,
   wave = 1,
@@ -161,6 +168,7 @@ window.__streetMission = mission;
 window.__supportVehicle = supportVehicle;
 window.__waveDefense = true;
 window.__wave = wave;
+window.__frontLineCam = false;
 function resize() {
   dpr = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth;
@@ -181,13 +189,32 @@ function distance(a, b) {
 function rand(a, b) {
   return a + Math.random() * (b - a);
 }
+function syncCamModeHud() {
+  if (!camModeButton) return;
+  camModeButton.classList.toggle("hidden", !autoPlay);
+  camModeButton.classList.toggle("active", !!(autoPlay && frontLineCam));
+  camModeButton.textContent = camModeLabel(frontLineCam);
+  camModeButton.setAttribute(
+    "aria-pressed",
+    autoPlay && frontLineCam ? "true" : "false",
+  );
+  window.__frontLineCam = !!(autoPlay && frontLineCam);
+}
+function setFrontLineCam(on) {
+  frontLineCam = !!on && autoPlay;
+  hudDirty = true;
+  syncCamModeHud();
+}
 function updateCamera() {
-  world.cameraX +=
-    (clamp(player.x, world.minX + 430, world.maxX - 430) - world.cameraX) *
-    0.09;
-  world.cameraY +=
-    (clamp(player.y, world.minY + 330, world.maxY - 330) - world.cameraY) *
-    0.09;
+  var look = cameraLookAt(
+    world,
+    player,
+    allies,
+    marines,
+    enemies,
+    autoPlay && frontLineCam,
+  );
+  easeCameraToward(world, look.x, look.y);
 }
 export function iso(x, y) {
   return worldToScreen(x, y, world, W, H);
@@ -629,8 +656,19 @@ autoPlayButton.addEventListener("pointerdown", function (e) {
     autoMoveTimer = 0;
     autoTargetTimer = 0;
     player.keyboardMove = null;
-  } else player.keyboardMove = null;
+  } else {
+    player.keyboardMove = null;
+    frontLineCam = false;
+  }
+  syncCamModeHud();
 });
+if (camModeButton) {
+  camModeButton.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    if (!started || paused || gameOver || !autoPlay) return;
+    setFrontLineCam(!frontLineCam);
+  });
+}
 fireButton.addEventListener("pointerdown", function (e) {
   e.preventDefault();
   if (!started || autoPlay || paused || gameOver) return;
@@ -808,11 +846,13 @@ function reset() {
   fireHeld = false;
   autoPlay = false;
   window.__autoPlay = false;
+  frontLineCam = false;
   autoMoveTimer = 0;
   autoTargetTimer = 0;
   paused = false;
   autoPlayButton.classList.remove("active");
   autoPlayButton.textContent = "AUTO PLAY";
+  syncCamModeHud();
   gameOver = false;
   pauseMenu.classList.add("hidden");
   pauseButton.textContent = "Ⅱ";
@@ -1411,7 +1451,9 @@ function draw(now) {
     (player.cover ? " • IN COVER" : "") +
     (target && !target.dead ? " • TARGET LOCKED" : "") +
     (autoPlay
-      ? " • AI PILOT" + (player.tacticalState ? " • " + player.tacticalState : "")
+      ? " • AI PILOT" +
+        (frontLineCam ? " • FRONT-LINE CAM" : " • PLAYER CAM") +
+        (player.tacticalState ? " • " + player.tacticalState : "")
       : "") +
     (mission.captured ? " • FORT SECURE" : mission.capturing ? " • CAPTURING" : "") +
     (paused ? " • PAUSED" : "");

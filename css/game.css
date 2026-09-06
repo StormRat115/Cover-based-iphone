@@ -211,6 +211,23 @@ button {
 #autoPlay.active {
   background: #3c6f83dd;
 }
+#camMode {
+  position: absolute;
+  left: max(36px, calc(env(safe-area-inset-left) + 18px));
+  bottom: max(318px, calc(env(safe-area-inset-bottom) + 300px));
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 20px;
+  border: 2px solid #fff;
+  background: #2a2418ee;
+  color: #fff;
+  font-weight: 900;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+#camMode.active {
+  background: #6a4a28dd;
+}
 #reload {
   position: absolute;
   left: 150px;
@@ -311,6 +328,11 @@ button {
     bottom: 180px;
     left: 25px;
     height: 42px;
+  }
+  #camMode {
+    bottom: 228px;
+    left: 25px;
+    height: 36px;
   }
   #movePad {
     bottom: 8px;
