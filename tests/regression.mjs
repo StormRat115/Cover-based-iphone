@@ -313,11 +313,13 @@ test("cover pieces use explicit square/rect/T/U/L segments that match their art"
     assert.ok(cover.theme, cover.id + " needs a fitted theme");
     assert.ok(cover.segments && cover.segments.length >= 1);
     shapes.add(cover.shape);
-    if (cover.shape === "square" || cover.shape === "rect")
-      assert.equal(cover.segments.length, 1);
-    if (cover.shape === "T") assert.equal(cover.segments.length, 2);
-    if (cover.shape === "U") assert.equal(cover.segments.length, 3);
-    if (cover.shape === "L") assert.equal(cover.segments.length, 2);
+    const minSeg = { square: 1, rect: 1, T: 2, U: 3, L: 2 };
+    assert.ok(
+      cover.segments.length >= minSeg[cover.shape],
+      cover.id + " needs the interior segments of a " + cover.shape,
+    );
+    if (!cover.setPiece)
+      assert.equal(cover.segments.length, minSeg[cover.shape]);
     const pieces = coverModule.coverPieces(cover);
     assert.equal(pieces.length, cover.segments.length);
     const threat = { x: cover.x, y: cover.y + 400 };
@@ -328,6 +330,11 @@ test("cover pieces use explicit square/rect/T/U/L segments that match their art"
     assert.ok(gap <= 20, "units must plant against the facing cover edge");
   }
   assert.deepEqual([...shapes].sort(), ["L", "T", "U", "rect", "square"]);
+  const layout = city.createCityCoverLayout(() => 0.31);
+  assert.ok(
+    layout.some((cover) => cover.setPiece && cover.segments.length > 2),
+    "street should include larger combined set pieces",
+  );
 
   const low = {
     type: "low",
@@ -1034,8 +1041,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    10,
-    "eight character sources plus two environment atlases",
+    12,
+    "nine character sources plus three environment atlases",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
@@ -1054,6 +1061,84 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
       /bloodOverlay|autoplayTracers|playerAggression/.test(path),
     ),
   );
+});
+
+test("solid cover blocks walks and vaults over jumpable pieces", async () => {
+  const h = createHarness();
+  const col = await h.importModule(`js/coverCollision.js?v=${BUILD}`);
+  const low = {
+    id: "bags",
+    x: 0,
+    y: 0,
+    w: 160,
+    h: 36,
+    type: "low",
+    theme: "sandbags",
+    shape: "rect",
+    segments: [{ dx: 0, dy: 0, w: 160, h: 36 }],
+  };
+  const tall = {
+    id: "wall",
+    x: 0,
+    y: 0,
+    w: 160,
+    h: 36,
+    type: "wide",
+    theme: "jersey",
+    shape: "rect",
+    segments: [{ dx: 0, dy: 0, w: 160, h: 36 }],
+  };
+  assert.equal(col.isCoverJumpable(low), true);
+  assert.equal(col.isCoverJumpable(tall), false);
+  assert.ok(col.overlapsSolid(0, 0, [tall], { pad: 11 }));
+  const walker = { x: -130, y: 0, vaulting: false, state: "walk" };
+  const blocked = col.resolveSolidMove(walker, 20, 0, [tall], {
+    allowVault: false,
+    target: { x: 80, y: 0 },
+  });
+  assert.ok(blocked.x < -70, "units must stop or slide, not walk through tall cover");
+  assert.equal(blocked.vaulted, false);
+  const jumper = { x: 0, y: 48, vaulting: false, state: "walk" };
+  const hop = col.resolveSolidMove(jumper, 0, 12, [low], {
+    target: { x: 0, y: -60 },
+  });
+  assert.equal(jumper.vaulting, true);
+  assert.equal(hop.vaulted, true);
+  const sprites = await h.importModule(`js/soldierAssets.js?v=${BUILD}`);
+  assert.equal(sprites.getSoldierState(jumper), "vault");
+  col.updateVault(jumper, 0.2);
+  assert.equal(jumper.vaulting, true);
+  assert.ok(jumper.y < 48, "vault should carry the soldier across the piece");
+});
+
+test("living friendlies stay fully opaque every animation frame", async () => {
+  const h = createHarness();
+  const sprites = await h.importModule(`js/soldierAssets.js?v=${BUILD}`);
+  await sprites.preloadSoldierAssets();
+  const actor = {
+    x: 0,
+    y: 0,
+    hp: 100,
+    maxHp: 100,
+    state: "walk",
+    targetX: 80,
+    targetY: 40,
+    facingX: 1,
+    facingY: 0,
+    dead: false,
+    downed: false,
+  };
+  const ctx = h.document.createElement("canvas").getContext("2d");
+  for (let i = 0; i < 36; i++) {
+    h.frame(40);
+    const before = h.metrics.drawImages.length;
+    sprites.drawSoldier(ctx, actor, { team: "player", alpha: 1 });
+    assert.ok(
+      h.metrics.drawImages.length > before,
+      "alive soldiers must draw a sprite every frame",
+    );
+    sprites.drawSoldier(ctx, actor, { team: "ally", alpha: 1 });
+  }
 });
 
 test("sustained simulated play stays finite at mobile and desktop sizes", async () => {

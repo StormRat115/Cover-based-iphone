@@ -1,15 +1,18 @@
-import { loadImage } from "./assets.js?v=20260906-79";
+import { loadImage } from "./assets.js?v=20260906-80";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
-  "./assets/generated/soldier/player-ally-atlas.png?v=20260906-79";
+  "./assets/generated/soldier/player-ally-atlas.png?v=20260906-80";
 export const soldierSource = new Image();
 soldierSource.src =
-  "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260906-79";
+  "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260906-80";
 export const enemySource = new Image();
 enemySource.src =
-  "./assets/198C101B-E186-4852-A270-3F04D83451ED.png?v=20260906-79";
+  "./assets/198C101B-E186-4852-A270-3F04D83451ED.png?v=20260906-80";
 export const deathSource = new Image();
-deathSource.src = "./assets/soldier_death_sheet.png?v=20260906-79";
+deathSource.src = "./assets/soldier_death_sheet.png?v=20260906-80";
+export const vaultSheetSource = new Image();
+vaultSheetSource.src =
+  "./assets/generated/soldier/vault-sheet.png?v=20260906-80";
 
 const ENEMY_MONSTER_SHEET_WIDTH = 1536,
   ENEMY_MONSTER_SHEET_HEIGHT = 1022,
@@ -34,7 +37,7 @@ const ENEMY_MONSTER_FILES = {
 const enemyMonsterSources = Object.fromEntries(
   Object.entries(ENEMY_MONSTER_FILES).map(function ([type, file]) {
     const image = new Image();
-    image.src = "./assets/generated/enemies/" + file + "?v=20260906-79";
+    image.src = "./assets/generated/enemies/" + file + "?v=20260906-80";
     return [type, image];
   }),
 );
@@ -182,6 +185,7 @@ const FRIENDLY_ROWS = {
   crouchShoot: 5,
   death: 6,
   shoot: 4,
+  vault: 1,
 };
 const FRIENDLY_FPS = {
   idle: 3.2,
@@ -192,7 +196,10 @@ const FRIENDLY_FPS = {
   crouchShoot: 10,
   shoot: 10,
   death: 7,
+  vault: 10,
 };
+const VAULT_COLS = 4;
+const VAULT_CELL = 168;
 let runtimeFriendlyAtlas = null;
 const ROWS = {
   idle: 0,
@@ -230,6 +237,7 @@ const STATE_HOLD_MS = {
   shoot: 110,
   crouchShoot: 110,
   standShoot: 110,
+  vault: 70,
   death: 99999,
 };
 function nowMs() {
@@ -274,6 +282,7 @@ export function preloadSoldierAssets(onProgress) {
     loadImage(soldierSource),
     loadImage(enemySource),
     loadImage(deathSource),
+    loadImage(vaultSheetSource),
     ...Object.values(enemyMonsterSources).map(function (image) {
       return loadImage(image);
     }),
@@ -291,8 +300,18 @@ export function preloadSoldierAssets(onProgress) {
     return { soldierAtlas: runtimeAtlas, monsterAtlas };
   });
 }
+function vaultFrame(actor) {
+  var u = actor && actor.vaulting ? Math.min(0.999, (actor.vaultT || 0) / 0.46) : 0;
+  var col = u < 0.22 ? 0 : u < 0.5 ? 1 : u < 0.78 ? 2 : 3;
+  var sheet = vaultSheetSource;
+  var cellW =
+    sheet.naturalWidth > 0 ? Math.round(sheet.naturalWidth / VAULT_COLS) : VAULT_CELL;
+  var cellH = sheet.naturalHeight > 0 ? sheet.naturalHeight : VAULT_CELL;
+  return { col: col, nextCol: col, blend: 0, row: 0, w: cellW, h: cellH, state: "vault" };
+}
 function moving(actor) {
   if (!actor) return false;
+  if (actor.vaulting || actor.state === "vault") return true;
   if (actor.state === "walk" || actor.state === "run") return true;
   if (typeof actor.targetX === "number" && typeof actor.targetY === "number")
     return Math.hypot(actor.targetX - actor.x, actor.targetY - actor.y) > 8;
@@ -347,6 +366,7 @@ function zeroHealth(actor) {
 function desiredSoldierState(actor) {
   if (!actor) return "idle";
   if (zeroHealth(actor)) return "death";
+  if (actor.vaulting || actor.state === "vault") return "vault";
   if (actor.downed) return "lowCover";
   if (shooting(actor)) {
     if (lowCover(actor)) return "crouchShoot";
@@ -378,6 +398,7 @@ export function getSoldierState(actor) {
   }
   var urgent =
     desired === "death" ||
+    desired === "vault" ||
     desired === "shoot" ||
     desired === "crouchShoot" ||
     desired === "standShoot" ||
@@ -674,25 +695,30 @@ function drawBlendedSheetFrame(
     sh = Math.max(1, frameH - pad * 2),
     a0 = baseAlpha * (1 - blend),
     a1 = baseAlpha * blend;
-  if (a0 > 0.02) {
-    ctx.globalAlpha = a0;
+  if (a0 <= 0.02 && (a1 <= 0.02 || next === frame)) {
+    ctx.globalAlpha = baseAlpha;
     ctx.drawImage(source, sx0, sy0, sw, sh, dx, dy, dw, dh);
+  } else {
+    if (a0 > 0.02) {
+      ctx.globalAlpha = a0;
+      ctx.drawImage(source, sx0, sy0, sw, sh, dx, dy, dw, dh);
+    }
+    if (a1 > 0.02 && next !== frame) {
+      ctx.globalAlpha = a1;
+      ctx.drawImage(
+        source,
+        next * frameW + pad,
+        sy0,
+        sw,
+        sh,
+        dx,
+        dy,
+        dw,
+        dh,
+      );
+    }
   }
-  if (a1 > 0.02 && next !== frame) {
-    ctx.globalAlpha = a1;
-    ctx.drawImage(
-      source,
-      next * frameW + pad,
-      sy0,
-      sw,
-      sh,
-      dx,
-      dy,
-      dw,
-      dh,
-    );
-  }
-  ctx.globalAlpha = baseAlpha;
+  ctx.globalAlpha = 1;
 }
 
 export function drawEnemyMonster(ctx, actor, options) {
@@ -712,7 +738,10 @@ export function drawEnemyMonster(ctx, actor, options) {
     baseAlpha = options.alpha == null ? 1 : options.alpha;
   var plant = coverPlantOffset(actor);
   ctx.save();
-  ctx.translate((options.x || 0) + plant.x, (options.y || 0) + plant.y);
+  ctx.translate(
+    (options.x || 0) + plant.x,
+    (options.y || 0) + plant.y - (actor && actor.vaultZ ? actor.vaultZ : 0),
+  );
   ctx.globalAlpha = baseAlpha;
   ctx.fillStyle = "#0007";
   ctx.beginPath();
@@ -790,12 +819,14 @@ export function drawSoldier(ctx, actor, options) {
     bob = state === "run" ? Math.sin(nowMs() * 0.012) * 0.28 : 0,
     plant = coverPlantOffset(actor),
     enemyCorpse = false;
+  var vaultLift = actor && actor.vaultZ ? actor.vaultZ : 0;
   ctx.save();
   ctx.translate(
     (options.x || 0) + plant.x,
-    (options.y || 0) + bob + plant.y,
+    (options.y || 0) + bob + plant.y - vaultLift,
   );
-  ctx.globalAlpha = options.alpha == null ? 1 : options.alpha;
+  var liveFriendly = !isEnemy && !zeroHealth(actor) && !actor.downed;
+  ctx.globalAlpha = liveFriendly ? 1 : options.alpha == null ? 1 : options.alpha;
   if (state === "death") {
     if (isEnemy) {
       state = "lowCover";
@@ -805,14 +836,21 @@ export function drawSoldier(ctx, actor, options) {
       return;
     } else if (!runtimeFriendlyAtlas) state = "lowCover";
   }
+  var useVault =
+      state === "vault" &&
+      vaultSheetSource.complete &&
+      vaultSheetSource.naturalWidth > 0;
   var useFriendly = !isEnemy && runtimeFriendlyAtlas;
   if (useFriendly) scale *= 1.15;
-  var r = useFriendly
-      ? frameForFriendly(actor, state)
-      : frameFor(actor, state, boxes),
-    cell = useFriendly ? FRIENDLY_CELL : CELL,
-    dw = (useFriendly ? FRIENDLY_CELL : r.w) * scale,
-    dh = (useFriendly ? FRIENDLY_CELL : r.h) * scale;
+  var r = useVault
+      ? vaultFrame(actor)
+      : useFriendly
+        ? frameForFriendly(actor, state === "vault" ? "run" : state)
+        : frameFor(actor, state === "vault" ? "run" : state, boxes);
+  var cellW = useVault ? r.w : useFriendly ? FRIENDLY_CELL : CELL;
+  var cellH = useVault ? r.h : useFriendly ? FRIENDLY_CELL : r.h;
+  var dw = cellW * scale * (useVault ? 1.08 : 1);
+  var dh = cellH * scale * (useVault ? 1.08 : 1);
   ctx.fillStyle = "#0007";
   ctx.beginPath();
   ctx.ellipse(
@@ -831,32 +869,58 @@ export function drawSoldier(ctx, actor, options) {
     ctx.globalAlpha *= 0.82;
   }
   ctx.scale(flip, 1);
-  ctx.filter = teamFilter(team);
+  // CSS filters on live friendlies were a hypothesized vanish path; keep them off.
+  ctx.filter = liveFriendly ? "none" : teamFilter(team);
   ctx.imageSmoothingEnabled = true;
-  var drawAtlas = useFriendly ? runtimeFriendlyAtlas : atlas;
+  var drawAtlas = useVault
+    ? vaultSheetSource
+    : useFriendly
+      ? runtimeFriendlyAtlas
+      : atlas;
   if (drawAtlas) {
-    var baseAlpha = options.alpha == null ? 1 : options.alpha;
+    var baseAlpha = liveFriendly ? 1 : options.alpha == null ? 1 : options.alpha;
     if (enemyCorpse) baseAlpha *= 0.82;
-    drawBlendedSheetFrame(
-      ctx,
-      drawAtlas,
-      r.col,
-      r.nextCol,
-      r.blend || 0,
-      useFriendly ? r.row : ROWS[r.state] || 0,
-      useFriendly ? FRIENDLY_CELL : CELL,
-      useFriendly ? FRIENDLY_CELL : CELL,
-      -dw * 0.5,
-      -dh +
-        (state === "lowCover" || state === "crouchShoot"
-          ? 5
-          : state === "tallCover"
-            ? 2
-            : 0),
-      dw,
-      dh,
-      baseAlpha,
-    );
+    if (liveFriendly) {
+      ctx.globalAlpha = 1;
+      ctx.filter = "none";
+      ctx.drawImage(
+        drawAtlas,
+        r.col * cellW,
+        (useVault ? 0 : r.row) * cellH,
+        cellW,
+        cellH,
+        -dw * 0.5,
+        -dh +
+          (state === "lowCover" || state === "crouchShoot"
+            ? 5
+            : state === "tallCover"
+              ? 2
+              : 0),
+        dw,
+        dh,
+      );
+    } else {
+      drawBlendedSheetFrame(
+        ctx,
+        drawAtlas,
+        r.col,
+        r.nextCol,
+        r.blend || 0,
+        useVault ? 0 : useFriendly ? r.row : ROWS[r.state] || 0,
+        cellW,
+        cellH,
+        -dw * 0.5,
+        -dh +
+          (state === "lowCover" || state === "crouchShoot"
+            ? 5
+            : state === "tallCover"
+              ? 2
+              : 0),
+        dw,
+        dh,
+        baseAlpha,
+      );
+    }
   } else {
     ctx.filter = "none";
     ctx.fillStyle = isEnemy
@@ -900,6 +964,9 @@ export function getSoldierAtlasInfo() {
       crouchShoot: 6,
       standShoot: 5,
       death: DEATH_FRAMES,
+      vault: VAULT_COLS,
     },
+    vaultSheet: "vault-sheet.png",
+    vaultCell: VAULT_CELL,
   };
 }

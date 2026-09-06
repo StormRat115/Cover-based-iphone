@@ -1,6 +1,6 @@
 let elements = null;
-import { getHitChance } from "./cover.js?v=20260906-79";
-import { finalAccuracy } from "./combatStats.js?v=20260906-79";
+import { getHitChance } from "./cover.js?v=20260906-80";
+import { finalAccuracy } from "./combatStats.js?v=20260906-80";
 
 function nearestEnemy(p, enemies) {
   var best = null,
