@@ -324,7 +324,12 @@ function drawStreetScenes(ctx, iso, world) {
     pattern = ctx.createPattern && ctx.createPattern(wartornStreet, "repeat");
     origin = iso(sides[s] < 0 ? -1400 : 1400, 0);
     if (pattern) {
-      ctx.translate(origin[0] % 160, origin[1] % 90);
+      // Wrap only at the texture's actual repeat period. Arbitrary wrap
+      // distances make the scenery jump whenever the camera crosses one.
+      ctx.translate(
+        origin[0] % wartornStreet.naturalWidth,
+        origin[1] % wartornStreet.naturalHeight,
+      );
       ctx.fillStyle = pattern;
       ctx.fillRect(-4000, -4000, 8000, 8000);
     }
@@ -423,7 +428,11 @@ export function drawWartornStreetSurface(ctx, iso, world) {
   pattern = ctx.createPattern && ctx.createPattern(wartornStreet, "repeat");
   origin = iso(0, 0);
   if (pattern) {
-    ctx.translate(origin[0] % 240, origin[1] % 135);
+    // Same world anchor as the camera, modulo one complete image tile.
+    ctx.translate(
+      origin[0] % wartornStreet.naturalWidth,
+      origin[1] % wartornStreet.naturalHeight,
+    );
     ctx.fillStyle = pattern;
     ctx.fillRect(-5000, -5000, 10000, 10000);
   }
