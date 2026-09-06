@@ -1,4 +1,4 @@
-const MAP_SCALE = 1.32;
+const MAP_SCALE = 1.7;
 function spread(items) {
   return items.map(function (item) {
     return Object.assign({}, item, {

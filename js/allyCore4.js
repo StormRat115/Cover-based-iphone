@@ -3,8 +3,8 @@ import {
   getCoverSlot,
   getHitChance,
   chooseCoverPeek,
-} from "./cover.js?v=20260906-74";
-import { weaponCopy } from "./weapons.js?v=20260906-74";
+} from "./cover.js?v=20260906-75";
+import { weaponCopy } from "./weapons.js?v=20260906-75";
 
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW",

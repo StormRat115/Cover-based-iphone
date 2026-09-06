@@ -1,63 +1,63 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-74";
+import { createGameLoop } from "./gameLoop.js?v=20260906-75";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-74";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-74";
+} from "./geometry.js?v=20260906-75";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-75";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-74";
-import { updateSquadHud } from "./squadHud.js?v=20260906-74";
-import { updateCombatHud } from "./combatHud.js?v=20260906-74";
-import { updatePlayerHud } from "./player.js?v=20260906-74";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-74";
-import "./squadDrawer.js?v=20260906-74";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-74";
+} from "./bloodEffects.js?v=20260906-75";
+import { updateSquadHud } from "./squadHud.js?v=20260906-75";
+import { updateCombatHud } from "./combatHud.js?v=20260906-75";
+import { updatePlayerHud } from "./player.js?v=20260906-75";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-75";
+import "./squadDrawer.js?v=20260906-75";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-75";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-74";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-74";
+} from "./enemy.js?v=20260906-75";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-75";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-74";
+} from "./marines.js?v=20260906-75";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-74";
+} from "./streetMission.js?v=20260906-75";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-74";
+} from "./supportVehicle.js?v=20260906-75";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260906-74";
+} from "./cover.js?v=20260906-75";
 import {
   groundTile,
   buildingRuinA,
   buildingRuinB,
-} from "./cityAssets.js?v=20260906-74";
+} from "./cityAssets.js?v=20260906-75";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-74";
-import { initTactical } from "./tactical.js?v=20260906-74";
-import { AudioBus } from "./audio.js?v=20260906-74";
+} from "./input.js?v=20260906-75";
+import { initTactical } from "./tactical.js?v=20260906-75";
+import { AudioBus } from "./audio.js?v=20260906-75";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -848,7 +848,7 @@ function worldPoly(points, fill, stroke) {
   }
 }
 function drawBuilding(x, y, w, h, roof, variant) {
-  if (!onScreen(x, y, ((w + h) * world.scaleX) / 2 + 48)) return;
+  if (!onScreen(x, y, ((w + h) * world.scaleX) / 2 + 520)) return;
   var q = iso(x, y);
   var img = variant === "b" ? buildingRuinB : buildingRuinA;
   if (img && img.complete && img.naturalWidth > 0) {
@@ -903,7 +903,7 @@ function drawBuilding(x, y, w, h, roof, variant) {
   ctx.restore();
 }
 function drawStreetLamp(x, y) {
-  if (!onScreen(x, y, 48)) return;
+  if (!onScreen(x, y, 180)) return;
   var q = iso(x, y);
   ctx.save();
   ctx.strokeStyle = "#252b2a";
@@ -932,22 +932,12 @@ function drawCrosswalk(y) {
       "#d1d0c5aa",
     );
 }
-function asphaltPattern() {
-  if (
-    !groundTile ||
-    !groundTile.complete ||
-    !groundTile.naturalWidth ||
-    typeof ctx.createPattern !== "function"
-  )
-    return null;
-  try {
-    return ctx.createPattern(groundTile, "repeat");
-  } catch (e) {
-    return null;
-  }
-}
 function drawMapDecor() {
-  // Opaque base layers — never leave transparent holes for a grid to peek through.
+  // Wide urban street: playable asphalt corridor with thin shoulders.
+  // No repeating texture pattern — those always read as a grid on phone.
+  var ROAD = 980;
+  var curbL = -ROAD,
+    curbR = ROAD;
   worldPoly(
     [
       [world.minX, world.minY],
@@ -955,77 +945,71 @@ function drawMapDecor() {
       [world.maxX, world.maxY],
       [world.minX, world.maxY],
     ],
-    "#3a403e",
+    "#2b302e",
+  );
+  // Continuous street slab (main play space).
+  worldPoly(
+    [
+      [curbL, world.minY],
+      [curbR, world.minY],
+      [curbR, world.maxY],
+      [curbL, world.maxY],
+    ],
+    "#313735",
+  );
+  // Soft center lane wash — solid, not tiled.
+  worldPoly(
+    [
+      [-70, world.minY],
+      [70, world.minY],
+      [70, world.maxY],
+      [-70, world.maxY],
+    ],
+    "#353b39",
+  );
+  // Shoulder gutters
+  worldPoly(
+    [
+      [curbL - 40, world.minY],
+      [curbL, world.minY],
+      [curbL, world.maxY],
+      [curbL - 40, world.maxY],
+    ],
+    "#262b29",
   );
   worldPoly(
     [
-      [world.minX, world.minY],
-      [-310, world.minY],
-      [-310, world.maxY],
-      [world.minX, world.maxY],
+      [curbR, world.minY],
+      [curbR + 40, world.minY],
+      [curbR + 40, world.maxY],
+      [curbR, world.maxY],
     ],
-    "#323836",
+    "#262b29",
   );
-  worldPoly(
-    [
-      [310, world.minY],
-      [world.maxX, world.minY],
-      [world.maxX, world.maxY],
-      [310, world.maxY],
-    ],
-    "#323836",
-  );
-  var road = [
-    [-310, world.minY],
-    [310, world.minY],
-    [310, world.maxY],
-    [-310, world.maxY],
-  ];
-  worldPoly(road, "#2c3130");
-  var pat = asphaltPattern();
-  if (pat) {
-    ctx.save();
-    ctx.beginPath();
-    road.forEach(function (p, i) {
-      var q = iso(p[0], p[1]);
-      if (i === 0) ctx.moveTo(q[0], q[1]);
-      else ctx.lineTo(q[0], q[1]);
-    });
-    ctx.closePath();
-    ctx.clip();
-    ctx.globalAlpha = 0.88;
-    ctx.fillStyle = pat;
-    // Scroll pattern with the isometric camera without diamond stamps.
-    var ox = -((world.cameraX * world.scaleX + world.cameraY * world.scaleY) % 256);
-    var oy = -((world.cameraY * world.scaleY) % 256);
-    ctx.translate(ox, oy);
-    ctx.fillRect(-W * 2, -H * 2, W * 6, H * 6);
-    ctx.restore();
-  }
-  for (var y = world.minY + 80; y <= world.maxY - 50; y += 118)
+  // Sparse lane dashes (not a grid).
+  for (var y = world.minY + 120; y <= world.maxY - 80; y += 160)
     worldPoly(
       [
-        [-11, y],
-        [11, y],
-        [11, y + 62],
-        [-11, y + 62],
+        [-9, y],
+        [9, y],
+        [9, y + 48],
+        [-9, y + 48],
       ],
-      "#c0a64d99",
+      "#b8a45e66",
     );
-  for (var crossY = world.minY + 300; crossY < world.maxY; crossY += 620)
+  // Occasional crosswalks
+  for (var crossY = world.minY + 420; crossY < world.maxY; crossY += 900)
     drawCrosswalk(crossY);
+  // Far skyline only — never in the play corridor. Huge cull margin kills pop-in.
   var bi = 0;
-  for (var outerY = world.minY + 260; outerY < world.maxY; outerY += 540) {
-    drawBuilding(-1650, outerY, 470, 330, "#404644", bi++ % 2 ? "b" : "a");
-    drawBuilding(1650, outerY, 470, 330, "#454947", bi++ % 2 ? "b" : "a");
+  for (var by = world.minY + 200; by < world.maxY; by += 720) {
+    drawBuilding(-(ROAD + 920), by, 520, 360, "#404644", bi++ % 2 ? "b" : "a");
+    drawBuilding(ROAD + 920, by, 520, 360, "#454947", bi++ % 2 ? "b" : "a");
   }
-  for (var innerY = world.minY + 120; innerY < world.maxY; innerY += 560) {
-    drawBuilding(-980, innerY, 320, 250, "#3e4442", bi++ % 2 ? "b" : "a");
-    drawBuilding(980, innerY, 320, 250, "#424744", bi++ % 2 ? "b" : "a");
-  }
-  for (var ly = world.minY + 120; ly <= world.maxY; ly += 360) {
-    drawStreetLamp(-430, ly);
-    drawStreetLamp(430, ly);
+  // Street lamps along the wide curbs
+  for (var ly = world.minY + 160; ly <= world.maxY; ly += 420) {
+    drawStreetLamp(curbL + 50, ly);
+    drawStreetLamp(curbR - 50, ly);
   }
 }
 function drawStreetObjective() {

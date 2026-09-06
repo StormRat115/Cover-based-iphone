@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-74";
+import { loadImage } from "./assets.js?v=20260906-75";
 export const soldierSource = new Image();
 soldierSource.src =
   "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-60";
