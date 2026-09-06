@@ -10,6 +10,11 @@ import {
   prepareCoverHp,
   drawCoverWear,
 } from "./destructibleCover.js?v=20260906-102";
+import {
+  COVER_BLOCK_SIZE,
+  livingBlocks,
+  syncCoverGeometry,
+} from "./coverBlocks.js?v=20260906-102";
 export {
   resolveSolidMove,
   updateVault,
@@ -22,23 +27,30 @@ export {
   VAULT_DURATION,
 } from "./coverCollision.js?v=20260906-102";
 
-/* Tactical cover: explicit square / rect / T / U / L segments. */
+/* Tactical cover: uniform square blocks assembled into random shapes. */
 export function createCover(random) {
   const layout = createCityCoverLayout(random).map(function (item) {
     var cover = {
       id: item.id,
       x: item.x,
       y: item.y,
-      w: item.w || 120,
-      h: item.h || 34,
-      type: item.coverType || "low",
+      w: item.w || COVER_BLOCK_SIZE,
+      h: item.h || COVER_BLOCK_SIZE,
+      type: item.coverType || item.type || "low",
       asset: item.asset,
       shape: item.shape || "rect",
       theme: item.theme || "jersey",
       facing: item.facing || 0,
       scale: item.scale || 0.24,
+      blockSize: item.blockSize || COVER_BLOCK_SIZE,
+      blocks: (item.blocks || []).map(function (b) {
+        return Object.assign({}, b);
+      }),
       segments: item.segments || null,
+      grid: true,
+      setPiece: item.setPiece || null,
     };
+    syncCoverGeometry(cover);
     cover.slotCount = coverSlotCount(cover);
     return cover;
   });
@@ -56,6 +68,7 @@ export function coverPieces(c) {
 
 export function registerCover(cover) {
   prepareCoverHp(cover);
+  syncCoverGeometry(cover);
   collisionPieces.delete(cover);
   if (!cover.destroyed) collisionPieces.set(cover, pieces(cover));
   return cover;
@@ -65,6 +78,21 @@ function pieces(c) {
   if (c && c.destroyed) {
     collisionPieces.delete(c);
     return [];
+  }
+  if (c && c.blocks && c.blocks.length) {
+    var size = c.blockSize || COVER_BLOCK_SIZE;
+    return livingBlocks(c).map(function (b) {
+      return {
+        x: c.x + b.dx,
+        y: c.y + b.dy,
+        w: size,
+        h: size,
+        type: c.type,
+        gx: b.gx,
+        gy: b.gy,
+        theme: b.theme || c.theme,
+      };
+    });
   }
   const cached = collisionPieces.get(c);
   if (cached) return cached;
@@ -136,7 +164,28 @@ export function getCoverPeekOptions(c, actor, threat) {
       side: 1,
     },
   ];
-  if (c.segments && c.segments.length > 1) {
+  var peekBlocks = c.blocks && c.blocks.length ? livingBlocks(c) : null;
+  if (peekBlocks && peekBlocks.length > 1) {
+    var used = 0;
+    for (const b of peekBlocks) {
+      if (used >= 6) break;
+      const cx = c.x + b.dx,
+        cy = c.y + b.dy,
+        sx = Math.max(20, (c.blockSize || COVER_BLOCK_SIZE) * 0.48),
+        sy = sx;
+      opts.push({
+        x: cx + px * sx + nx * 14,
+        y: cy + py * sy + ny * 14,
+        side: -1,
+      });
+      opts.push({
+        x: cx - px * sx + nx * 14,
+        y: cy - py * sy + ny * 14,
+        side: 1,
+      });
+      used++;
+    }
+  } else if (c.segments && c.segments.length > 1) {
     for (const s of c.segments) {
       const cx = c.x + (s.dx || 0),
         cy = c.y + (s.dy || 0),
@@ -200,7 +249,11 @@ export function getHitChance(shooter, target, covers) {
     else if (cover.type === "wide") chance -= 25;
     else if (cover.type === "car") chance -= 20;
     else chance -= 22;
-    if (cover.segments && cover.segments.length > 1) chance -= 4;
+    if (
+      (cover.blocks && livingBlocks(cover).length > 1) ||
+      (cover.segments && cover.segments.length > 1)
+    )
+      chance -= 4;
   }
   if (target.exposed) chance += 5;
   if (shooter.cover && !shooter.exposed) chance += 3;

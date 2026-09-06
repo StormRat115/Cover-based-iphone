@@ -1,4 +1,23 @@
+import {
+  describeOuterSlots,
+  livingBlocks,
+  slotCountFromBlocks,
+} from "./coverBlocks.js?v=20260906-99";
+
 function segmentsOf(cover) {
+  if (cover && cover.blocks && cover.blocks.length) {
+    var size = cover.blockSize || 40;
+    return livingBlocks(cover).map(function (b) {
+      return {
+        x: cover.x + b.dx,
+        y: cover.y + b.dy,
+        w: size,
+        h: size,
+        gx: b.gx,
+        gy: b.gy,
+      };
+    });
+  }
   if (cover && cover.segments && cover.segments.length)
     return cover.segments.map(function (s) {
       return {
@@ -34,6 +53,19 @@ function slotsOnSegment(seg, shape) {
 }
 
 export function coverSlotPlan(cover) {
+  if (cover && cover.blocks && cover.blocks.length) {
+    var live = livingBlocks(cover);
+    var n = slotCountFromBlocks(live);
+    var segs = segmentsOf(cover);
+    if (!segs.length) return [{ segment: { x: cover.x, y: cover.y, w: 40, h: 40 }, count: 1 }];
+    var per = Math.max(1, Math.floor(n / segs.length));
+    var rem = n;
+    return segs.map(function (seg, i) {
+      var count = i === segs.length - 1 ? rem : Math.min(per, rem);
+      rem -= count;
+      return { segment: seg, count: Math.max(0, count) };
+    });
+  }
   var segs = segmentsOf(cover),
     shape = cover.shape || (segs.length === 1 && nearSquare(segs[0]) ? "square" : "rect"),
     counts,
@@ -53,6 +85,8 @@ export function coverSlotPlan(cover) {
 
 export function coverSlotCount(cover) {
   if (!cover) return 1;
+  if (cover.blocks && cover.blocks.length)
+    return Math.max(1, slotCountFromBlocks(cover.blocks));
   if (Number.isFinite(cover.slotCount) && cover.slotCount > 0) return cover.slotCount;
   var plan = coverSlotPlan(cover),
     n = 0,
@@ -97,9 +131,15 @@ function pointOnSegment(seg, side, localIndex, localCount, cover) {
 }
 
 export function slotWorldPoint(cover, index, threat, actor) {
+  var side = facingSide(cover, threat, actor);
+  if (cover && cover.blocks && cover.blocks.length) {
+    var count = coverSlotCount(cover);
+    var slots = describeOuterSlots(cover, side, count);
+    var idx = Math.max(0, Math.min(slots.length - 1, index || 0));
+    return slots[idx] || pointOnSegment(segmentsOf(cover)[0], side, 0, 1, cover);
+  }
   var plan = coverSlotPlan(cover),
     count = coverSlotCount(cover),
-    side = facingSide(cover, threat, actor),
     idx = Math.max(0, Math.min(count - 1, index || 0)),
     cursor = 0,
     i,

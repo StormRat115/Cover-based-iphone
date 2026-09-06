@@ -151,13 +151,19 @@ Wartorn street composition lock (TMNT arcade beat-em-up read, kept on the establ
 
 Phone Art street-edge pack (from `chore/street-edge-accents`) stamps lamps and sidewalk props on the curb band only: intact/bent/fallen posts, curb chunks, hydrant/manhole, wrecked bus shelter, tipped trash, dead planter. They are clipped off the playable asphalt so they cannot become mid-road plates.
 
-### Pages verify (BUILD 20260906-102)
+### Pages verify (BUILD 20260906-103)
 
 1. Open https://stormrat115.github.io/Cover-based-iphone/
-2. Confirm the stamp reads **BUILD 20260906-102**.
-3. Start a mission. The player (and allies) use Phone Art’s solid `player-solid-atlas` v4. Bodies are opaque — not milky ghosts. Head and boots stay in the cell; no floating feet.
-4. Animation list: idle, run, standShoot, crouchShoot, reload, death. In cover: tall/peek → idle or standShoot; low → crouchShoot. World cover is drawn separately.
-5. Cover spacing, exclusive slots, vaulting, and squad KILLS from BUILD 97 still work.
+2. Confirm the stamp reads **BUILD 20260906-103**.
+3. Start a mission. Cover is built from uniform square blocks with material skins (jersey, sandbags, crates, rubble, wreck). Adjacent same-skin blocks should read as one solid piece, not a stack of loose boxes.
+4. Shapes should vary: rectangles, L / T / U, lines, and small clusters — still spaced on the asphalt, not mid-road buildings.
+5. Exclusive cover slots sit on the outer edges of each shape. Soft cover still vaults and can break; jersey stays up. LOS follows the block grid.
+6. The player (and allies) use Phone Art’s solid `player-solid-atlas` v4. Bodies are opaque. Animation list: idle, run, standShoot, crouchShoot, reload, death.
+7. Sidewalks and lamps stay on the edges. Buildings stay a far backdrop. Squad KILLS still tick.
+
+## Minecraft-style block cover: 20260906-103
+
+Street cover is assembled from one uniform block size. Each piece is a connected random shape (rect, L, T, U, line, cluster) wearing a material skin. Same-skin neighbors hide the shared face and use connection tiles so the shape reads as one solid barricade. Collision, exclusive slots, vault, LOS, and soft-cover breaks all run on that block grid. Compact skins live in `assets/generated/cover/blocks/`. Rebased onto BUILD 102 Phone Art soldier atlas.
 
 ## Phone Art solid player atlas: 20260906-102
 

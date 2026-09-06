@@ -362,6 +362,7 @@ function updateProjectiles(dt) {
           coverHit.cover,
           p.owner === "player" ? 18 : p.owner === "ally" ? 14 : 10,
           [player].concat(allies).concat(marines).concat(enemies),
+          coverHit.piece,
         );
         projectiles.splice(i, 1);
         continue;
