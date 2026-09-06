@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-70";
+import { loadImage } from "./assets.js?v=20260906-71";
 export const soldierSource = new Image();
 soldierSource.src =
   "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-60";
@@ -178,13 +178,33 @@ const ROWS = {
   standShoot: 6,
 };
 const FPS = {
-  idle: 3,
-  run: 10,
-  lowCover: 3,
-  tallCover: 3,
-  shoot: 14,
-  crouchShoot: 13,
-  standShoot: 13,
+  // Keep rates low for short sheets so loops don't stutter.
+  idle: 2.2,
+  run: 7,
+  lowCover: 2.4,
+  tallCover: 2.4,
+  shoot: 9,
+  crouchShoot: 8.5,
+  standShoot: 8.5,
+};
+const LOOP_STATES = {
+  idle: true,
+  run: true,
+  lowCover: true,
+  tallCover: true,
+  shoot: true,
+  crouchShoot: true,
+  standShoot: true,
+};
+const STATE_HOLD_MS = {
+  idle: 220,
+  run: 180,
+  lowCover: 260,
+  tallCover: 260,
+  shoot: 140,
+  crouchShoot: 140,
+  standShoot: 140,
+  death: 99999,
 };
 function nowMs() {
   return typeof performance !== "undefined" && performance.now
@@ -265,7 +285,7 @@ function lowCover(actor) {
 function zeroHealth(actor) {
   return !!(actor && (actor.hp <= 0 || actor.dead));
 }
-export function getSoldierState(actor) {
+function desiredSoldierState(actor) {
   if (!actor) return "idle";
   if (zeroHealth(actor)) return "death";
   if (actor.downed) return "lowCover";
@@ -277,6 +297,38 @@ export function getSoldierState(actor) {
   if (actor.cover) return lowCover(actor) ? "lowCover" : "tallCover";
   if (moving(actor)) return "run";
   return "idle";
+}
+export function getSoldierState(actor) {
+  var desired = desiredSoldierState(actor),
+    now = nowMs();
+  if (!actor) return desired;
+  if (!actor.__visualAnimState) {
+    actor.__visualAnimState = desired;
+    actor.__soldierStateStart = now;
+    actor.__animLockUntil = now + (STATE_HOLD_MS[desired] || 180);
+    return desired;
+  }
+  if (desired === actor.__visualAnimState) {
+    // Refresh shoot locks while still firing so the cycle does not snap early.
+    if (desired === "shoot" || desired === "crouchShoot" || desired === "standShoot")
+      actor.__animLockUntil = Math.max(
+        actor.__animLockUntil || 0,
+        now + (STATE_HOLD_MS[desired] || 140),
+      );
+    return actor.__visualAnimState;
+  }
+  var urgent =
+    desired === "death" ||
+    desired === "shoot" ||
+    desired === "crouchShoot" ||
+    desired === "standShoot" ||
+    actor.__visualAnimState === "death";
+  if (urgent || now >= (actor.__animLockUntil || 0)) {
+    actor.__visualAnimState = desired;
+    actor.__soldierStateStart = now;
+    actor.__animLockUntil = now + (STATE_HOLD_MS[desired] || 180);
+  }
+  return actor.__visualAnimState;
 }
 function stableFacing(actor, state) {
   if (!actor) return 1;
@@ -325,24 +377,52 @@ function stableFacing(actor, state) {
 function frameFor(actor, state, boxes) {
   var frames = boxes[state] || boxes.idle,
     row = ROWS[state] || 0,
-    now = nowMs();
+    now = nowMs(),
+    count = frames.length;
   if (actor.__lastSoldierState !== state) {
     actor.__lastSoldierState = state;
     actor.__soldierStateStart = now;
   }
   var elapsed = Math.max(0, (now - (actor.__soldierStateStart || now)) / 1000),
-    fps = FPS[state] || 4,
-    col = Math.min(
-      frames.length - 1,
-      Math.floor(elapsed * fps) % frames.length,
-    );
+    fps = FPS[state] || 4;
+  // Slightly pace run cycles to travel speed so feet do not skate.
+  if (state === "run" && actor) {
+    var spd = 0;
+    if (typeof actor.vx === "number" && typeof actor.vy === "number")
+      spd = Math.hypot(actor.vx, actor.vy);
+    else if (
+      typeof actor.targetX === "number" &&
+      typeof actor.targetY === "number"
+    )
+      spd = Math.min(
+        1,
+        Math.hypot(actor.targetX - actor.x, actor.targetY - actor.y) / 140,
+      );
+    fps = Math.max(5, Math.min(8.5, fps * (0.7 + 0.45 * Math.min(1, spd / 90 || spd))));
+  }
+  var phase = elapsed * fps,
+    col = Math.floor(phase) % count,
+    next = (col + 1) % count,
+    blend = phase - Math.floor(phase);
+  // Ease the blend so swaps are soft instead of linear pops.
+  blend = blend * blend * (3 - 2 * blend);
+  if (!LOOP_STATES[state]) {
+    col = Math.min(count - 1, Math.floor(phase));
+    next = Math.min(count - 1, col + 1);
+    blend = col === next ? 0 : Math.min(1, phase - col);
+    blend = blend * blend * (3 - 2 * blend);
+  }
   return {
     x: col * CELL,
     y: row * CELL,
+    nextX: next * CELL,
+    nextY: row * CELL,
     w: CELL,
     h: CELL,
     state: state,
     col: col,
+    nextCol: next,
+    blend: blend,
   };
 }
 function deathFrame(actor) {
@@ -352,8 +432,12 @@ function deathFrame(actor) {
     actor.__soldierStateStart = now;
   }
   var elapsed = Math.max(0, (now - (actor.__soldierStateStart || now)) / 1000),
-    frame = Math.min(DEATH_FRAMES - 1, Math.floor(elapsed * DEATH_FPS));
-  return { frame: frame, elapsed: elapsed };
+    phase = Math.min(DEATH_FRAMES - 1.001, elapsed * DEATH_FPS),
+    frame = Math.min(DEATH_FRAMES - 1, Math.floor(phase)),
+    next = Math.min(DEATH_FRAMES - 1, frame + 1),
+    blend = phase - frame;
+  blend = blend * blend * (3 - 2 * blend);
+  return { frame: frame, next: next, blend: blend, elapsed: elapsed };
 }
 function teamFilter(team) {
   if (team === "ally")
@@ -405,23 +489,32 @@ function enemyMonsterState(actor, now) {
   if (!actor.__monsterVisualState) {
     actor.__monsterVisualState = desired;
     actor.__monsterStateStart = now;
-    actor.__monsterStateLockUntil = now + 120;
+    actor.__monsterStateLockUntil = now + 240;
   } else if (
     actor.__monsterVisualState !== desired &&
     (urgent || now >= (actor.__monsterStateLockUntil || 0))
   ) {
     actor.__monsterVisualState = desired;
     actor.__monsterStateStart = now;
-    actor.__monsterStateLockUntil = now + (urgent ? 180 : 120);
+    actor.__monsterStateLockUntil = now + (urgent ? 220 : 280);
   }
   return actor.__monsterVisualState;
 }
 
 function enemyMonsterFrame(actor, state, now) {
+  var count = ENEMY_MONSTER_FRAMES;
   if (state === "death") {
     const duration = Math.max(0.01, actor.deathDuration || 0.8),
-      progress = Math.min(0.999, Math.max(0, (actor.deathTimer || 0) / duration));
-    return Math.min(ENEMY_MONSTER_FRAMES - 1, Math.floor(progress * 6));
+      progress = Math.min(0.999, Math.max(0, (actor.deathTimer || 0) / duration)),
+      phase = progress * (count - 1),
+      frame = Math.min(count - 1, Math.floor(phase)),
+      next = Math.min(count - 1, frame + 1),
+      blend = phase - frame;
+    return {
+      frame: frame,
+      next: next,
+      blend: blend * blend * (3 - 2 * blend),
+    };
   }
   var stateStart = Number.isFinite(actor.__monsterStateStart)
       ? actor.__monsterStateStart
@@ -429,15 +522,75 @@ function enemyMonsterFrame(actor, state, now) {
     elapsed = Math.max(0, (now - stateStart) / 1000),
     fps =
       state === "run"
-        ? 8
+        ? 6.2
         : state === "shoot"
-          ? 10
+          ? 7.5
           : state === "hit"
-            ? 9
-            : 4,
-    frame = Math.floor(elapsed * fps);
-  if (state === "hit") return Math.min(ENEMY_MONSTER_FRAMES - 1, frame);
-  return frame % ENEMY_MONSTER_FRAMES;
+            ? 7
+            : state === "lowCover" || state === "tallCover"
+              ? 2.6
+              : 2.4,
+    phase = elapsed * fps;
+  if (state === "hit") {
+    var hf = Math.min(count - 1, Math.floor(phase)),
+      hn = Math.min(count - 1, hf + 1),
+      hb = Math.min(1, phase - hf);
+    return { frame: hf, next: hn, blend: hb * hb * (3 - 2 * hb) };
+  }
+  var frame = Math.floor(phase) % count,
+    next = (frame + 1) % count,
+    blend = phase - Math.floor(phase);
+  return { frame: frame, next: next, blend: blend * blend * (3 - 2 * blend) };
+}
+
+function drawBlendedSheetFrame(
+  ctx,
+  source,
+  frame,
+  next,
+  blend,
+  row,
+  frameW,
+  frameH,
+  dx,
+  dy,
+  dw,
+  dh,
+  baseAlpha,
+) {
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  var a0 = baseAlpha * (1 - blend),
+    a1 = baseAlpha * blend;
+  if (a0 > 0.02) {
+    ctx.globalAlpha = a0;
+    ctx.drawImage(
+      source,
+      frame * frameW,
+      row * frameH,
+      frameW,
+      frameH,
+      dx,
+      dy,
+      dw,
+      dh,
+    );
+  }
+  if (a1 > 0.02 && next !== frame) {
+    ctx.globalAlpha = a1;
+    ctx.drawImage(
+      source,
+      next * frameW,
+      row * frameH,
+      frameW,
+      frameH,
+      dx,
+      dy,
+      dw,
+      dh,
+    );
+  }
+  ctx.globalAlpha = baseAlpha;
 }
 
 export function drawEnemyMonster(ctx, actor, options) {
@@ -447,16 +600,17 @@ export function drawEnemyMonster(ctx, actor, options) {
   options = options || {};
   const now = nowMs(),
     state = enemyMonsterState(actor, now),
-    frame = enemyMonsterFrame(actor, state, now),
+    anim = enemyMonsterFrame(actor, state, now),
     row = ENEMY_MONSTER_ROWS[state],
     baseScale = options.scale == null ? 0.38 : options.scale * 1.27,
     scale = baseScale * (actor.scale || 1),
     dw = ENEMY_MONSTER_FRAME_WIDTH * scale,
     dh = ENEMY_MONSTER_FRAME_HEIGHT * scale,
-    flip = stableFacing(actor, state);
+    flip = stableFacing(actor, state),
+    baseAlpha = options.alpha == null ? 1 : options.alpha;
   ctx.save();
   ctx.translate(options.x || 0, options.y || 0);
-  ctx.globalAlpha = options.alpha == null ? 1 : options.alpha;
+  ctx.globalAlpha = baseAlpha;
   ctx.fillStyle = "#0007";
   ctx.beginPath();
   ctx.ellipse(
@@ -470,17 +624,20 @@ export function drawEnemyMonster(ctx, actor, options) {
   );
   ctx.fill();
   ctx.scale(flip, 1);
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(
+  drawBlendedSheetFrame(
+    ctx,
     source,
-    frame * ENEMY_MONSTER_FRAME_WIDTH,
-    row * ENEMY_MONSTER_FRAME_HEIGHT,
+    anim.frame,
+    anim.next,
+    anim.blend,
+    row,
     ENEMY_MONSTER_FRAME_WIDTH,
     ENEMY_MONSTER_FRAME_HEIGHT,
     -dw * 0.5,
     -dh,
     dw,
     dh,
+    baseAlpha,
   );
   ctx.restore();
   return true;
@@ -492,12 +649,26 @@ function drawDeath(ctx, actor, options, scale, flip) {
     sh = deathSource.naturalHeight,
     deathScale = scale * DEATH_SCALE,
     dw = sw * deathScale,
-    dh = sh * deathScale;
+    dh = sh * deathScale,
+    baseAlpha = options.alpha == null ? 1 : options.alpha;
   ctx.save();
   ctx.scale(flip, 1);
   ctx.filter = teamFilter(options.team || "player");
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(deathSource, d.frame * sw, 0, sw, sh, -dw * 0.5, -dh, dw, dh);
+  drawBlendedSheetFrame(
+    ctx,
+    deathSource,
+    d.frame,
+    d.next,
+    d.blend,
+    0,
+    sw,
+    sh,
+    -dw * 0.5,
+    -dh,
+    dw,
+    dh,
+    baseAlpha,
+  );
   ctx.restore();
   return true;
 }
@@ -511,7 +682,7 @@ export function drawSoldier(ctx, actor, options) {
     baseScale = options.scale == null ? 0.28 : options.scale,
     scale = baseScale * (actor && actor.scale ? actor.scale : 1),
     flip = stableFacing(actor, state),
-    bob = state === "run" ? Math.sin(nowMs() * 0.018) * 0.65 : 0,
+    bob = state === "run" ? Math.sin(nowMs() * 0.012) * 0.28 : 0,
     enemyCorpse = false;
   ctx.save();
   ctx.translate(options.x || 0, (options.y || 0) + bob);
@@ -549,7 +720,23 @@ export function drawSoldier(ctx, actor, options) {
   ctx.filter = teamFilter(team);
   ctx.imageSmoothingEnabled = true;
   if (atlas) {
-    ctx.drawImage(atlas, r.x, r.y, r.w, r.h, -dw * 0.5, -dh, dw, dh);
+    var baseAlpha = options.alpha == null ? 1 : options.alpha;
+    if (enemyCorpse) baseAlpha *= 0.82;
+    drawBlendedSheetFrame(
+      ctx,
+      atlas,
+      r.col,
+      r.nextCol,
+      r.blend || 0,
+      ROWS[r.state] || 0,
+      CELL,
+      CELL,
+      -dw * 0.5,
+      -dh,
+      dw,
+      dh,
+      baseAlpha,
+    );
   } else {
     ctx.filter = "none";
     ctx.fillStyle = isEnemy

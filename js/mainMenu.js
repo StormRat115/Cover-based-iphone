@@ -1,10 +1,10 @@
-import { WEAPONS, weaponCopy } from "./weapons.js?v=20260906-70";
-import { soldierSource } from "./soldierAssets.js?v=20260906-70";
+import { WEAPONS, weaponCopy } from "./weapons.js?v=20260906-71";
+import { soldierSource } from "./soldierAssets.js?v=20260906-71";
 import {
   CHARACTER_STATS,
   damageReductionPercent,
   GENERAL_ACCURACY_PENALTY,
-} from "./combatStats.js?v=20260906-70";
+} from "./combatStats.js?v=20260906-71";
 var DEFAULTS = { player: "rifle", Rook: "rifle", Viper: "smg", Doc: "dmr" },
   STORAGE = "coverShooterLoadout",
   CHARACTERS = [
