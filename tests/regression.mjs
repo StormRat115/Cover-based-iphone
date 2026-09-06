@@ -1041,8 +1041,13 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
+<<<<<<< HEAD
     16,
     "soldier/vault/monster/charger sources plus cover atlases and wartorn plates",
+=======
+    15,
+    "nine character sources, three cover atlases, and three wartorn plates",
+>>>>>>> 3d78fcb (Use clean transparent ruin plates for side dressing)
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");

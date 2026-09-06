@@ -9,9 +9,6 @@ function plate(file) {
 export const wartornSkyline = plate("wartorn-skyline.webp");
 export const wartornTenement = plate("ruin-tenement.webp");
 export const wartornWarehouse = plate("ruin-warehouse.webp");
-export const wartornRubble = plate("wartorn-rubble-iso.webp");
-export const wartornFacade = plate("wartorn-facade.webp");
-export const wartornSmoke = plate("wartorn-smoke.webp");
 
 var ROAD = 980;
 
@@ -81,8 +78,7 @@ function ready(image) {
 }
 
 function spriteFor(kind) {
-  if (kind === "warehouse") return wartornWarehouse;
-  if (kind === "facade") return wartornFacade;
+  if (kind === "warehouse" || kind === "facade") return wartornWarehouse;
   return wartornTenement;
 }
 
@@ -135,9 +131,6 @@ export function preloadWartornAssets(onProgress) {
     loadImage(wartornSkyline),
     loadImage(wartornTenement),
     loadImage(wartornWarehouse),
-    loadImage(wartornRubble),
-    loadImage(wartornFacade),
-    loadImage(wartornSmoke),
   ]).then(function (images) {
     if (
       images.some(function (img) {
@@ -205,42 +198,23 @@ export function drawWartornDressing(ctx, iso, world, W, H, onScreen) {
     item = SMOKE[i];
     if (onScreen && !onScreen(item.x, item.y, 360)) continue;
     q = iso(item.x, item.y);
-    if (
-      !stamp(
-        ctx,
-        wartornSmoke,
-        q[0],
-        q[1] + 10,
-        90 * item.s,
-        150 * item.s,
-        0.72,
-      )
-    ) {
-      ctx.save();
-      ctx.globalAlpha = 0.28;
-      ctx.fillStyle = "#2a2622";
-      ctx.beginPath();
-      ctx.ellipse(q[0], q[1] - 70 * item.s, 18 * item.s, 46 * item.s, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = "#2a2622";
+    ctx.beginPath();
+    ctx.ellipse(q[0], q[1] - 78 * item.s, 16 * item.s, 52 * item.s, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.16;
+    ctx.beginPath();
+    ctx.ellipse(q[0] + 10 * item.s, q[1] - 120 * item.s, 22 * item.s, 36 * item.s, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
   for (i = 0; i < RUBBLE.length; i++) {
     item = RUBBLE[i];
     if (onScreen && !onScreen(item.x, item.y, 180)) continue;
     q = iso(item.x, item.y);
-    if (
-      !stamp(
-        ctx,
-        wartornRubble,
-        q[0],
-        q[1] + 6,
-        92 * item.s * 2.2,
-        70 * item.s * 2.2,
-        0.94,
-      )
-    )
-      fallbackRubble(ctx, q[0], q[1], item.s * 2);
+    fallbackRubble(ctx, q[0], q[1], item.s * 2.4);
   }
 }
 

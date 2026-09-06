@@ -4,9 +4,6 @@
   "assets": {
     "skyline": "assets/generated/world/wartorn-skyline.webp",
     "ruinTenement": "assets/generated/world/ruin-tenement.webp",
-    "ruinWarehouse": "assets/generated/world/ruin-warehouse.webp",
-    "rubble": "assets/generated/world/wartorn-rubble-iso.webp",
-    "facade": "assets/generated/world/wartorn-facade.webp",
-    "smoke": "assets/generated/world/wartorn-smoke.webp"
+    "ruinWarehouse": "assets/generated/world/ruin-warehouse.webp"
   }
 }
