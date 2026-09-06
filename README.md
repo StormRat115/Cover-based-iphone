@@ -97,6 +97,14 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - Capturing deploys a 200 HP, 20 defense support vehicle with a long-range, high-rate, low-damage turret and visible gunner.
 - Monsters prioritize living Marines, then the support vehicle, before choosing the player squad; enemy snipers are rarer and use stronger, slower precision fire.
 
+## Tactical awareness and encirclement: 20260906-69
+
+- Player AI scores active threats by distance, visibility, exposure, health, enemy role, and who the enemy is attacking instead of always selecting the nearest target.
+- Squad members coordinate target assignments to suppress dangerous specialists while avoiding unnecessary full-team overfocus.
+- Combat cover choices account for crossfire and route exposure; friendlies hold position when no safe fighting cover is available.
+- Friendlies reload partial magazines from cover and delay revives while enemies are dangerously close.
+- After the fort is captured, every new wave splits between the upper and lower screen edges and enters from off-screen to surround the defenders.
+
 ## Enemy monster animations: 20260905-65
 
 - Riflemen, shotgunners, heavies, and snipers now use their own transparent monster animation sheets.

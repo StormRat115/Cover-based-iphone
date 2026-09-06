@@ -1,57 +1,57 @@
-import { createGameLoop } from "./gameLoop.js?v=20260905-68";
+import { createGameLoop } from "./gameLoop.js?v=20260906-69";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260905-68";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-68";
+} from "./geometry.js?v=20260906-69";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-69";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260905-68";
-import { updateSquadHud } from "./squadHud.js?v=20260905-68";
-import { updateCombatHud } from "./combatHud.js?v=20260905-68";
-import { updatePlayerHud } from "./player.js?v=20260905-68";
-import { resetSquadCommands } from "./allyCore2.js?v=20260905-68";
-import "./squadDrawer.js?v=20260905-68";
-import { createPlayer, drawPlayer } from "./player.js?v=20260905-68";
+} from "./bloodEffects.js?v=20260906-69";
+import { updateSquadHud } from "./squadHud.js?v=20260906-69";
+import { updateCombatHud } from "./combatHud.js?v=20260906-69";
+import { updatePlayerHud } from "./player.js?v=20260906-69";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-69";
+import "./squadDrawer.js?v=20260906-69";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-69";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260905-68";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260905-68";
+} from "./enemy.js?v=20260906-69";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-69";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260905-68";
+} from "./marines.js?v=20260906-69";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260905-68";
+} from "./streetMission.js?v=20260906-69";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260905-68";
+} from "./supportVehicle.js?v=20260906-69";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260905-68";
+} from "./cover.js?v=20260906-69";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260905-68";
-import { initTactical } from "./tactical.js?v=20260905-68";
+} from "./input.js?v=20260906-69";
+import { initTactical } from "./tactical.js?v=20260906-69";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -84,6 +84,7 @@ var W = 0,
   playerHitFlash = 0,
   autoPlay = false,
   autoMoveTimer = 0,
+  autoTargetTimer = 0,
   wave = 1,
   waveState = "active",
   waveTimer = 0;
@@ -149,6 +150,7 @@ export function iso(x, y) {
 }
 function createWaveEnemies() {
   return createBandits(wave, {
+    spawnMode: mission && mission.captured ? "surround" : "northeast",
     spawnView: {
       world: world,
       width: W || 390,
@@ -159,15 +161,29 @@ function createWaveEnemies() {
 function nearestEnemy() {
   return nearestLivingEnemy(player, enemies);
 }
-function nearestAutoCombatEnemy() {
+function activeCombatEnemies() {
+  return enemies.filter(function (enemy) {
+    return !enemy.dead && !enemy.downed && enemy.hp > 0 && enemy.spawnTimer <= 0;
+  });
+}
+function chooseAutoCombatEnemy() {
   var best = null,
-    bestDistance = Infinity;
-  enemies.forEach(function (enemy) {
-    if (enemy.dead || enemy.downed || enemy.hp <= 0 || enemy.spawnTimer > 0)
-      return;
-    var d = distance(player, enemy);
-    if (d < bestDistance) {
-      bestDistance = d;
+    bestScore = -Infinity;
+  activeCombatEnemies().forEach(function (enemy) {
+    var d = distance(player, enemy),
+      blocked = isLineBlocked(player, enemy, covers),
+      healthPressure = 1 - enemy.hp / Math.max(1, enemy.maxHp),
+      score = Math.max(0, 1800 - d) * 0.045 + healthPressure * 42;
+    score += blocked ? -18 : 24;
+    score += enemy.exposed ? 22 : -8;
+    if (enemy.type === "sniper") score += 58;
+    else if (enemy.type === "heavy") score += 32;
+    else if (enemy.type === "shotgunner" && d < 650) score += 45;
+    if (enemy.combatTarget === player) score += 64;
+    else if (enemy.combatTarget && enemy.combatTarget.isMarine) score += 18;
+    if (enemy === target) score += 18;
+    if (score > bestScore) {
+      bestScore = score;
       best = enemy;
     }
   });
@@ -408,6 +424,7 @@ function chooseAutoPosition(e, strategicGoal) {
   var best = null,
     bestCover = null,
     bestScore = 1e9,
+    combatThreats = e ? activeCombatEnemies() : [],
     desired = Math.min(player.weapon.range * 0.72, 760),
     currentGoalDistance = strategicGoal
       ? distance(player, strategicGoal)
@@ -423,12 +440,25 @@ function chooseAutoPosition(e, strategicGoal) {
       protectedSpot = e
         ? isLineBlocked({ x: slot.x, y: slot.y }, e, [c])
         : true,
+      exposedTo = 0,
+      routeExposure = 0,
       score =
         cd * (strategicGoal ? 0.35 : 1) +
         Math.abs(ed - desired) * (strategicGoal ? 0.25 : 0.55) +
         goalDistance * (strategicGoal ? 0.48 : 0) +
         (protectedSpot ? -190 : 180) +
         (c.type === "wide" || c.type === "car" ? -65 : 0);
+    if (e) {
+      var midpoint = {
+        x: (player.x + slot.x) * 0.5,
+        y: (player.y + slot.y) * 0.5,
+      };
+      combatThreats.forEach(function (threat) {
+        if (!isLineBlocked(slot, threat, [c])) exposedTo++;
+        if (!isLineBlocked(midpoint, threat, [c])) routeExposure++;
+      });
+      score += exposedTo * 185 + routeExposure * 42;
+    }
     if (score < bestScore) {
       bestScore = score;
       best = slot;
@@ -447,10 +477,19 @@ function chooseAutoPosition(e, strategicGoal) {
 }
 function updateAutoPlayer(dt) {
   if (!autoPlay || gameOver || paused || player.dead || player.downed) return;
-  var e =
-      target && !target.dead && (target.spawnTimer || 0) <= 0
-        ? target
-        : nearestAutoCombatEnemy(),
+  autoTargetTimer -= dt;
+  if (
+    autoTargetTimer <= 0 ||
+    !target ||
+    target.dead ||
+    target.hp <= 0 ||
+    target.spawnTimer > 0
+  ) {
+    var assessedTarget = chooseAutoCombatEnemy();
+    if (assessedTarget !== target) setTarget(assessedTarget);
+    autoTargetTimer = 0.48;
+  }
+  var e = target,
     strategicGoal = mission && !mission.captured ? mission.objective : null;
   if (shouldRecover(player)) {
     recoverInCover(player, e, covers, allies, dt);
@@ -461,6 +500,7 @@ function updateAutoPlayer(dt) {
   }
   if (!e) {
     player.objectiveAdvancePaused = false;
+    player.tacticalState = mission.captured ? "DEFENDING" : "ADVANCING";
     if (!strategicGoal) return;
     autoMoveTimer -= dt;
     if (distance(player, strategicGoal) <= strategicGoal.radius * 0.68) {
@@ -484,10 +524,19 @@ function updateAutoPlayer(dt) {
     return;
   }
   player.objectiveAdvancePaused = true;
-  if (target !== e) setTarget(e);
   var d = distance(player, e),
     blocked = isLineBlocked(player, e, covers),
     engage = Math.min(player.weapon.range * 0.86, 900);
+  player.tacticalState = d < 320 ? "DANGER CLOSE" : "ENGAGING FROM COVER";
+  if (
+    player.cover &&
+    !player.reloading &&
+    player.weapon.ammo <= Math.ceil(player.weapon.magazine * 0.3) &&
+    d > 380
+  ) {
+    reload();
+    return;
+  }
   if (player.weapon.ammo <= 0) {
     reload();
     return;
@@ -527,6 +576,7 @@ autoPlayButton.addEventListener("pointerdown", function (e) {
     fireHeld = false;
     fireButton.classList.remove("active");
     autoMoveTimer = 0;
+    autoTargetTimer = 0;
     player.keyboardMove = null;
   } else player.keyboardMove = null;
 });
@@ -687,6 +737,7 @@ function reset() {
   autoPlay = false;
   window.__autoPlay = false;
   autoMoveTimer = 0;
+  autoTargetTimer = 0;
   paused = false;
   autoPlayButton.classList.remove("active");
   autoPlayButton.textContent = "AUTO PLAY";
@@ -1126,7 +1177,9 @@ function draw(now) {
     (player.downed ? " • DOWNED" : "") +
     (player.cover ? " • IN COVER" : "") +
     (target && !target.dead ? " • TARGET LOCKED" : "") +
-    (autoPlay ? " • AI PILOT" : "") +
+    (autoPlay
+      ? " • AI PILOT" + (player.tacticalState ? " • " + player.tacticalState : "")
+      : "") +
     (mission.captured ? " • FORT SECURE" : mission.capturing ? " • CAPTURING" : "") +
     (paused ? " • PAUSED" : "");
   const nextHint = paused
@@ -1141,6 +1194,8 @@ function draw(now) {
             " SECONDS"
         : waveState === "cleared"
           ? "WAVE CLEAR — PREPARE FOR CONTACT"
+          : mission.captured
+            ? "DEFEND THE FORT — CONTACT ABOVE AND BELOW"
           : player.reloading
             ? "RELOADING..."
             : "Tap to move • Tap enemy to lock • Hold FIRE";

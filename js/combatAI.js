@@ -1,4 +1,4 @@
-import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260905-68";
+import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260906-69";
 function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
@@ -49,6 +49,7 @@ export function pickTacticalCover(actor, threat, covers, friendlies, options) {
     flankWeight = options.flankWeight == null ? 150 : options.flankWeight,
     anchor = options.anchor || null,
     anchorWeight = options.anchorWeight == null ? 0.18 : options.anchorWeight,
+    threats = options.threats || [],
     forceNew = !!options.forceNew,
     best = null,
     bestScore = Infinity;
@@ -80,6 +81,21 @@ export function pickTacticalCover(actor, threat, covers, friendlies, options) {
     else score -= Math.abs(lateral) * 55;
     if (anchor)
       score += Math.hypot(slot.x - anchor.x, slot.y - anchor.y) * anchorWeight;
+    if (threats.length > 1) {
+      var crossfireExposure = 0;
+      for (var k = 0; k < threats.length; k++) {
+        var secondary = threats[k];
+        if (
+          !secondary ||
+          secondary === threat ||
+          secondary.dead ||
+          secondary.downed
+        )
+          continue;
+        if (!coverProtects(c, slot, secondary)) crossfireExposure++;
+      }
+      score += crossfireExposure * 135;
+    }
     if (actor.cover === c) score += forceNew ? 420 : -150;
     if (actor.lastCoverId && actor.lastCoverId === c.id && forceNew)
       score += 180;

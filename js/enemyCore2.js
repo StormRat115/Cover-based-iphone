@@ -3,8 +3,8 @@ import {
   getCoverSlot,
   getHitChance,
   chooseCoverPeek,
-} from "./cover.js?v=20260905-68";
-import { weaponCopy } from "./weapons.js?v=20260905-68";
+} from "./cover.js?v=20260906-69";
+import { weaponCopy } from "./weapons.js?v=20260906-69";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },

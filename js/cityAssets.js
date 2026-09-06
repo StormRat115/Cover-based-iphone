@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260905-68";
+import { loadImage } from "./assets.js?v=20260906-69";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =

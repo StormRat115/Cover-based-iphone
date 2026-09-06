@@ -2,4 +2,4 @@ export {
   createAllies,
   updateAllies,
   SQUAD_MODES,
-} from "./allyCore2.js?v=20260905-68";
+} from "./allyCore2.js?v=20260906-69";

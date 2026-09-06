@@ -1,5 +1,5 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260905-68";
-import { weaponCopy } from "./weapons.js?v=20260905-68";
+import { isLineBlocked, getHitChance } from "./cover.js?v=20260906-69";
+import { weaponCopy } from "./weapons.js?v=20260906-69";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -7,13 +7,13 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260905-68";
+} from "./combatAI.js?v=20260906-69";
 import {
   ENEMY_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260905-68";
+} from "./combatStats.js?v=20260906-69";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -60,6 +60,36 @@ export function createNortheastSpawnPoints(count, view) {
   }
   return points;
 }
+export function createSurroundSpawnPoints(count, view) {
+  view = view || {};
+  var world = view.world || view,
+    width = Math.max(320, view.width || 390),
+    height = Math.max(568, view.height || 844),
+    scaleX = world.scaleX || 0.25,
+    scaleY = world.scaleY || 0.125,
+    offsetY = world.offsetY == null ? -40 : world.offsetY,
+    cameraX = world.cameraX || 0,
+    cameraY = world.cameraY || 0,
+    points = [];
+  for (var i = 0; i < count; i++) {
+    var fromTop = i % 2 === 0,
+      sideIndex = Math.floor(i / 2),
+      rank = Math.floor(sideIndex / 5),
+      lane = sideIndex % 5,
+      screenX = width * (0.14 + lane * 0.18) + (rank % 2) * 22,
+      screenY = fromTop ? -145 - rank * 42 : height + 145 + rank * 42,
+      horizontal = (screenX - width / 2) / scaleX,
+      vertical = (screenY - height / 2 - offsetY) / scaleY;
+    points.push({
+      x: cameraX + (horizontal + vertical) / 2,
+      y: cameraY + (vertical - horizontal) / 2,
+      screenX: screenX,
+      screenY: screenY,
+      lane: fromTop ? "top" : "bottom",
+    });
+  }
+  return points;
+}
 export function enemyCountForWave(wave, random, extraCount) {
   wave = Math.max(1, wave || 1);
   random = random || Math.random;
@@ -75,7 +105,10 @@ export function createBandits(wave, options) {
   options = options || {};
   var random = options.random || Math.random,
     count = enemyCountForWave(wave, random, options.extraCount),
-    spawns = createNortheastSpawnPoints(count, options.spawnView);
+    spawns =
+      options.spawnMode === "surround"
+        ? createSurroundSpawnPoints(count, options.spawnView)
+        : createNortheastSpawnPoints(count, options.spawnView);
   return spawns.map(function (pos, i) {
     var x = pos.x,
       y = pos.y,

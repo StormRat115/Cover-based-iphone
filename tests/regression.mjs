@@ -147,6 +147,19 @@ test("waves enter off-screen from the northeast street with 6-12 reinforcements"
       Math.ceil(lateWave.length / 9),
     "snipers should be a rare specialist spawn",
   );
+  const surround = enemies.createSurroundSpawnPoints(20, {
+    world,
+    width: 390,
+    height: 844,
+  });
+  assert.ok(surround.some((point) => point.screenY < -110));
+  assert.ok(surround.some((point) => point.screenY > 844 + 110));
+  assert.ok(
+    surround.every(
+      (point) => point.screenY < -110 || point.screenY > 844 + 110,
+    ),
+    "fort defense waves must begin off-screen above or below",
+  );
 });
 
 test("monsters prioritize living Marines over the player and squad", async () => {
@@ -526,12 +539,18 @@ test("actual game handles combat, pause, restart, tab hiding and waves", async (
   h.frame(1000 / 30);
   assert.equal(marine.dead, true);
   assert.equal(marine.downed, false);
+  h.window.__streetMission.captured = true;
   for (const enemy of h.window.__battleEnemies) {
     enemy.dead = true;
     enemy.deathTimer = enemy.deathDuration;
   }
   h.advance(180);
   assert.equal(h.window.__wave, 2);
+  assert.ok(
+    h.window.__battleEnemies.some((enemy) => enemy.spawnLane === "top") &&
+      h.window.__battleEnemies.some((enemy) => enemy.spawnLane === "bottom"),
+    "post-capture waves should surround the fort from both screen edges",
+  );
   assert.equal(marine.dead, true, "KIA Marines must not respawn between waves");
   h.document.hidden = true;
   h.document.emit("visibilitychange");
@@ -669,6 +688,104 @@ test("friendly AI pauses the objective push for contact and resumes after the wi
     h.window.__battleMarines.every((marine) => !marine.objectiveAdvancePaused),
   );
   assert.ok(after < before, "the objective push should resume after contact is clear");
+});
+
+test("friendly combat awareness prioritizes threats and coordinates squad fire", async () => {
+  const h = createHarness();
+  const game = await h.importModule(entry);
+  game.startGame();
+  const player = h.window.__battlePlayer;
+  const enemies = h.window.__battleEnemies;
+  enemies.forEach((enemy, index) => {
+    enemy.dead = index > 1;
+    enemy.deathTimer = enemy.deathDuration;
+  });
+  Object.assign(enemies[0], {
+    type: "rifleman",
+    x: player.x + 220,
+    y: player.y,
+    hp: 500,
+    maxHp: 500,
+    spawnTimer: 0,
+    dead: false,
+    exposed: true,
+    combatTarget: null,
+  });
+  Object.assign(enemies[1], {
+    type: "sniper",
+    x: player.x + 580,
+    y: player.y,
+    hp: 500,
+    maxHp: 500,
+    spawnTimer: 0,
+    dead: false,
+    exposed: true,
+    combatTarget: player,
+  });
+  h.nodes.get("autoPlay").emit("pointerdown");
+  h.frame();
+  h.advance(2);
+  assert.equal(player.aimTarget, enemies[1], "player AI should suppress the high-threat sniper");
+  assert.equal(player.objectiveAdvancePaused, true);
+
+  const assigned = new Set(
+    h.window.__battleAllies.map((ally) => ally.combatTarget).filter(Boolean),
+  );
+  assert.ok(assigned.size >= 2, "the squad should avoid wasteful full-team overfocus");
+});
+
+test("covered squad members reload early and avoid unsafe revives", async () => {
+  const h = createHarness();
+  const alliesModule = await h.importModule(`js/allyCore2.js?v=${BUILD}`);
+  const allies = alliesModule.createAllies();
+  const cover = {
+    id: "test-cover",
+    x: 0,
+    y: 0,
+    w: 180,
+    h: 40,
+    type: "wide",
+  };
+  const actor = allies[0];
+  Object.assign(actor, {
+    x: 0,
+    y: 48,
+    cover,
+    coverAnchorX: 0,
+    coverAnchorY: 48,
+    combatState: "covered",
+    exposed: false,
+  });
+  actor.weapon.ammo = 1;
+  allies[1].downed = true;
+  allies[1].x = 420;
+  allies[1].y = 0;
+  const enemy = {
+    type: "shotgunner",
+    x: 0,
+    y: -500,
+    hp: 500,
+    maxHp: 500,
+    defense: 0,
+    dead: false,
+    downed: false,
+    exposed: true,
+    spawnTimer: 0,
+    combatTarget: actor,
+  };
+  const beforeRevive = allies[1].reviveTimer;
+  alliesModule.updateAllies(
+    allies,
+    1 / 60,
+    { x: 0, y: 120, hp: 100, dead: false, downed: false, aimTarget: null },
+    [cover],
+    [enemy],
+    null,
+    "FOLLOW",
+    [],
+  );
+  assert.equal(actor.reloading, true, "low magazines should be refreshed from cover");
+  assert.equal(allies[1].reviveTimer, beforeRevive, "danger-close revives should wait");
 });
 
 test("enemy magazines are consumed and reload, and blood memory stays bounded", async () => {

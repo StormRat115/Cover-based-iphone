@@ -2,8 +2,8 @@ import {
   isLineBlocked,
   getHitChance,
   getCoverSlot,
-} from "./cover.js?v=20260905-68";
-import { weaponCopy } from "./weapons.js?v=20260905-68";
+} from "./cover.js?v=20260906-69";
+import { weaponCopy } from "./weapons.js?v=20260906-69";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -11,14 +11,14 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260905-68";
+} from "./combatAI.js?v=20260906-69";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260905-68";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260905-68";
+} from "./combatStats.js?v=20260906-69";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-69";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -147,19 +147,45 @@ export function createAllies() {
   window.__battleAllies = allies;
   return allies;
 }
-function nearestEnemy(a, enemies) {
+function activeEnemy(e) {
+  return !!e && !e.dead && !e.downed && e.hp > 0 && !(e.spawnTimer > 0);
+}
+function chooseCombatEnemy(a, enemies, covers, friendlies, player, mode) {
+  if (mode === "FOCUS" && activeEnemy(player.aimTarget))
+    return {
+      target: player.aimTarget,
+      dist: Math.hypot(a.x - player.aimTarget.x, a.y - player.aimTarget.y),
+    };
   var best = null,
-    bd = Infinity;
+    bestDistance = Infinity,
+    bestScore = -Infinity;
   enemies.forEach(function (e) {
-    if (!e.dead && !e.downed && e.hp > 0 && !(e.spawnTimer > 0)) {
-      var d = Math.hypot(a.x - e.x, a.y - e.y);
-      if (d < bd) {
-        bd = d;
-        best = e;
-      }
+    if (!activeEnemy(e)) return;
+    var d = Math.hypot(a.x - e.x, a.y - e.y),
+      blocked = isLineBlocked(a, e, covers),
+      focusCount = friendlies.filter(function (friendly) {
+        return friendly !== a && friendly.combatTarget === e;
+      }).length,
+      healthPressure = 1 - e.hp / Math.max(1, e.maxHp),
+      score = Math.max(0, 1700 - d) * 0.04 + healthPressure * 48;
+    score += blocked ? -16 : 26;
+    score += e.exposed ? 24 : -9;
+    score -= focusCount * (healthPressure > 0.65 ? 9 : 55);
+    if (e.type === "sniper") score += 52;
+    else if (e.type === "heavy") score += a.role === "marksman" ? 44 : 24;
+    else if (e.type === "shotgunner" && d < 650) score += 48;
+    if (e.combatTarget === a) score += 72;
+    else if (e.combatTarget === player) score += 36;
+    else if (e.combatTarget && !e.combatTarget.dead) score += 18;
+    if (e === a.combatTarget) score += 16;
+    if (a.role === "flanker" && d < 700 && e.exposed) score += 20;
+    if (score > bestScore) {
+      bestScore = score;
+      best = e;
+      bestDistance = d;
     }
   });
-  return { target: best, dist: bd };
+  return { target: best, dist: bestDistance };
 }
 function reload(a) {
   if (!a.reloading) {
@@ -357,7 +383,14 @@ export function updateAllies(
     }
     if (a.regenRate > 0 && a.hp < a.maxHp && a.timeSinceDamage > a.regenDelay)
       a.hp = Math.min(a.maxHp, a.hp + a.regenRate * dt);
-    var pick = nearestEnemy(a, enemies),
+    var pick = chooseCombatEnemy(
+        a,
+        enemies,
+        covers,
+        friendlyTeam,
+        player,
+        squadMode,
+      ),
       e = pick.target,
       d = pick.dist,
       aggressiveAdvance = !!a.aggressiveAdvance && squadMode === "ASSAULT",
@@ -365,12 +398,29 @@ export function updateAllies(
         ? Math.min(a.weapon.range * 0.48, 760)
         : a.weapon.range * 0.82;
     a.objectiveAdvancePaused = !!e;
+    if (!Object.prototype.hasOwnProperty.call(a, "combatTarget"))
+      Object.defineProperty(a, "combatTarget", {
+        value: e,
+        writable: true,
+        configurable: true,
+      });
+    else a.combatTarget = e;
     if (a.canRecover !== false && shouldRecover(a)) {
       if (e) faceThreat(a, e);
       recoverInCover(a, e, covers, friendlyTeam, dt);
       return;
     }
-    if (a.canRevive !== false && updateRevive(a, friendlyTeam, player, dt))
+    var reviveSafe =
+      !e ||
+      d > 900 ||
+      (d > 620 &&
+        a.cover &&
+        isLineBlocked({ x: a.x, y: a.y }, e, covers));
+    if (
+      a.canRevive !== false &&
+      reviveSafe &&
+      updateRevive(a, friendlyTeam, player, dt)
+    )
       return;
     var mission =
       typeof window !== "undefined" ? window.__streetMission : null;
@@ -392,13 +442,14 @@ export function updateAllies(
     );
     faceThreat(a, e);
     if (
-      squadMode === "FOLLOW" &&
-      Math.hypot(a.x - player.x, a.y - player.y) > 400
+      a.cover &&
+      !a.reloading &&
+      a.weapon.ammo <= Math.ceil(a.weapon.magazine * 0.3) &&
+      d > 380
     ) {
-      a.cover = null;
-      a.targetX = player.x + (a.coverSlotIndex - 1) * 90;
-      a.targetY = player.y + 105;
-      moveTowardTarget(a, dt);
+      reload(a);
+      a.exposed = false;
+      a.combatState = "covered";
       return;
     }
     var blocked = isLineBlocked(a, e, covers);
@@ -428,15 +479,12 @@ export function updateAllies(
         flankSide: a.flankSide,
         flankWeight: aggressiveAdvance ? 230 : 150,
         forceNew: aggressiveAdvance && d > engagementRange * 1.28,
+        threats: enemies.filter(activeEnemy),
       });
       if (choice && !claimed(choice, a, friendlyTeam)) {
         applyCoverChoice(a, choice);
         a.combatState = "seeking";
         a.repositionCooldown = aggressiveAdvance ? 0.65 : 1.1;
-      } else if (aggressiveAdvance && d > engagementRange * 1.28) {
-        a.cover = null;
-        a.combatState = "seeking";
-        a.exposed = true;
       }
     }
     if (a.cover && a.combatState === "seeking") {
@@ -473,14 +521,6 @@ export function updateAllies(
       }
       return;
     }
-    if (
-      d > engagementRange &&
-      squadMode !== "HOLD" &&
-      !defendingObjective
-    ) {
-      a.targetX = e.x;
-      a.targetY = e.y;
-      moveTowardTarget(a, dt, aggressiveAdvance ? 1.18 : 1);
-    } else shoot(a, e, spawnProjectile, covers);
+    if (d <= a.weapon.range) shoot(a, e, spawnProjectile, covers);
   });
 }
