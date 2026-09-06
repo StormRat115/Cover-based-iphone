@@ -1,37 +1,26 @@
-import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260906-85";
+import { isLineBlocked } from "./cover.js?v=20260906-86";
 import {
   resolveSolidMove,
   updateVault,
   findDetour,
   firstCoverOnSegment,
   ignoreCoverFor,
-} from "./coverCollision.js?v=20260906-85";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-85";
+} from "./coverCollision.js?v=20260906-86";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-86";
+import {
+  coverSlotCount,
+  isCoverFull,
+  occupancyPenalty,
+  reserveCoverSlot,
+} from "./coverSlots.js?v=20260906-86";
 function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
 function clamp(v, a, b) {
   return Math.max(a, Math.min(b, v));
 }
-function occupiedSlots(cover, actors, ignore) {
-  var used = {};
-  for (var i = 0; i < actors.length; i++) {
-    var a = actors[i];
-    if (!a || a === ignore || a.dead || a.downed || a.cover !== cover) continue;
-    used[a.coverSlotIndex || 0] = true;
-  }
-  return used;
-}
-function slotIndexFor(cover, actors, ignore) {
-  var used = occupiedSlots(cover, actors, ignore);
-  for (var i = 0; i < 3; i++) if (!used[i]) return i;
-  return 1;
-}
 function candidateSlot(cover, actor, threat, actors) {
-  var idx = slotIndexFor(cover, actors || [], actor),
-    proxy = { x: actor.x, y: actor.y, coverSlotIndex: idx },
-    p = getCoverSlot(cover, proxy, threat);
-  return { x: p.x, y: p.y, side: p.side, index: idx };
+  return reserveCoverSlot(cover, actor, threat, actors || []);
 }
 function flankValue(actor, threat, slot) {
   var ax = actor.x - threat.x,
@@ -65,22 +54,20 @@ export function pickTacticalCover(actor, threat, covers, friendlies, options) {
     var c = covers[i],
       travel = Math.hypot(c.x - actor.x, c.y - actor.y);
     if (travel > maxTravel) continue;
-    var slot = candidateSlot(c, actor, threat, friendlies || []),
-      threatDist = Math.hypot(slot.x - threat.x, slot.y - threat.y);
+    if (isCoverFull(c, friendlies || [], actor)) continue;
+    var slot = candidateSlot(c, actor, threat, friendlies || []);
+    if (!slot) continue;
+    var threatDist = Math.hypot(slot.x - threat.x, slot.y - threat.y);
     if (threatDist < minThreat || threatDist > maxThreat) continue;
     var protection = coverProtects(c, slot, threat),
       midpoint = { x: (actor.x + slot.x) * 0.5, y: (actor.y + slot.y) * 0.5 },
-      routeCovered = isLineBlocked(midpoint, threat, covers),
-      users = 0;
-    for (var j = 0; j < (friendlies || []).length; j++) {
-      var f = friendlies[j];
-      if (f && f !== actor && !f.dead && !f.downed && f.cover === c) users++;
-    }
+      routeCovered = isLineBlocked(midpoint, threat, covers);
     var score = travel * 0.62 + Math.abs(threatDist - desired) * 0.38;
     score += protection ? -330 : 420;
     if (!routeCovered && travel > 170) score += Math.min(260, travel * 0.26);
     if (routeCovered) score -= 45;
-    score += users * 150;
+    score += occupancyPenalty(c, friendlies || [], actor);
+    score += coverSlotCount(c) <= 1 ? 40 : 0;
     if (c.type === "wide" || c.type === "car") score -= 70;
     else if (c.type === "low") score += 20;
     if (c.segments && c.segments.length > 1) score -= 55;

@@ -1376,6 +1376,106 @@ test("wartorn city plates load and dress the street sides", async () => {
   await city.preloadWartornAssets();
 });
 
+test("cover pieces expose exclusive slots by shape", async () => {
+  const h = createHarness();
+  const slots = await h.importModule(`js/coverSlots.js?v=${BUILD}`);
+  const map = await h.importModule(`js/cityMap.js?v=${BUILD}`);
+  const ai = await h.importModule(`js/combatAI.js?v=${BUILD}`);
+  const withType = (cover, type) => Object.assign(cover, { type: type });
+  const square = withType(
+    map.makeShapedCover({
+      id: "sq",
+      x: 0,
+      y: 0,
+      shape: "square",
+      theme: "sandbags",
+    }),
+    "low",
+  );
+  const rect = withType(
+    map.makeShapedCover({
+      id: "rect",
+      x: 220,
+      y: 0,
+      shape: "rect",
+      theme: "jersey",
+    }),
+    "wide",
+  );
+  const tee = withType(
+    map.makeShapedCover({ id: "t", x: 440, y: 0, shape: "T", theme: "jersey" }),
+    "wide",
+  );
+  const you = withType(
+    map.makeShapedCover({
+      id: "u",
+      x: 680,
+      y: 0,
+      shape: "U",
+      theme: "sandbags",
+    }),
+    "low",
+  );
+  const ell = withType(
+    map.makeShapedCover({ id: "l", x: 900, y: 0, shape: "L", theme: "jersey" }),
+    "wide",
+  );
+  assert.ok(slots.coverSlotCount(square) >= 1 && slots.coverSlotCount(square) <= 2);
+  assert.ok(slots.coverSlotCount(rect) >= 2);
+  assert.ok(slots.coverSlotCount(tee) >= 2);
+  assert.ok(slots.coverSlotCount(you) >= 3);
+  assert.ok(slots.coverSlotCount(ell) >= 2);
+  const threat = { x: 220, y: 420 };
+  const a = { x: 200, y: 80, hp: 40, dead: false, cover: null };
+  const first = slots.reserveCoverSlot(rect, a, threat, []);
+  assert.ok(first);
+  a.cover = rect;
+  a.coverSlotIndex = first.index;
+  const b = { x: 240, y: 80, hp: 40, dead: false, cover: null };
+  const second = slots.reserveCoverSlot(rect, b, threat, [a]);
+  assert.ok(second);
+  assert.notEqual(first.index, second.index);
+  assert.ok(
+    Math.hypot(first.x - second.x, first.y - second.y) >= 12,
+    "adjacent slots stand beside each other",
+  );
+  b.cover = rect;
+  b.coverSlotIndex = second.index;
+  const occupants = [a, b];
+  let extra = slots.reserveCoverSlot(rect, { x: 220, y: 90, hp: 40 }, threat, occupants);
+  while (extra) {
+    occupants.push({
+      cover: rect,
+      coverSlotIndex: extra.index,
+      hp: 40,
+      dead: false,
+    });
+    extra = slots.reserveCoverSlot(
+      rect,
+      { x: 220, y: 90, hp: 40 },
+      threat,
+      occupants,
+    );
+  }
+  assert.equal(slots.isCoverFull(rect, occupants), true);
+  const seeker = {
+    x: 200,
+    y: 70,
+    hp: 40,
+    dead: false,
+    cover: null,
+    speed: 200,
+  };
+  const pick = ai.pickTacticalCover(seeker, threat, [rect, square], occupants, {
+    minThreat: 10,
+    maxThreat: 2000,
+    maxTravel: 2000,
+    desiredRange: 400,
+  });
+  assert.ok(pick, "a full piece should send seekers to the next free cover");
+  assert.notEqual(pick.cover, rect);
+});
+
 test("unit collision blocks overlap and unsticks jammed pairs", async () => {
   const h = createHarness();
   const col = await h.importModule(`js/unitCollision.js?v=${BUILD}`);

@@ -1,8 +1,8 @@
-import { loadImage } from "./assets.js?v=20260906-85";
+import { loadImage } from "./assets.js?v=20260906-86";
 
 function plate(file) {
   var image = new Image();
-  image.src = "./assets/generated/world/" + file + "?v=20260906-85";
+  image.src = "./assets/generated/world/" + file + "?v=20260906-86";
   return image;
 }
 

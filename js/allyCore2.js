@@ -1,10 +1,9 @@
 import {
   isLineBlocked,
   getHitChance,
-  getCoverSlot,
-} from "./cover.js?v=20260906-85";
-import { weaponCopy } from "./weapons.js?v=20260906-85";
-import { AudioBus } from "./audio.js?v=20260906-85";
+} from "./cover.js?v=20260906-86";
+import { weaponCopy } from "./weapons.js?v=20260906-86";
+import { AudioBus } from "./audio.js?v=20260906-86";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -12,14 +11,19 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-85";
+} from "./combatAI.js?v=20260906-86";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-85";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-85";
+} from "./combatStats.js?v=20260906-86";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-86";
+import {
+  isCoverFull,
+  occupancyPenalty,
+  reserveCoverSlot,
+} from "./coverSlots.js?v=20260906-86";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -269,12 +273,9 @@ function updateRevive(a, allies, player, dt) {
   return true;
 }
 function claimed(choice, a, allies) {
-  return (
-    choice &&
-    allies.some(function (o) {
-      return o !== a && !o.dead && !o.downed && o.cover === choice.cover;
-    })
-  );
+  if (!choice || !choice.cover) return true;
+  if (isCoverFull(choice.cover, allies, a)) return true;
+  return false;
 }
 function advanceToMission(a, mission, covers, friendlies, dt) {
   if (!mission || !mission.objective) return false;
@@ -306,17 +307,12 @@ function advanceToMission(a, mission, covers, friendlies, dt) {
     var travel = Math.hypot(cover.x - a.x, cover.y - a.y),
       remaining = Math.hypot(cover.x - goal.x, cover.y - goal.y);
     if (travel < 90 || travel > 920 || remaining > goalDistance - 100) return;
-    var choice = {
-      cover: cover,
-      slot: Object.assign(getCoverSlot(cover, a, null), {
-        index: a.coverSlotIndex || 0,
-      }),
-    };
+    var slot = reserveCoverSlot(cover, a, null, friendlies);
+    if (!slot) return;
+    var choice = { cover: cover, slot: slot };
     if (claimed(choice, a, friendlies)) return;
-    var users = friendlies.filter(function (other) {
-      return other !== a && !other.dead && other.cover === cover;
-    }).length;
-    var score = remaining * 0.55 + travel * 0.3 + users * 260;
+    var score =
+      remaining * 0.55 + travel * 0.3 + occupancyPenalty(cover, friendlies, a);
     if (cover.type === "wide" || cover.type === "car") score -= 90;
     score += Math.random() * 35;
     if (score < bestScore) {

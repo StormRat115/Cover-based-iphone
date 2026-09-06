@@ -1,18 +1,18 @@
-import { loadImage } from "./assets.js?v=20260906-85";
+import { loadImage } from "./assets.js?v=20260906-86";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
-  "./assets/generated/soldier/player-ally-atlas.png?v=20260906-85";
+  "./assets/generated/soldier/player-ally-atlas.png?v=20260906-86";
 export const soldierSource = new Image();
 soldierSource.src =
-  "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260906-85";
+  "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260906-86";
 export const enemySource = new Image();
 enemySource.src =
-  "./assets/198C101B-E186-4852-A270-3F04D83451ED.png?v=20260906-85";
+  "./assets/198C101B-E186-4852-A270-3F04D83451ED.png?v=20260906-86";
 export const deathSource = new Image();
-deathSource.src = "./assets/soldier_death_sheet.png?v=20260906-85";
+deathSource.src = "./assets/soldier_death_sheet.png?v=20260906-86";
 export const vaultSheetSource = new Image();
 vaultSheetSource.src =
-  "./assets/generated/soldier/vault-sheet.png?v=20260906-85";
+  "./assets/generated/soldier/vault-sheet.png?v=20260906-86";
 
 const ENEMY_MONSTER_SHEET_WIDTH = 1536,
   ENEMY_MONSTER_SHEET_HEIGHT = 1022,
@@ -37,7 +37,7 @@ const ENEMY_MONSTER_FILES = {
 const enemyMonsterSources = Object.fromEntries(
   Object.entries(ENEMY_MONSTER_FILES).map(function ([type, file]) {
     const image = new Image();
-    image.src = "./assets/generated/enemies/" + file + "?v=20260906-85";
+    image.src = "./assets/generated/enemies/" + file + "?v=20260906-86";
     return [type, image];
   }),
 );

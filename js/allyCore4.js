@@ -3,8 +3,13 @@ import {
   getCoverSlot,
   getHitChance,
   chooseCoverPeek,
-} from "./cover.js?v=20260906-85";
-import { weaponCopy } from "./weapons.js?v=20260906-85";
+} from "./cover.js?v=20260906-86";
+import { weaponCopy } from "./weapons.js?v=20260906-86";
+import {
+  isCoverFull,
+  occupancyPenalty,
+  reserveCoverSlot,
+} from "./coverSlots.js?v=20260906-86";
 
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW",
@@ -212,12 +217,16 @@ function coverScore(a, c, target, player, covers, allies, mode) {
   var travel = Math.hypot(c.x - a.x, c.y - a.y),
     td = Math.hypot(c.x - target.x, c.y - target.y),
     use = users(c, allies, a);
-  if (travel > 780 || use >= 3) return 1e9;
-  var ghost = { x: a.x, y: a.y, coverSlotIndex: use % 3 },
+  if (travel > 780 || isCoverFull(c, allies, a)) return 1e9;
+  var reserved = reserveCoverSlot(c, a, target, allies);
+  if (!reserved) return 1e9;
+  var ghost = { x: a.x, y: a.y, coverSlotIndex: reserved.index },
     anchor = getCoverSlot(c, ghost, target),
     peek = chooseCoverPeek(c, ghost, target, covers);
   var score =
-    travel * 0.62 + Math.abs(td - desired(a, mode)) * 0.78 + use * 230;
+    travel * 0.62 +
+    Math.abs(td - desired(a, mode)) * 0.78 +
+    occupancyPenalty(c, allies, a);
   if (isLineBlocked(anchor, target, covers)) score -= 120;
   else score += 220;
   if (isLineBlocked(peek, target, covers)) score += 380;
@@ -255,7 +264,8 @@ function pickCover(a, player, covers, allies, target, mode) {
   var c = ranked[Math.floor(Math.random() * Math.min(2, ranked.length))].c;
   a.lastCoverId = a.cover ? a.cover.id : a.lastCoverId;
   a.cover = c;
-  a.coverSlotIndex = users(c, allies, a) % 3;
+  var reserved = reserveCoverSlot(c, a, target, allies);
+  a.coverSlotIndex = reserved ? reserved.index : 0;
   var slot = getCoverSlot(c, a, target),
     peek = chooseCoverPeek(c, a, target, covers);
   a.coverAnchorX = slot.x;
