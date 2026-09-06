@@ -1,20 +1,20 @@
-import { getHitChance } from "./cover.js?v=20260906-83";
+import { getHitChance } from "./cover.js?v=20260906-84";
 import {
   resolveSolidMove,
   updateVault,
   planRoute,
   continueRoute,
-} from "./coverCollision.js?v=20260906-83";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-83";
-import { weaponCopy } from "./weapons.js?v=20260906-83";
-import { AudioBus } from "./audio.js?v=20260906-83";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-83";
+} from "./coverCollision.js?v=20260906-84";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-84";
+import { weaponCopy } from "./weapons.js?v=20260906-84";
+import { AudioBus } from "./audio.js?v=20260906-84";
+import { drawSoldier } from "./soldierAssets.js?v=20260906-84";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-83";
+} from "./combatStats.js?v=20260906-84";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,

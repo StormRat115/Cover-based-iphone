@@ -1,12 +1,12 @@
-import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260906-83";
+import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260906-84";
 import {
   resolveSolidMove,
   updateVault,
   findDetour,
   firstCoverOnSegment,
   ignoreCoverFor,
-} from "./coverCollision.js?v=20260906-83";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-83";
+} from "./coverCollision.js?v=20260906-84";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-84";
 function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }

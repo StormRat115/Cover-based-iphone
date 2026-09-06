@@ -1,6 +1,6 @@
-import { loadImage } from "./assets.js?v=20260906-83";
-import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260906-83";
-import { faceThreat } from "./combatAI.js?v=20260906-83";
+import { loadImage } from "./assets.js?v=20260906-84";
+import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260906-84";
+import { faceThreat } from "./combatAI.js?v=20260906-84";
 
 export const CHARGER_SHEET = {
   file: "enemy-charger-melee-sheet.png",
@@ -24,7 +24,7 @@ export const CHARGER_SHEET = {
 
 const chargerSource = new Image();
 chargerSource.src =
-  "./assets/generated/enemies/" + CHARGER_SHEET.file + "?v=20260906-83";
+  "./assets/generated/enemies/" + CHARGER_SHEET.file + "?v=20260906-84";
 
 export function getChargerSheet() {
   return Object.assign({ source: chargerSource }, CHARGER_SHEET);

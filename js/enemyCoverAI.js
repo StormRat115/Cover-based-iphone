@@ -3,9 +3,9 @@ import {
   applyCoverChoice,
   coverProtects,
   peekPoint,
-} from "./combatAI.js?v=20260906-83";
-import { getCoverSlot } from "./cover.js?v=20260906-83";
-import { seeksCover } from "./enemyStance.js?v=20260906-83";
+} from "./combatAI.js?v=20260906-84";
+import { getCoverSlot } from "./cover.js?v=20260906-84";
+import { seeksCover } from "./enemyStance.js?v=20260906-84";
 
 function living(list) {
   return (list || []).filter(function (a) {
