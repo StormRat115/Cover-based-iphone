@@ -1,63 +1,63 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-75";
+import { createGameLoop } from "./gameLoop.js?v=20260906-76";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-75";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-75";
+} from "./geometry.js?v=20260906-76";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-76";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-75";
-import { updateSquadHud } from "./squadHud.js?v=20260906-75";
-import { updateCombatHud } from "./combatHud.js?v=20260906-75";
-import { updatePlayerHud } from "./player.js?v=20260906-75";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-75";
-import "./squadDrawer.js?v=20260906-75";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-75";
+} from "./bloodEffects.js?v=20260906-76";
+import { updateSquadHud } from "./squadHud.js?v=20260906-76";
+import { updateCombatHud } from "./combatHud.js?v=20260906-76";
+import { updatePlayerHud } from "./player.js?v=20260906-76";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-76";
+import "./squadDrawer.js?v=20260906-76";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-76";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-75";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-75";
+} from "./enemy.js?v=20260906-76";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-76";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-75";
+} from "./marines.js?v=20260906-76";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-75";
+} from "./streetMission.js?v=20260906-76";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-75";
+} from "./supportVehicle.js?v=20260906-76";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260906-75";
+} from "./cover.js?v=20260906-76";
 import {
   groundTile,
   buildingRuinA,
   buildingRuinB,
-} from "./cityAssets.js?v=20260906-75";
+} from "./cityAssets.js?v=20260906-76";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-75";
-import { initTactical } from "./tactical.js?v=20260906-75";
-import { AudioBus } from "./audio.js?v=20260906-75";
+} from "./input.js?v=20260906-76";
+import { initTactical } from "./tactical.js?v=20260906-76";
+import { AudioBus } from "./audio.js?v=20260906-76";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -1000,12 +1000,8 @@ function drawMapDecor() {
   // Occasional crosswalks
   for (var crossY = world.minY + 420; crossY < world.maxY; crossY += 900)
     drawCrosswalk(crossY);
-  // Far skyline only — never in the play corridor. Huge cull margin kills pop-in.
-  var bi = 0;
-  for (var by = world.minY + 200; by < world.maxY; by += 720) {
-    drawBuilding(-(ROAD + 920), by, 520, 360, "#404644", bi++ % 2 ? "b" : "a");
-    drawBuilding(ROAD + 920, by, 520, 360, "#454947", bi++ % 2 ? "b" : "a");
-  }
+
+  // Buildings parked — street-only map for now.
   // Street lamps along the wide curbs
   for (var ly = world.minY + 160; ly <= world.maxY; ly += 420) {
     drawStreetLamp(curbL + 50, ly);
