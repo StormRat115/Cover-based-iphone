@@ -3,8 +3,9 @@ import {
   applyCoverChoice,
   coverProtects,
   peekPoint,
-} from "./combatAI.js?v=20260906-81";
-import { getCoverSlot } from "./cover.js?v=20260906-81";
+} from "./combatAI.js?v=20260906-82";
+import { getCoverSlot } from "./cover.js?v=20260906-82";
+import { seeksCover } from "./enemyStance.js?v=20260906-82";
 
 function living(list) {
   return (list || []).filter(function (a) {
@@ -13,7 +14,7 @@ function living(list) {
 }
 
 export function isCoverUser(enemy) {
-  return !!(enemy && enemy.type !== "charger" && !enemy.meleeCharge);
+  return seeksCover(enemy);
 }
 
 export function coverOptionsFor(enemy) {

@@ -1,20 +1,21 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260906-81";
-import { weaponCopy } from "./weapons.js?v=20260906-81";
+import { isLineBlocked, getHitChance } from "./cover.js?v=20260906-82";
+import { weaponCopy } from "./weapons.js?v=20260906-82";
 import {
   moveTowardTarget,
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-81";
+} from "./combatAI.js?v=20260906-82";
 import {
   ENEMY_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-81";
-import { AudioBus } from "./audio.js?v=20260906-81";
-import { assignEnemyCover } from "./enemyCoverAI.js?v=20260906-81";
-import { chargerWeapon } from "./chargerEnemy.js?v=20260906-81";
+} from "./combatStats.js?v=20260906-82";
+import { AudioBus } from "./audio.js?v=20260906-82";
+import { assignEnemyCover } from "./enemyCoverAI.js?v=20260906-82";
+import { chargerWeapon } from "./chargerEnemy.js?v=20260906-82";
+import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260906-82";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -126,7 +127,7 @@ export function createBandits(wave, options) {
     var s = TYPES[type] || TYPES.rifleman,
       w = type === "charger" ? chargerWeapon() : weaponCopy(s.weapon),
       stats = ENEMY_STATS[type] || ENEMY_STATS.rifleman;
-    return {
+    return tagEnemyStance({
       x: x,
       y: y,
       type: type,
@@ -173,7 +174,7 @@ export function createBandits(wave, options) {
       meleeCharge: type === "charger",
       charging: false,
       meleeTimer: 0,
-    };
+    }, i);
   });
 }
 function desiredRange(e) {
@@ -260,7 +261,10 @@ function enterTucking(e) {
   e.targetY = e.coverAnchorY;
 }
 function chooseCover(e, target, covers, enemies, forceNew) {
-  if (e.type === "charger") return false;
+  if (!seeksCover(e)) {
+    applyExposedHold(e, target);
+    return false;
+  }
   var friendlies = playerRoster().concat(enemies || []);
   return assignEnemyCover(e, target, covers, friendlies, forceNew);
 }

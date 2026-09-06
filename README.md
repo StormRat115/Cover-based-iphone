@@ -118,6 +118,14 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - Cover is authored as square, rectangle, T, U, and L pieces. Collision segments and procedural art (sandbags, jersey barriers, crates, wrecks, rubble) follow those silhouettes.
 - Soldiers and monsters plant against the facing cover edge: closer slots, tall vs low poses, peek/lean offsets, and a slight depth nudge so tucked units sit on the cover silhouette instead of floating through it.
 
+## Wartorn street, dialog, and unit collision: 20260906-82
+
+- Side-of-street ruined buildings, rubble, smoke, and a smoky skyline dress the battlefield. The playable lane stays street + cover.
+- Marines and squad mates bark short military callouts, strategy chatter, and taunts as speech bubbles, rate-limited so they stay organic.
+- Living units block each other. Overlap auto-unsticks with a brief pass-through so vaulting and cover collision stay playable.
+- Pause sits in the top-right with a mobile-sized hit target.
+- Wave enemies mix cover-seekers and exposed shooters. Chargers still rush.
+
 ## Team XP, skills, armor, and segmented waves: 20260906-81
 
 Shared team XP for the player, allies, and Marines:

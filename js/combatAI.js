@@ -1,11 +1,12 @@
-import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260906-81";
+import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260906-82";
 import {
   resolveSolidMove,
   updateVault,
   findDetour,
   firstCoverOnSegment,
   ignoreCoverFor,
-} from "./coverCollision.js?v=20260906-81";
+} from "./coverCollision.js?v=20260906-82";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-82";
 function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
@@ -194,10 +195,13 @@ export function moveTowardTarget(actor, dt, speedScale, covers) {
       actor.cover &&
       Math.hypot(actor.targetX - actor.coverAnchorX, actor.targetY - actor.coverAnchorY) <
         10,
-    result = resolveSolidMove(actor, nx, ny, covers, {
-      target: { x: actor.targetX, y: actor.targetY },
-      allowVault: !walkingToOwnCover,
-    });
+    result = composeSolidAndUnitMove(
+      resolveSolidMove(actor, nx, ny, covers, {
+        target: { x: actor.targetX, y: actor.targetY },
+        allowVault: !walkingToOwnCover,
+      }),
+      actor,
+    );
   actor.x = result.x;
   actor.y = result.y;
   if (result.vaulted) return false;

@@ -1041,8 +1041,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    13,
-    "soldier/vault/monster sources plus charger sheet and environment atlases",
+    16,
+    "soldier/vault/monster/charger sources plus cover atlases and wartorn plates",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
@@ -1323,4 +1323,128 @@ test("sustained simulated play stays finite at mobile and desktop sizes", async 
     }
     assert.equal(h.frames.length, 1);
   }
+});
+
+test("wartorn city plates load and dress the street sides", async () => {
+  const h = createHarness();
+  const city = await h.importModule(`js/wartornCity.js?v=${BUILD}`);
+  assert.ok(city.playableStreetHalfWidth() >= 900);
+  const dressing = city.createWartornDressing();
+  assert.ok(dressing.buildings.length >= 12);
+  assert.ok(dressing.rubble.length >= 12);
+  assert.ok(
+    dressing.buildings.every((item) => Math.abs(item.x) > dressing.road),
+    "ruins stay off the playable street",
+  );
+  const ctx = h.document.createElement("canvas").getContext("2d");
+  city.drawWartornAtmosphere(ctx, 390, 844);
+  city.drawWartornDressing(
+    ctx,
+    (x, y) => [x * 0.25, y * 0.125],
+    { minX: -2300, maxX: 2300, minY: -6600, maxY: 1900 },
+    390,
+    844,
+    () => true,
+  );
+  await city.preloadWartornAssets();
+});
+
+test("unit collision blocks overlap and unsticks jammed pairs", async () => {
+  const h = createHarness();
+  const col = await h.importModule(`js/unitCollision.js?v=${BUILD}`);
+  const cover = await h.importModule(`js/coverCollision.js?v=${BUILD}`);
+  const a = { x: 0, y: 0, hp: 40, speed: 200, scale: 1 };
+  const b = { x: 40, y: 0, hp: 40, speed: 180, scale: 1 };
+  const blocked = col.resolveUnitMove(a, 20, 0, [a, b]);
+  assert.ok(blocked.blocked, "units cannot walk through each other");
+  assert.ok(blocked.x < 20);
+  const beside = col.resolveUnitMove(a, 0, 30, [a, b]);
+  assert.equal(beside.blocked, false, "units can stand beside each other");
+  a.x = 0;
+  a.y = 0;
+  b.x = 1;
+  b.y = 0;
+  for (let i = 0; i < 12; i++) {
+    if (!a.passThrough && !b.passThrough) {
+      a.x = 0;
+      b.x = 1;
+    }
+    col.unstickOverlappingUnits([a, b], 0.05);
+  }
+  assert.ok(
+    Math.hypot(a.x - b.x, a.y - b.y) >= col.UNIT_RADIUS,
+    "stuck pairs must separate",
+  );
+  assert.ok(
+    a.passThrough > 0 || b.passThrough > 0,
+    "one unit should briefly pass through after a jam",
+  );
+  const jumper = { x: 0, y: 0, hp: 40, vaulting: true };
+  const hop = col.composeSolidAndUnitMove(
+    { x: 12, y: 0, blocked: true, vaulted: true },
+    jumper,
+    [jumper, b],
+  );
+  assert.equal(hop.vaulted, true);
+  assert.equal(cover.isCoverJumpable({ type: "low", theme: "sandbags" }), true);
+});
+
+test("wave enemies mix cover-users and exposed shooters", async () => {
+  const h = createHarness();
+  const stance = await h.importModule(`js/enemyStance.js?v=${BUILD}`);
+  const enemies = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
+  const wave = enemies.createBandits(2, {
+    random: () => 0.4,
+    extraCount: 8,
+    spawnView: { width: 390, height: 844, world: {} },
+  });
+  const coverUsers = wave.filter((e) => stance.seeksCover(e));
+  const exposed = wave.filter((e) => e.coverBehavior === "exposed");
+  assert.ok(coverUsers.length >= 2, "some hostiles should seek cover");
+  assert.ok(exposed.length >= 1, "some hostiles should stand in the open");
+  assert.ok(wave.every((e) => e.coverBehavior));
+  const open = {
+    x: 0,
+    y: 0,
+    coverBehavior: "exposed",
+    weapon: { role: "assault" },
+  };
+  stance.applyExposedHold(open, { x: 400, y: 0 });
+  assert.equal(open.cover, null);
+  assert.equal(open.exposed, true);
+  assert.ok(open.targetX < 400);
+});
+
+test("squad dialog is rate-limited and draws near speakers", async () => {
+  const h = createHarness();
+  const dialog = await h.importModule(`js/squadDialog.js?v=${BUILD}`);
+  dialog.resetSquadDialog();
+  const marine = {
+    x: 10,
+    y: 20,
+    hp: 90,
+    isMarine: true,
+    dead: false,
+    downed: false,
+    calloutTimer: 0,
+    dialogLock: 0,
+  };
+  const ally = {
+    x: 40,
+    y: 20,
+    hp: 80,
+    dead: false,
+    downed: false,
+    calloutTimer: 0,
+    dialogLock: 0,
+  };
+  assert.equal(dialog.speak(marine, "Hold the curb."), true);
+  assert.equal(dialog.speak(ally, "Covering."), false);
+  dialog.resetSquadDialog();
+  marine.calloutTimer = 0;
+  marine.dialogLock = 0;
+  const ctx = h.document.createElement("canvas").getContext("2d");
+  dialog.speak(marine, "Contact front.");
+  dialog.drawDialogBubbles(ctx, (x, y) => [x, y], [marine, ally]);
+  assert.match(readFileSync("css/game.css", "utf8"), /#pause \{[\s\S]*right:/);
 });

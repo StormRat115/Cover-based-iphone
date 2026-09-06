@@ -33,7 +33,7 @@ canvas {
 #status {
   position: absolute;
   right: max(12px, env(safe-area-inset-right));
-  top: max(12px, env(safe-area-inset-top));
+  top: max(74px, calc(env(safe-area-inset-top) + 64px));
   font-size: 11px;
   font-weight: 800;
   opacity: 0.88;
@@ -41,7 +41,7 @@ canvas {
 #hint {
   position: absolute;
   right: 12px;
-  top: 45px;
+  top: max(118px, calc(env(safe-area-inset-top) + 108px));
   text-align: right;
   font-size: 10px;
   opacity: 0.72;
@@ -53,17 +53,18 @@ button {
 }
 #pause {
   position: absolute;
-  left: max(12px, env(safe-area-inset-left));
-  top: max(104px, calc(env(safe-area-inset-top) + 92px));
-  width: 54px;
-  height: 54px;
+  right: max(12px, env(safe-area-inset-right));
+  top: max(10px, env(safe-area-inset-top));
+  left: auto;
+  width: 56px;
+  height: 56px;
   border: 1px solid #ffffff66;
   border-radius: 10px;
   background: #11181dcc;
   color: #fff;
   font-size: 25px;
   font-weight: 900;
-  z-index: 9;
+  z-index: 11;
 }
 #squadCommands {
   position: absolute;
@@ -252,17 +253,18 @@ button {
 }
 @media (max-width: 700px) {
   #status {
-    top: 96px;
+    top: max(70px, calc(env(safe-area-inset-top) + 60px));
     font-size: 9px;
   }
   #hint {
     display: none;
   }
   #pause {
-    left: 8px;
-    top: max(96px, calc(env(safe-area-inset-top) + 88px));
-    width: 46px;
-    height: 46px;
+    right: 8px;
+    left: auto;
+    top: max(8px, env(safe-area-inset-top));
+    width: 52px;
+    height: 52px;
   }
   #loadout {
     height: 58px;

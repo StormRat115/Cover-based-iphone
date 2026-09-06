@@ -1,19 +1,20 @@
-import { getHitChance } from "./cover.js?v=20260906-81";
+import { getHitChance } from "./cover.js?v=20260906-82";
 import {
   resolveSolidMove,
   updateVault,
   planRoute,
   continueRoute,
-} from "./coverCollision.js?v=20260906-81";
-import { weaponCopy } from "./weapons.js?v=20260906-81";
-import { AudioBus } from "./audio.js?v=20260906-81";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-81";
+} from "./coverCollision.js?v=20260906-82";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-82";
+import { weaponCopy } from "./weapons.js?v=20260906-82";
+import { AudioBus } from "./audio.js?v=20260906-82";
+import { drawSoldier } from "./soldierAssets.js?v=20260906-82";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-81";
+} from "./combatStats.js?v=20260906-82";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,
@@ -378,10 +379,13 @@ export function createPlayer() {
       if (this.keyboardMove) {
         var knx = this.x + this.keyboardMove.x * this.speed * dt,
           kny = this.y + this.keyboardMove.y * this.speed * dt,
-          kmove = resolveSolidMove(this, knx, kny, covers, {
-            target: { x: knx, y: kny },
-            allowVault: true,
-          });
+          kmove = composeSolidAndUnitMove(
+            resolveSolidMove(this, knx, kny, covers, {
+              target: { x: knx, y: kny },
+              allowVault: true,
+            }),
+            this,
+          );
         this.x = kmove.x;
         this.y = kmove.y;
         this.state = this.vaulting ? "vault" : "walk";
@@ -393,10 +397,13 @@ export function createPlayer() {
           const step = Math.min(d, this.speed * dt);
           var nx = this.x + (dx / d) * step,
             ny = this.y + (dy / d) * step,
-            moved = resolveSolidMove(this, nx, ny, covers, {
-              target: { x: this.tx, y: this.ty },
-              allowVault: !this.coverTarget,
-            });
+            moved = composeSolidAndUnitMove(
+              resolveSolidMove(this, nx, ny, covers, {
+                target: { x: this.tx, y: this.ty },
+                allowVault: !this.coverTarget,
+              }),
+              this,
+            );
           this.x = moved.x;
           this.y = moved.y;
           this.facingX = dx / d;

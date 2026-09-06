@@ -2,12 +2,12 @@ import {
   createBandits,
   createSurroundSpawnPoints,
   updateBandits as updateBanditsCore,
-} from "./enemyCore.js?v=20260906-81";
+} from "./enemyCore.js?v=20260906-82";
 import {
   drawEnemyMonster,
   drawSoldier,
-} from "./soldierAssets.js?v=20260906-81";
-import { updateChargers, drawCharger } from "./chargerEnemy.js?v=20260906-81";
+} from "./soldierAssets.js?v=20260906-82";
+import { updateChargers, drawCharger } from "./chargerEnemy.js?v=20260906-82";
 export { createBandits, createSurroundSpawnPoints };
 var ENEMY_LINES = {
   contact: ["CONTACT!", "THERE!", "I SEE THEM!", "MOVE! MOVE!"],
@@ -31,19 +31,6 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
   enemies.forEach(function (e) {
     if (e.dead) return;
     e.calloutTimer = Math.max(0, (e.calloutTimer || 0) - dt);
-    e.flavorClock = (e.flavorClock || 0.7 + Math.random() * 2.5) - dt;
-    e.lastFlavorState = e.lastFlavorState || "";
-    if (e.hit > 0) enemySay(e, "hurt", 0.18);
-    if (e.combatState !== e.lastFlavorState) {
-      if (e.combatState === "seeking") enemySay(e, "move", 0.16);
-      else if (e.combatState === "covered") enemySay(e, "cover", 0.1);
-      else if (e.combatState === "exposed") enemySay(e, "fire", 0.17);
-      e.lastFlavorState = e.combatState;
-    }
-    if (e.flavorClock <= 0) {
-      e.flavorClock = 4.5 + Math.random() * 7;
-      enemySay(e, e.exposed ? "aggressive" : "contact", 0.24);
-    }
   });
 }
 function drawBubble(ctx, e) {

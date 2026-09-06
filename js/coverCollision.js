@@ -1,4 +1,4 @@
-import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-81";
+import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-82";
 
 export const ACTOR_RADIUS = 11;
 export const VAULT_DURATION = 0.46;

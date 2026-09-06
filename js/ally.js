@@ -2,8 +2,9 @@ import {
   createAllies,
   updateAllies as updateAlliesCore,
   SQUAD_MODES,
-} from "./allyCore2.js?v=20260906-81";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-81";
+} from "./allyCore2.js?v=20260906-82";
+import { drawSoldier } from "./soldierAssets.js?v=20260906-82";
+import { speak } from "./squadDialog.js?v=20260906-82";
 export { createAllies, SQUAD_MODES };
 var ALLY_LINES = {
   contact: ["CONTACT!", "ENEMY SPOTTED!", "I SEE THEM!", "EYES UP!"],
@@ -23,9 +24,8 @@ function pick(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 function flavor(a, key, chance, duration) {
-  if (a.calloutTimer > 0 || Math.random() > chance) return;
-  a.callout = pick(ALLY_LINES[key]);
-  a.calloutTimer = duration || 1.5;
+  if (Math.random() > chance) return;
+  speak(a, pick(ALLY_LINES[key]), duration || 1.8);
 }
 export function updateAllies(
   allies,
@@ -106,11 +106,5 @@ export function drawAlly(ctx, a, iso) {
   ctx.shadowColor = "#000";
   ctx.shadowBlur = 3;
   ctx.fillText((a.name || "ALLY") + " · " + a.weapon.short, 0, -44);
-  if (a.calloutTimer > 0 && !a.dead) {
-    ctx.font = "900 9px system-ui";
-    ctx.fillStyle = "#eef3ef";
-    ctx.textBaseline = "middle";
-    ctx.fillText(a.callout, 0, -82);
-  }
   ctx.restore();
 }
