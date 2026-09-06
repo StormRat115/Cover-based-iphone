@@ -151,18 +151,18 @@ Wartorn street composition lock (TMNT arcade beat-em-up read, kept on the establ
 
 Phone Art street-edge pack (from `chore/street-edge-accents`) stamps lamps and sidewalk props on the curb band only: intact/bent/fallen posts, curb chunks, hydrant/manhole, wrecked bus shelter, tipped trash, dead planter. They are clipped off the playable asphalt so they cannot become mid-road plates.
 
-### Pages verify (BUILD 20260906-99)
+### Pages verify (BUILD 20260906-100)
 
 1. Open https://stormrat115.github.io/Cover-based-iphone/
-2. Confirm the stamp reads **BUILD 20260906-99**.
-3. Start a mission. The player (and allies) use Phone Art’s solid `player-solid-atlas`. Bodies are opaque — not milky ghosts. Head and boots stay in the cell; no floating feet.
-4. Animation rows: idle, run, standShoot, crouchShoot, reload, death. In cover, the unit uses idle / standShoot / crouchShoot — no baked barrier prop in the sprite. World cover is drawn separately.
+2. Confirm the stamp reads **BUILD 20260906-100**.
+3. Start a mission. The player (and allies) use Phone Art’s solid `player-solid-atlas` v3. Bodies are opaque — not milky ghosts. Head and boots stay in the cell; no floating feet on any row.
+4. Animation rows: idle, run, tallCover, lowCover, standShoot, crouchShoot, reload, death (4 frames each).
 5. Cover spacing, exclusive slots, vaulting, and squad KILLS from BUILD 97 still work.
 
-## Phone Art solid player atlas: 20260906-99
+## Phone Art solid player atlas: 20260906-100
 
-- Wired official `assets/generated/soldier/player-solid-atlas` from `chore/player-solid-atlas` (v4, 4×6, 192px cells) as the primary player and ally sheet.
-- States: idle, run, standShoot, crouchShoot, reload, death. Tall/low cover rows were removed because they baked a barrier into the sprite; in-cover maps to idle / standShoot / crouchShoot.
+- Wired official `assets/generated/soldier/player-solid-atlas` from `chore/player-solid-atlas` (v3, 4×8, 192px cells) as the primary player and ally sheet.
+- States: idle, run, tallCover, lowCover, standShoot, crouchShoot, reload, death. Binary alpha; upright full-body framing every cell.
 - Living friendlies still blit one fully opaque frame (no mid-alpha blend, no body plate). Vault stays on its own strip.
 
 ## Opaque friendlies, spaced street cover, and squad kills: 20260906-97

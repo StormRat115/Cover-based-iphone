@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Fail if player-solid-atlas has inverted, clipped, or wrapped cells.
 
-Phone Art v4 is 4×6, cell 192, states idle/run/standShoot/crouchShoot/reload/death.
-Cover rows were removed. Run (and every standing cell) must keep the whole body
-together: head near the top, feet near the bottom, padding so nothing clips.
+Phone Art v3 is 4×8, cell 192:
+idle, run, tallCover, lowCover, standShoot, crouchShoot, reload, death.
+Every cell must keep the whole body together: head near the top, feet near
+the bottom, padding so nothing clips. Mid-alpha must stay 0.
 """
 from __future__ import annotations
 
@@ -18,7 +19,25 @@ ROOT = Path(__file__).resolve().parents[1]
 PNG = ROOT / "assets/generated/soldier/player-solid-atlas.png"
 META = ROOT / "assets/generated/soldier/player-solid-atlas.json"
 CELL = 192
-STANDING = {"idle", "run", "standShoot", "crouchShoot", "reload"}
+V3_STATES = [
+    "idle",
+    "run",
+    "tallCover",
+    "lowCover",
+    "standShoot",
+    "crouchShoot",
+    "reload",
+    "death",
+]
+STANDING = {
+    "idle",
+    "run",
+    "tallCover",
+    "lowCover",
+    "standShoot",
+    "crouchShoot",
+    "reload",
+}
 
 
 def components(mask):
@@ -72,16 +91,14 @@ def cell_mask(px, w, h):
 def main() -> int:
     meta = json.loads(META.read_text())
     errors = []
-    if meta.get("cell") != CELL or meta.get("cols") != 4 or meta.get("rows") != 6:
+    if meta.get("cell") != CELL or meta.get("cols") != 4 or meta.get("rows") != 8:
         errors.append(f"unexpected layout {meta}")
     states = meta.get("states") or []
-    if states != ["idle", "run", "standShoot", "crouchShoot", "reload", "death"]:
+    if states != V3_STATES:
         errors.append(f"unexpected states {states}")
-    if "tallCover" in states or "lowCover" in states:
-        errors.append("cover rows must stay off the official sheet")
 
     im = Image.open(PNG).convert("RGBA")
-    if im.size != (768, 1152):
+    if im.size != (768, 1536):
         errors.append(f"unexpected sheet size {im.size}")
 
     for row, state in enumerate(states):
@@ -103,12 +120,10 @@ def main() -> int:
             pad_b = CELL - 1 - main_c["maxy"]
             yspan = main_c["maxy"] - main_c["miny"] + 1
             top_edge = sum(1 for x in range(CELL) for y in range(4) if mask[y][x])
-            bot_edge = sum(1 for x in range(CELL) for y in range(CELL - 4, CELL) if mask[y][x])
-            top_frags = [
-                c
-                for c in comps[1:]
-                if c["maxy"] <= 22 and c["n"] >= 8
-            ]
+            bot_edge = sum(
+                1 for x in range(CELL) for y in range(CELL - 4, CELL) if mask[y][x]
+            )
+            top_frags = [c for c in comps[1:] if c["maxy"] <= 22 and c["n"] >= 8]
             if top_frags:
                 errors.append(
                     f"{label}: floating fragment at top of cell (feet-above-head)"
@@ -136,8 +151,8 @@ def main() -> int:
             print(" -", err)
         return 1
     print(
-        "player-solid-atlas framing OK: 4x6 cell 192, no cover rows, "
-        "run/idle/shoot/reload upright full-body, binary alpha"
+        "player-solid-atlas framing OK: 4x8 cell 192, v3 eight states, "
+        "upright full-body, binary alpha"
     )
     return 0
 

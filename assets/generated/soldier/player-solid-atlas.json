@@ -1,16 +1,18 @@
 {
   "cols": 4,
-  "rows": 6,
+  "rows": 8,
   "cell": 192,
   "frameWidth": 192,
   "frameHeight": 192,
   "facing": "right",
   "opaque": true,
   "alphaHardened": true,
-  "revision": "full-regen-strips-v4-nocover",
+  "revision": "full-regen-strips-v3-keepbody",
   "states": [
     "idle",
     "run",
+    "tallCover",
+    "lowCover",
     "standShoot",
     "crouchShoot",
     "reload",
@@ -19,15 +21,12 @@
   "fps": {
     "idle": 3.2,
     "run": 9,
+    "tallCover": 3,
+    "lowCover": 3,
     "standShoot": 10,
     "crouchShoot": 10,
     "reload": 8,
     "death": 7
   },
-  "file": "player-solid-atlas.png",
-  "removed": [
-    "tallCover",
-    "lowCover"
-  ],
-  "note": "In-cover maps to crouchShoot/standShoot; world cover props separate."
+  "file": "player-solid-atlas.png"
 }
