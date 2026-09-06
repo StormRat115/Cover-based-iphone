@@ -1,11 +1,15 @@
-import { loadImage } from "./assets.js?v=20260906-79";
+import { loadImage } from "./assets.js?v=20260906-80";
+import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-80";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
-  "./assets/C226AF9A-3862-4A3E-BA10-1F43A16A3D8A.PNG?v=20260906-79";
+  "./assets/C226AF9A-3862-4A3E-BA10-1F43A16A3D8A.PNG?v=20260906-80";
 export const generatedCoverAtlas = new Image();
 generatedCoverAtlas.src =
-  "./assets/generated/cover-runtime-atlas.webp?v=20260906-79";
+  "./assets/generated/cover-runtime-atlas.webp?v=20260906-80";
+export const coverShapeAtlas = new Image();
+coverShapeAtlas.src =
+  "./assets/generated/cover/cover-shape-atlas.webp?v=20260906-80";
 
 const THEME = {
   jersey: {
@@ -53,7 +57,11 @@ const THEME = {
 export function preloadCityAssets(onProgress) {
   onProgress = onProgress || function () {};
   onProgress(0.1, "LOADING CITY ASSETS");
-  return Promise.all([loadImage(cityAtlas), loadImage(generatedCoverAtlas)]).then(
+  return Promise.all([
+    loadImage(cityAtlas),
+    loadImage(generatedCoverAtlas),
+    loadImage(coverShapeAtlas),
+  ]).then(
     function (images) {
       if (images.some(function (img) {
         return !img;
@@ -63,6 +71,7 @@ export function preloadCityAssets(onProgress) {
       return {
         cityAtlas: images[0],
         generatedCoverAtlas: images[1],
+        coverShapeAtlas: images[2],
       };
     },
   );
@@ -285,7 +294,117 @@ function decorateSegment(ctx, prism, cover, segment) {
   else decorateJersey(ctx, prism);
 }
 
+function spriteDefFor(cover) {
+  if (cover.sprite && COVER_ATLAS_SPRITES[cover.sprite])
+    return COVER_ATLAS_SPRITES[cover.sprite];
+  if (cover.setPiece && COVER_ATLAS_SPRITES["set_" + cover.setPiece])
+    return COVER_ATLAS_SPRITES["set_" + cover.setPiece];
+  var theme = cover.theme || "jersey";
+  var shape = cover.shape || "rect";
+  return (
+    COVER_ATLAS_SPRITES[theme + "_" + shape] ||
+    COVER_ATLAS_SPRITES[theme + "_rect"] ||
+    COVER_ATLAS_SPRITES.jersey_rect
+  );
+}
+
+function isoBox(iso, x0, y0, x1, y1, lift) {
+  var pts = [iso(x0, y0), iso(x1, y0), iso(x1, y1), iso(x0, y1)];
+  var minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity;
+  for (var i = 0; i < pts.length; i++) {
+    minX = Math.min(minX, pts[i][0]);
+    maxX = Math.max(maxX, pts[i][0]);
+    minY = Math.min(minY, pts[i][1] - lift);
+    maxY = Math.max(maxY, pts[i][1]);
+  }
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+function stampCoverSprite(ctx, def, dest) {
+  if (
+    !coverShapeAtlas.complete ||
+    !coverShapeAtlas.naturalWidth ||
+    !def ||
+    dest.w < 4 ||
+    dest.h < 4
+  )
+    return false;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(
+    coverShapeAtlas,
+    def.x,
+    def.y,
+    def.w,
+    def.h,
+    dest.x,
+    dest.y,
+    dest.w,
+    dest.h,
+  );
+  ctx.restore();
+  return true;
+}
+
+function drawCoverSprite(ctx, cover, iso) {
+  var def = spriteDefFor(cover);
+  if (!def) return false;
+  var segments =
+    cover.segments && cover.segments.length
+      ? cover.segments
+      : [{ dx: 0, dy: 0, w: cover.w, h: cover.h }];
+  var stampSegments =
+    cover.facing && cover.facing % 360 !== 0 && !cover.setPiece && segments.length > 1;
+  if (stampSegments) {
+    var themeRect =
+      COVER_ATLAS_SPRITES[(cover.theme || "jersey") + "_rect"] || def;
+    var painted = false;
+    for (var i = 0; i < segments.length; i++) {
+      var s = segments[i];
+      var x = cover.x + (s.dx || 0),
+        y = cover.y + (s.dy || 0);
+      var lift = prismHeight(cover, s) + 6;
+      var dest = isoBox(
+        iso,
+        x - s.w / 2,
+        y - s.h / 2,
+        x + s.w / 2,
+        y + s.h / 2,
+        lift,
+      );
+      dest.y -= 4;
+      dest.h += 8;
+      painted = stampCoverSprite(ctx, themeRect, dest) || painted;
+    }
+    return painted;
+  }
+  var minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity,
+    lift = 16;
+  for (var j = 0; j < segments.length; j++) {
+    var seg = segments[j];
+    var cx = cover.x + (seg.dx || 0),
+      cy = cover.y + (seg.dy || 0);
+    minX = Math.min(minX, cx - seg.w / 2);
+    maxX = Math.max(maxX, cx + seg.w / 2);
+    minY = Math.min(minY, cy - seg.h / 2);
+    maxY = Math.max(maxY, cy + seg.h / 2);
+    lift = Math.max(lift, prismHeight(cover, seg) + 8);
+  }
+  var box = isoBox(iso, minX, minY, maxX, maxY, lift);
+  box.y -= 6;
+  box.h += 10;
+  return stampCoverSprite(ctx, def, box);
+}
+
 export function drawShapedCover(ctx, cover, iso) {
+  if (drawCoverSprite(ctx, cover, iso)) return true;
   var segments = cover.segments && cover.segments.length
     ? cover.segments
     : [{ dx: 0, dy: 0, w: cover.w, h: cover.h }];

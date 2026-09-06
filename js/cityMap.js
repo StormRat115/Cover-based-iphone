@@ -30,6 +30,40 @@ const SHAPE_KITS = {
   },
 };
 
+const SET_PIECE_KITS = {
+  fortL: {
+    shape: "L",
+    segments: [
+      { dx: -8, dy: 62, w: 220, h: 42 },
+      { dx: -86, dy: -42, w: 42, h: 168 },
+      { dx: 92, dy: 62, w: 100, h: 36 },
+    ],
+  },
+  barricade: {
+    shape: "rect",
+    segments: [
+      { dx: -96, dy: 0, w: 124, h: 38 },
+      { dx: 30, dy: 0, w: 124, h: 38 },
+      { dx: 126, dy: 8, w: 72, h: 34 },
+    ],
+  },
+  bunkerU: {
+    shape: "U",
+    segments: [
+      { dx: 0, dy: -74, w: 220, h: 42 },
+      { dx: -90, dy: 28, w: 42, h: 148 },
+      { dx: 90, dy: 28, w: 42, h: 148 },
+    ],
+  },
+  checkpointT: {
+    shape: "T",
+    segments: [
+      { dx: 0, dy: -60, w: 210, h: 42 },
+      { dx: 0, dy: 40, w: 48, h: 128 },
+    ],
+  },
+};
+
 function rotatePoint(dx, dy, facing) {
   if (facing === 90) return { dx: dy, dy: -dx };
   if (facing === 180) return { dx: -dx, dy: -dy };
@@ -75,8 +109,9 @@ export function coverTypeForTheme(theme) {
 }
 
 export function makeShapedCover(spec) {
-  var shape = spec.shape;
-  var kit = SHAPE_KITS[shape];
+  var setKit = spec.kit && SET_PIECE_KITS[spec.kit];
+  var shape = (setKit && setKit.shape) || spec.shape;
+  var kit = setKit || SHAPE_KITS[shape];
   if (!kit) throw new Error("Unknown cover shape: " + shape);
   var facing = spec.facing || 0;
   var segments = rotateCoverSegments(kit.segments, facing);
@@ -95,6 +130,8 @@ export function makeShapedCover(spec) {
     w: box.w,
     h: box.h,
     segments: segments,
+    setPiece: spec.kit || null,
+    sprite: spec.sprite || (spec.kit ? "set_" + spec.kit : null),
   };
 }
 
@@ -110,16 +147,16 @@ function spread(items) {
 function createCityCoverTemplates() {
   return spread(
     [
-      { id: "p1", x: -180, y: 520, shape: "rect", theme: "jersey" },
+      { id: "p1", x: -180, y: 520, kit: "barricade", shape: "rect", theme: "jersey", sprite: "set_barricade" },
       { id: "p2", x: 0, y: 520, shape: "rect", theme: "jersey" },
       { id: "p3", x: 180, y: 520, shape: "rect", theme: "sandbags" },
       { id: "ml1", x: -280, y: 250, shape: "rect", theme: "sandbags" },
-      { id: "ml2", x: -420, y: 60, shape: "L", theme: "jersey", facing: 0 },
+      { id: "ml2", x: -420, y: 60, kit: "fortL", shape: "L", theme: "jersey", facing: 0, sprite: "set_fortL" },
       { id: "ml3", x: -260, y: -120, shape: "square", theme: "crates" },
-      { id: "mr1", x: 280, y: 250, shape: "U", theme: "sandbags", facing: 180 },
+      { id: "mr1", x: 280, y: 250, kit: "bunkerU", shape: "U", theme: "sandbags", facing: 180, sprite: "sandbags_U" },
       { id: "mr2", x: 420, y: 40, shape: "L", theme: "jersey", facing: 90 },
       { id: "mr3", x: 260, y: -140, shape: "rect", theme: "crates", facing: 90 },
-      { id: "c1", x: 0, y: 210, shape: "T", theme: "jersey", facing: 0 },
+      { id: "c1", x: 0, y: 210, kit: "checkpointT", shape: "T", theme: "jersey", facing: 0 },
       { id: "c2", x: -90, y: -25, shape: "square", theme: "sandbags" },
       { id: "c3", x: 105, y: -30, shape: "square", theme: "crates" },
       { id: "c4", x: 0, y: -260, shape: "L", theme: "sandbags", facing: 270 },
@@ -260,30 +297,36 @@ export function createCityCoverLayout(random = Math.random) {
     makeShapedCover({
       id: "fort-front",
       x: 0,
-      y: -5880,
+      y: -5920,
+      kit: "bunkerU",
       shape: "U",
       theme: "sandbags",
       facing: 0,
       coverType: "wide",
       scale: 0.33,
+      sprite: "sandbags_U",
     }),
     makeShapedCover({
       id: "fort-left",
-      x: -245,
+      x: -380,
       y: -5680,
-      shape: "rect",
+      kit: "fortL",
+      shape: "L",
       theme: "jersey",
-      facing: 90,
+      facing: 180,
       scale: 0.3,
+      sprite: "set_fortL",
     }),
     makeShapedCover({
       id: "fort-right",
-      x: 245,
+      x: 380,
       y: -5680,
-      shape: "rect",
+      kit: "fortL",
+      shape: "L",
       theme: "jersey",
-      facing: 90,
+      facing: 0,
       scale: 0.3,
+      sprite: "set_fortL",
     }),
     makeShapedCover({
       id: "fort-rear",

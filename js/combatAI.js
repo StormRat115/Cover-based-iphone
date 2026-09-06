@@ -1,4 +1,11 @@
-import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260906-79";
+import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260906-80";
+import {
+  resolveSolidMove,
+  updateVault,
+  findDetour,
+  firstCoverOnSegment,
+  ignoreCoverFor,
+} from "./coverCollision.js?v=20260906-80";
 function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
@@ -127,10 +134,27 @@ export function applyCoverChoice(actor, choice) {
   actor.suppressionTimer = 0;
   return true;
 }
-export function moveTowardTarget(actor, dt, speedScale) {
+export function moveTowardTarget(actor, dt, speedScale, covers) {
+  covers =
+    covers ||
+    (typeof window !== "undefined" && window.__battleCovers) ||
+    [];
+  if (actor.vaulting) {
+    updateVault(actor, dt);
+    return false;
+  }
   if (actor.hit > 0)
     actor.suppressionTimer = Math.max(actor.suppressionTimer || 0, 1.45);
   else actor.suppressionTimer = Math.max(0, (actor.suppressionTimer || 0) - dt);
+  if (
+    Number.isFinite(actor.detourX) &&
+    Math.hypot(actor.x - actor.targetX, actor.y - actor.targetY) <= 8
+  ) {
+    actor.targetX = actor.detourX;
+    actor.targetY = actor.detourY;
+    actor.detourX = undefined;
+    actor.detourY = undefined;
+  }
   var dx = actor.targetX - actor.x,
     dy = actor.targetY - actor.y,
     d = Math.hypot(dx, dy);
@@ -162,9 +186,44 @@ export function moveTowardTarget(actor, dt, speedScale) {
   actor.facingX = dx / d;
   actor.facingY = dy / d;
   var step = Math.min(d, actor.speed * (speedScale || 1) * dt);
-  actor.x += (dx / d) * step;
-  actor.y += (dy / d) * step;
-  return d <= 10;
+  var ox = actor.x,
+    oy = actor.y,
+    nx = actor.x + (dx / d) * step,
+    ny = actor.y + (dy / d) * step,
+    walkingToOwnCover =
+      actor.cover &&
+      Math.hypot(actor.targetX - actor.coverAnchorX, actor.targetY - actor.coverAnchorY) <
+        10,
+    result = resolveSolidMove(actor, nx, ny, covers, {
+      target: { x: actor.targetX, y: actor.targetY },
+      allowVault: !walkingToOwnCover,
+    });
+  actor.x = result.x;
+  actor.y = result.y;
+  if (result.vaulted) return false;
+  if (result.blocked && result.x === ox && result.y === oy) {
+    var hit = firstCoverOnSegment(
+      actor,
+      { x: actor.targetX, y: actor.targetY },
+      covers,
+      ignoreCoverFor(actor),
+    );
+    if (hit) {
+      var detour = findDetour(
+        actor,
+        { x: actor.targetX, y: actor.targetY },
+        hit.cover,
+        covers,
+      );
+      if (detour) {
+        actor.detourX = actor.targetX;
+        actor.detourY = actor.targetY;
+        actor.targetX = detour.x;
+        actor.targetY = detour.y;
+      }
+    }
+  }
+  return Math.hypot(actor.x - actor.targetX, actor.y - actor.targetY) <= 10;
 }
 export function faceThreat(actor, threat) {
   if (!actor || !threat) return;

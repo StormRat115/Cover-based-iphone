@@ -1,13 +1,19 @@
-import { getHitChance } from "./cover.js?v=20260906-79";
-import { weaponCopy } from "./weapons.js?v=20260906-79";
-import { AudioBus } from "./audio.js?v=20260906-79";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-79";
+import { getHitChance } from "./cover.js?v=20260906-80";
+import {
+  resolveSolidMove,
+  updateVault,
+  planRoute,
+  continueRoute,
+} from "./coverCollision.js?v=20260906-80";
+import { weaponCopy } from "./weapons.js?v=20260906-80";
+import { AudioBus } from "./audio.js?v=20260906-80";
+import { drawSoldier } from "./soldierAssets.js?v=20260906-80";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-79";
+} from "./combatStats.js?v=20260906-80";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,
@@ -119,6 +125,9 @@ export function createPlayer() {
     keyboardMove: null,
     facingX: 1,
     facingY: 0,
+    vaulting: false,
+    vaultZ: 0,
+    vaultT: 0,
     lastShotHit: false,
     deathTimer: 0,
     deathDuration: 0.8,
@@ -133,7 +142,16 @@ export function createPlayer() {
       this.coverTarget = cover || null;
       this.tx = x;
       this.ty = y;
-      this.state = "walk";
+      this.routeGoalX = x;
+      this.routeGoalY = y;
+      planRoute(
+        this,
+        x,
+        y,
+        (typeof window !== "undefined" && window.__battleCovers) || [],
+        cover || null,
+      );
+      this.state = this.vaulting ? "vault" : "walk";
     },
     setKeyboardMove: function (v) {
       if (this.dead || this.downed) return;
@@ -305,6 +323,12 @@ export function createPlayer() {
         targetX: undefined,
         targetY: undefined,
         exposed: undefined,
+        vaulting: false,
+        vaultZ: 0,
+        vaultT: 0,
+        vaultCover: null,
+        routeGoalX: undefined,
+        routeGoalY: undefined,
         __lastSoldierState: undefined,
         __visualFacing: undefined,
         __faceLockUntil: 0,
@@ -345,28 +369,50 @@ export function createPlayer() {
         if (this.shootTimer <= 0 && this.state === "shoot") this.state = "idle";
       }
       if (this.peek > 0) this.peek = Math.max(0, this.peek - dt);
+      var covers =
+        (typeof window !== "undefined" && window.__battleCovers) || [];
+      if (this.vaulting) {
+        updateVault(this, dt);
+        return;
+      }
       if (this.keyboardMove) {
-        this.x += this.keyboardMove.x * this.speed * dt;
-        this.y += this.keyboardMove.y * this.speed * dt;
-        this.state = "walk";
+        var knx = this.x + this.keyboardMove.x * this.speed * dt,
+          kny = this.y + this.keyboardMove.y * this.speed * dt,
+          kmove = resolveSolidMove(this, knx, kny, covers, {
+            target: { x: knx, y: kny },
+            allowVault: true,
+          });
+        this.x = kmove.x;
+        this.y = kmove.y;
+        this.state = this.vaulting ? "vault" : "walk";
       } else {
         var dx = this.tx - this.x,
           dy = this.ty - this.y,
           d = Math.hypot(dx, dy);
         if (d > 5) {
           const step = Math.min(d, this.speed * dt);
-          this.x += (dx / d) * step;
-          this.y += (dy / d) * step;
+          var nx = this.x + (dx / d) * step,
+            ny = this.y + (dy / d) * step,
+            moved = resolveSolidMove(this, nx, ny, covers, {
+              target: { x: this.tx, y: this.ty },
+              allowVault: !this.coverTarget,
+            });
+          this.x = moved.x;
+          this.y = moved.y;
           this.facingX = dx / d;
           this.facingY = dy / d;
-          this.state = "walk";
-        } else if (this.state === "walk") {
-          this.x = this.tx;
-          this.y = this.ty;
-          this.state = "idle";
-          if (this.coverTarget) {
-            this.cover = this.coverTarget;
-            this.coverBlend = 1;
+          this.state = this.vaulting ? "vault" : "walk";
+          continueRoute(this, covers);
+        } else if (this.state === "walk" || this.state === "vault") {
+          continueRoute(this, covers);
+          if (Math.hypot(this.tx - this.x, this.ty - this.y) <= 5) {
+            this.x = this.tx;
+            this.y = this.ty;
+            this.state = "idle";
+            if (this.coverTarget) {
+              this.cover = this.coverTarget;
+              this.coverBlend = 1;
+            }
           }
         }
       }

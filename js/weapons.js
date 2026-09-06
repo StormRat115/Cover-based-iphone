@@ -1,7 +1,7 @@
 import {
   getAttachment,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260906-79";
+} from "./attachments.js?v=20260906-80";
 
 export const WEAPONS = {
   rifle: {
