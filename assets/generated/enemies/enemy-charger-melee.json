@@ -1,0 +1,24 @@
+{
+  "cols": 4,
+  "rows": 5,
+  "cell": 160,
+  "frameWidth": 160,
+  "frameHeight": 160,
+  "facing": "right",
+  "states": [
+    "idle",
+    "run",
+    "charge",
+    "melee",
+    "death"
+  ],
+  "fps": {
+    "idle": 4,
+    "run": 10,
+    "charge": 12,
+    "melee": 12,
+    "death": 8
+  },
+  "transparent": true,
+  "file": "enemy-charger-melee-sheet.png"
+}
