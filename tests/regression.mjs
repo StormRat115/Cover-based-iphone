@@ -364,9 +364,34 @@ test("cover pieces are uniform blocks assembled into random playable shapes", as
     layout.some((cover) => cover.setPiece && cover.blocks.length > 4),
     "street should include larger combined set pieces",
   );
-  assert.ok(existsSync("assets/generated/cover/blocks/atlas.png"));
-  assert.ok(existsSync("assets/generated/cover/blocks/jersey.png"));
-  assert.equal(typeof assets.coverBlockAtlas, "object");
+  assert.ok(existsSync("assets/generated/cover/blocks/manifest.json"));
+  assert.ok(existsSync("assets/generated/cover/blocks/atlas-preview.png"));
+  blocks.allCoverSkinFiles().forEach((file) => {
+    assert.ok(
+      existsSync("assets/generated/cover/blocks/" + file),
+      "missing Phone Art skin " + file,
+    );
+  });
+  assert.equal(blocks.allCoverSkinFiles().length, 16);
+  assert.equal(typeof assets.coverBlockSkins, "object");
+  assert.equal(Object.keys(assets.coverBlockSkins).length, 16);
+  assert.equal(
+    blocks.pickCoverBlockSkin("jersey", blocks.E | blocks.W),
+    "concrete-center.webp",
+  );
+  assert.equal(
+    blocks.pickCoverBlockSkin("jersey", blocks.W),
+    "concrete-edge-right.webp",
+  );
+  assert.equal(
+    blocks.pickCoverBlockSkin("sandbags", 0),
+    "sandbags-gap.webp",
+  );
+  assert.equal(
+    blocks.pickCoverBlockSkin("crates", 0),
+    "crate-corner-a.webp",
+  );
+  assert.equal(blocks.skinMaterialForTheme("jersey"), "concrete");
 
   const rect = city.makeShapedCover({
     id: "merge",
@@ -384,6 +409,10 @@ test("cover pieces are uniform blocks assembled into random playable shapes", as
     return (mask & blocks.E) && (mask & blocks.W);
   });
   assert.ok(ends.length >= 2 && mids.length >= 1, "same-skin neighbors share an edge mask");
+  assert.equal(
+    blocks.pickCoverBlockSkin("jersey", blocks.neighborMask(mids[0], rect.blocks, true)),
+    "concrete-center.webp",
+  );
 
   const low = {
     type: "low",
@@ -1131,8 +1160,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    38,
-    "soldier/vault/monster/charger sources plus cover atlases, block skins, and wartorn plates",
+    53,
+    "soldier/vault/monster/charger sources plus cover atlases, 16 Phone Art block skins, and wartorn plates",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");

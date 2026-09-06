@@ -4,6 +4,88 @@ export const COVER_BLOCK_SIZE = 40;
 export const COVER_THEMES = ["jersey", "sandbags", "crates", "rubble", "wreck"];
 export const COVER_SHAPES = ["square", "rect", "T", "U", "L", "line", "cluster"];
 
+export const COVER_SKIN_FILES = {
+  concrete: {
+    center: "concrete-center.webp",
+    edgeRight: "concrete-edge-right.webp",
+    edgeVert: "concrete-edge-vert.webp",
+    edgeTop: "concrete-edge-top.webp",
+  },
+  sandbags: {
+    center: "sandbags-center.webp",
+    gap: "sandbags-gap.webp",
+    gapThick: "sandbags-gap-thick.webp",
+    u: "sandbags-u.webp",
+  },
+  crates: {
+    face: "crate-face.webp",
+    cornerA: "crate-corner-a.webp",
+    cornerB: "crate-corner-b.webp",
+    top: "crate-top.webp",
+  },
+  rubble: {
+    center: "rubble-center.webp",
+    edgeLeft: "rubble-edge-left.webp",
+    edgeRight: "rubble-edge-right.webp",
+    scatter: "rubble-scatter.webp",
+  },
+};
+
+export function skinMaterialForTheme(theme) {
+  if (theme === "jersey") return "concrete";
+  if (theme === "wreck") return "rubble";
+  if (theme === "sandbags" || theme === "crates" || theme === "rubble")
+    return theme;
+  return "concrete";
+}
+
+export function allCoverSkinFiles() {
+  var files = [],
+    mat,
+    role;
+  for (mat in COVER_SKIN_FILES) {
+    for (role in COVER_SKIN_FILES[mat]) files.push(COVER_SKIN_FILES[mat][role]);
+  }
+  return files;
+}
+
+export function pickCoverBlockSkin(theme, mask, shape) {
+  var mat = skinMaterialForTheme(theme);
+  var files = COVER_SKIN_FILES[mat] || COVER_SKIN_FILES.concrete;
+  var n = (mask & N) !== 0,
+    e = (mask & E) !== 0,
+    s = (mask & S) !== 0,
+    w = (mask & W) !== 0;
+  var count = (n ? 1 : 0) + (e ? 1 : 0) + (s ? 1 : 0) + (w ? 1 : 0);
+  if (mat === "sandbags") {
+    if (shape === "U" && count <= 2) return files.u;
+    if (count <= 1) return files.gap;
+    if (count === 2 && ((n && s) || (e && w))) return files.gapThick;
+    if (count === 2) return files.u;
+    return files.center;
+  }
+  if (mat === "crates") {
+    if (!n && !w) return files.cornerA;
+    if (!n && !e) return files.cornerB;
+    if (!s && !e) return files.cornerA;
+    if (!s && !w) return files.cornerB;
+    if (!n) return files.top;
+    if (count <= 1) return files.top;
+    return files.face;
+  }
+  if (mat === "rubble") {
+    if (count === 0 || count === 1) return files.scatter;
+    if (!w && e) return files.edgeLeft;
+    if (!e && w) return files.edgeRight;
+    return files.center;
+  }
+  if (e && w) return files.center;
+  if (w && !e) return files.edgeRight;
+  if (n && s && !(e && w)) return files.edgeVert;
+  if (!n) return files.edgeTop;
+  return files.center;
+}
+
 export const N = 1,
   E = 2,
   S = 4,

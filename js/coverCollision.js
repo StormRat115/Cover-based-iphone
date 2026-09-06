@@ -1,5 +1,5 @@
-import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-103";
-import { COVER_BLOCK_SIZE, livingBlocks } from "./coverBlocks.js?v=20260906-103";
+import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-104";
+import { COVER_BLOCK_SIZE, livingBlocks } from "./coverBlocks.js?v=20260906-104";
 
 export const ACTOR_RADIUS = 11;
 export const VAULT_DURATION = 0.46;

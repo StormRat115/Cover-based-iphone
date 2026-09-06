@@ -1,0 +1,135 @@
+{
+  "tiles": [
+    {
+      "file": "concrete-center.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1030,
+      "material": "concrete",
+      "role": "center"
+    },
+    {
+      "file": "concrete-edge-right.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1176,
+      "material": "concrete",
+      "role": "edge"
+    },
+    {
+      "file": "concrete-edge-vert.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1176,
+      "material": "concrete",
+      "role": "edge"
+    },
+    {
+      "file": "concrete-edge-top.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1140,
+      "material": "concrete",
+      "role": "edge"
+    },
+    {
+      "file": "sandbags-center.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1432,
+      "material": "sandbags",
+      "role": "center"
+    },
+    {
+      "file": "sandbags-gap.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1514,
+      "material": "sandbags",
+      "role": "accent"
+    },
+    {
+      "file": "sandbags-gap-thick.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1538,
+      "material": "sandbags",
+      "role": "accent"
+    },
+    {
+      "file": "sandbags-u.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1544,
+      "material": "sandbags",
+      "role": "accent"
+    },
+    {
+      "file": "crate-face.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1320,
+      "material": "crates",
+      "role": "center"
+    },
+    {
+      "file": "crate-corner-a.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1570,
+      "material": "crates",
+      "role": "corner"
+    },
+    {
+      "file": "crate-corner-b.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1652,
+      "material": "crates",
+      "role": "corner"
+    },
+    {
+      "file": "crate-top.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1988,
+      "material": "crates",
+      "role": "accent"
+    },
+    {
+      "file": "rubble-center.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1696,
+      "material": "rubble",
+      "role": "center"
+    },
+    {
+      "file": "rubble-edge-left.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1828,
+      "material": "rubble",
+      "role": "edge"
+    },
+    {
+      "file": "rubble-edge-right.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1700,
+      "material": "rubble",
+      "role": "edge"
+    },
+    {
+      "file": "rubble-scatter.webp",
+      "width": 64,
+      "height": 64,
+      "bytes": 1720,
+      "material": "rubble",
+      "role": "accent"
+    }
+  ],
+  "tile_size": 64,
+  "format": "webp",
+  "quality": 82
+}
