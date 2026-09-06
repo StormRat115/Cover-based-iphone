@@ -1,7 +1,7 @@
 import { loadImage } from "./assets.js?v=20260906-98";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
-  "./assets/generated/soldier/player-ally-atlas.webp?v=20260906-98";
+  "./assets/generated/soldier/player-ally-atlas.png?v=20260906-98";
 export const soldierSource = new Image();
 soldierSource.src =
   "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260906-88";
@@ -992,7 +992,7 @@ export function drawSoldier(ctx, actor, options) {
       (vaultSrc.naturalWidth > 0 || vaultSrc.width > 0);
   var useFriendly = !isEnemy && runtimeFriendlyAtlas;
   // Atlas cells include padding so the figure is smaller than the cell.
-  if (useFriendly) scale *= 1.42;
+  if (useFriendly) scale *= 1.68;
   var r = useVault
       ? vaultFrame(actor)
       : useFriendly
@@ -1035,6 +1035,9 @@ export function drawSoldier(ctx, actor, options) {
       ctx.globalAlpha = 1;
       ctx.filter = "none";
       ctx.globalCompositeOperation = "source-over";
+      // Nearest-neighbor keeps binary atlas alpha; bilinear smoothing
+      // invents milky fringe when the 160px cell is drawn small.
+      ctx.imageSmoothingEnabled = false;
       ctx.drawImage(
         drawAtlas,
         r.col * cellW,
@@ -1119,7 +1122,8 @@ export function getSoldierAtlasInfo() {
       death: FRIENDLY_COLS,
       vault: VAULT_COLS,
     },
-    friendlyAtlas: "player-ally-atlas.webp",
+    friendlyAtlas: "player-ally-atlas.png",
+    friendlyAtlasWebp: "player-ally-atlas.webp",
     friendlyCell: FRIENDLY_CELL,
     friendlyCols: FRIENDLY_COLS,
     friendlyStates: FRIENDLY_ATLAS_STATES.slice(),

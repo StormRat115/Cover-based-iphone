@@ -170,12 +170,9 @@ def solidify(rgb: np.ndarray, mask: np.ndarray) -> Image.Image:
     if paperish.any():
         color = color.copy()
         color[paperish] = (58, 52, 44)
-    # Lift only near-black interior so asphalt cannot read through dark plates.
-    lift = closed & (color.mean(axis=2) < 38)
-    if lift.any():
-        color = color.astype(np.int16)
-        color[lift] = np.clip(color[lift] + 28, 0, 255)
-        color = color.astype(np.uint8)
+    # Read as a solid figure on dark asphalt — lift midtones, keep highlights.
+    # Not the old pale wash (1.62x+30 on every pixel).
+    color = np.clip(color.astype(np.int16) * 1.28 + 18, 0, 255).astype(np.uint8)
     rgba = np.zeros((rgb.shape[0], rgb.shape[1], 4), dtype=np.uint8)
     rgba[closed, :3] = color[closed]
     rgba[closed, 3] = 255
@@ -186,6 +183,11 @@ def solidify(rgb: np.ndarray, mask: np.ndarray) -> Image.Image:
     esat = rgba[:, :, :3].max(axis=2) - rgba[:, :, :3].min(axis=2)
     drop = edge & (elum >= 90) & (esat <= 38)
     rgba[drop] = 0
+    # Hard 1px dark rim so the silhouette reads on asphalt (body stays filled).
+    body = rgba[:, :, 3] >= 255
+    rim = body & dilate(~body, 1)
+    rgba[rim, :3] = (24, 22, 18)
+    rgba[rim, 3] = 255
     return Image.fromarray(rgba, "RGBA")
 
 
@@ -483,7 +485,7 @@ def build() -> None:
     png = OUT_DIR / "player-ally-atlas.png"
     webp = OUT_DIR / "player-ally-atlas.webp"
     atlas.save(png, "PNG", optimize=True)
-    atlas.save(webp, "WEBP", quality=82, method=6)
+    atlas.save(webp, "WEBP", lossless=True, quality=80, method=6)
     meta = {
         "cols": COLS,
         "rows": len(STATES),
