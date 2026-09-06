@@ -1217,8 +1217,8 @@ test("living friendlies stay fully opaque every animation frame", async () => {
       downed: false,
       cover: { type: "tall", x: 0, y: 0, w: 40, h: 40 },
     }),
-    "tallCover",
-    "tall cover uses the Phone Art tallCover row",
+    "idle",
+    "tall cover must not use a baked barrier pose",
   );
   assert.equal(
     sprites.getSoldierState({
@@ -1227,9 +1227,21 @@ test("living friendlies stay fully opaque every animation frame", async () => {
       downed: false,
       cover: { type: "low", x: 0, y: 0, w: 40, h: 20 },
     }),
-    "lowCover",
-    "low cover uses the Phone Art lowCover row",
+    "crouchShoot",
+    "low cover maps to crouchShoot",
   );
+  assert.equal(
+    JSON.stringify(sprites.FRIENDLY_ATLAS_STATES),
+    JSON.stringify([
+      "idle",
+      "run",
+      "standShoot",
+      "crouchShoot",
+      "reload",
+      "death",
+    ]),
+  );
+  assert.equal(sprites.getSoldierAtlasInfo().coverRows, "mapped");
 });
 
 test("Phone Art player-solid-atlas is the wired 8-state opaque sheet", () => {

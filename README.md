@@ -151,18 +151,18 @@ Wartorn street composition lock (TMNT arcade beat-em-up read, kept on the establ
 
 Phone Art street-edge pack (from `chore/street-edge-accents`) stamps lamps and sidewalk props on the curb band only: intact/bent/fallen posts, curb chunks, hydrant/manhole, wrecked bus shelter, tipped trash, dead planter. They are clipped off the playable asphalt so they cannot become mid-road plates.
 
-### Pages verify (BUILD 20260906-100)
+### Pages verify (BUILD 20260906-101)
 
 1. Open https://stormrat115.github.io/Cover-based-iphone/
-2. Confirm the stamp reads **BUILD 20260906-100**.
-3. Start a mission. The player (and allies) use Phone Art’s solid `player-solid-atlas` v3. Bodies are opaque — not milky ghosts. Head and boots stay in the cell; no floating feet on any row.
-4. Animation rows: idle, run, tallCover, lowCover, standShoot, crouchShoot, reload, death (4 frames each).
+2. Confirm the stamp reads **BUILD 20260906-101**.
+3. Start a mission. The player (and allies) use Phone Art’s solid `player-solid-atlas`. Bodies are opaque — not milky ghosts. Head and boots stay in the cell; no floating feet.
+4. Animation list: idle, run, standShoot, crouchShoot, reload, death. Tall/low cover rows are ignored — they bake a barrier into the sprite. In cover: tall/peek → idle or standShoot; low → crouchShoot. World cover is drawn separately.
 5. Cover spacing, exclusive slots, vaulting, and squad KILLS from BUILD 97 still work.
 
-## Phone Art solid player atlas: 20260906-100
+## Phone Art solid player atlas: 20260906-101
 
-- Wired official `assets/generated/soldier/player-solid-atlas` from `chore/player-solid-atlas` (v3, 4×8, 192px cells) as the primary player and ally sheet.
-- States: idle, run, tallCover, lowCover, standShoot, crouchShoot, reload, death. Binary alpha; upright full-body framing every cell.
+- Wired official `assets/generated/soldier/player-solid-atlas` (v3 sheet, 192px cells) as the primary player and ally sheet.
+- Playable states: idle, run, standShoot, crouchShoot, reload, death. `tallCover` / `lowCover` atlas rows are never sampled.
 - Living friendlies still blit one fully opaque frame (no mid-alpha blend, no body plate). Vault stays on its own strip.
 
 ## Opaque friendlies, spaced street cover, and squad kills: 20260906-97
