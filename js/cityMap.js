@@ -238,9 +238,9 @@ export const STREET_COVER_HALF = 720;
 export const STREET_COVER_LANES = [-580, 0, 580];
 export const STREET_COVER_Y0 = -320;
 export const STREET_COVER_Y1 = -5180;
-export const STREET_COVER_GAP_X = 180;
-export const STREET_COVER_GAP_Y = 240;
-export const STREET_COVER_MIN_DIST = 320;
+export const STREET_COVER_GAP_X = 200;
+export const STREET_COVER_GAP_Y = 280;
+export const STREET_COVER_MIN_DIST = 400;
 
 export function isFortCover(cover) {
   return !!(cover && cover.id && String(cover.id).indexOf("fort-") === 0);
@@ -308,7 +308,7 @@ function cloneCover(template, id, x, y) {
 
 export function createCityCoverLayout(random = Math.random) {
   const templates = shuffled(createCityCoverTemplates(), random);
-  const targetCount = 30 + Math.floor(random() * 5);
+  const targetCount = 22 + Math.floor(random() * 4);
   const placed = [];
   const lanes = STREET_COVER_LANES;
   const rows = Math.max(1, Math.ceil(targetCount / lanes.length));
@@ -343,7 +343,7 @@ export function createCityCoverLayout(random = Math.random) {
     }
   }
 
-  // Fill holes so street + fort stay in the 34–40 piece band.
+  // Fill holes so street + fort stay in the 26–32 piece band.
   let extra = 0;
   while (placed.length < targetCount && extra < 220) {
     const template = templates[extra % templates.length];
