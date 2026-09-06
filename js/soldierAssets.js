@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-95";
+import { loadImage } from "./assets.js?v=20260906-96";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
   "./assets/generated/soldier/player-ally-atlas.png?v=20260906-88";
@@ -950,9 +950,9 @@ export function drawSoldier(ctx, actor, options) {
       ctx.filter = "none";
       ctx.globalCompositeOperation = "source-over";
       ctx.fillStyle =
-        team === "ally" ? "#35566e" : team === "marine" ? "#4a5336" : "#58564e";
+        team === "ally" ? "#3a5368" : team === "marine" ? "#4a4f38" : "#4f4d46";
       ctx.beginPath();
-      ctx.ellipse(0, -dh * 0.34, dw * 0.16, dh * 0.3, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, -dh * 0.44, dw * 0.3, dh * 0.46, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.drawImage(
         drawAtlas,
