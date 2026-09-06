@@ -1048,7 +1048,7 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    16,
+    27,
     "soldier/vault/monster/charger sources plus cover atlases and wartorn plates",
   );
   assert.equal(h.metrics.intervals, 0);
@@ -1336,12 +1336,27 @@ test("wartorn city plates load and dress the street sides", async () => {
   const h = createHarness();
   const city = await h.importModule(`js/wartornCity.js?v=${BUILD}`);
   assert.ok(city.playableStreetHalfWidth() >= 900);
+  assert.match(city.wartornSkyline.src, /wartorn-skyline-backdrop\.png/);
+  assert.match(city.wartornStreet.src, /wartorn-street-plate\.png/);
+  assert.match(city.wartornRuin.src, /wartorn-ruin-building-a\.png/);
+  assert.match(city.wartornRubblePile.src, /wartorn-rubble-pile\.png/);
+  assert.ok(existsSync("assets/generated/world/world-manifest.json"));
   const dressing = city.createWartornDressing();
   assert.ok(dressing.buildings.length >= 12);
   assert.ok(dressing.rubble.length >= 12);
+  assert.ok(dressing.streetScenes.length >= 8);
+  assert.ok(dressing.wrecks.length >= 8);
   assert.ok(
     dressing.buildings.every((item) => Math.abs(item.x) > dressing.road),
     "ruins stay off the playable street",
+  );
+  assert.ok(
+    dressing.streetScenes.every((item) => Math.abs(item.x) > dressing.road),
+    "street plates stay off the playable asphalt",
+  );
+  assert.ok(
+    dressing.rubble.every((item) => Math.abs(item.x) > dressing.road),
+    "rubble stays on the curbs",
   );
   const ctx = h.document.createElement("canvas").getContext("2d");
   city.drawWartornAtmosphere(ctx, 390, 844);

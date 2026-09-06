@@ -1,0 +1,92 @@
+[
+  {
+    "file": "facade-ruin-apartment.webp",
+    "path": "assets/generated/world/facade-ruin-apartment.webp",
+    "width": 400,
+    "height": 432,
+    "bytes": 49972,
+    "category": "facade",
+    "transparent": true
+  },
+  {
+    "file": "facade-ruin-storefront.webp",
+    "path": "assets/generated/world/facade-ruin-storefront.webp",
+    "width": 400,
+    "height": 415,
+    "bytes": 45772,
+    "category": "facade",
+    "transparent": true
+  },
+  {
+    "file": "rubble-concrete-rebar.webp",
+    "path": "assets/generated/world/rubble-concrete-rebar.webp",
+    "width": 260,
+    "height": 274,
+    "bytes": 22424,
+    "category": "rubble",
+    "transparent": true
+  },
+  {
+    "file": "rubble-brick.webp",
+    "path": "assets/generated/world/rubble-brick.webp",
+    "width": 260,
+    "height": 254,
+    "bytes": 21560,
+    "category": "rubble",
+    "transparent": true
+  },
+  {
+    "file": "rubble-sandbags-crates.webp",
+    "path": "assets/generated/world/rubble-sandbags-crates.webp",
+    "width": 260,
+    "height": 261,
+    "bytes": 22210,
+    "category": "rubble",
+    "transparent": true
+  },
+  {
+    "file": "rubble-scrap-metal.webp",
+    "path": "assets/generated/world/rubble-scrap-metal.webp",
+    "width": 260,
+    "height": 244,
+    "bytes": 25650,
+    "category": "rubble",
+    "transparent": true
+  },
+  {
+    "file": "wreck-burnt-sedan.webp",
+    "path": "assets/generated/world/wreck-burnt-sedan.webp",
+    "width": 340,
+    "height": 274,
+    "bytes": 21624,
+    "category": "wreck",
+    "transparent": true
+  },
+  {
+    "file": "wreck-burnt-pickup.webp",
+    "path": "assets/generated/world/wreck-burnt-pickup.webp",
+    "width": 340,
+    "height": 273,
+    "bytes": 24708,
+    "category": "wreck",
+    "transparent": true
+  },
+  {
+    "file": "wreck-burnt-armored.webp",
+    "path": "assets/generated/world/wreck-burnt-armored.webp",
+    "width": 340,
+    "height": 337,
+    "bytes": 30632,
+    "category": "wreck",
+    "transparent": true
+  },
+  {
+    "file": "skyline-smoke-backdrop.webp",
+    "path": "assets/generated/world/skyline-smoke-backdrop.webp",
+    "width": 1280,
+    "height": 480,
+    "bytes": 42424,
+    "category": "backdrop",
+    "transparent": false
+  }
+]

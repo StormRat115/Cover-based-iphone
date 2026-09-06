@@ -2,8 +2,9 @@
   "theme": "wartorn-city",
   "loop": "human soldiers vs monster hordes",
   "assets": {
-    "skyline": "assets/generated/world/wartorn-skyline.webp",
-    "ruinTenement": "assets/generated/world/ruin-tenement.webp",
-    "ruinWarehouse": "assets/generated/world/ruin-warehouse.webp"
+    "streetPlate": "assets/generated/world/wartorn-street-plate.png",
+    "ruinBuildingA": "assets/generated/world/wartorn-ruin-building-a.png",
+    "rubblePile": "assets/generated/world/wartorn-rubble-pile.png",
+    "skylineBackdrop": "assets/generated/world/wartorn-skyline-backdrop.png"
   }
 }

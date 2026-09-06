@@ -1,16 +1,16 @@
-import { loadImage } from "./assets.js?v=20260906-82";
-import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-82";
-import { preloadWartornAssets } from "./wartornCity.js?v=20260906-82";
+import { loadImage } from "./assets.js?v=20260906-83";
+import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-83";
+import { preloadWartornAssets } from "./wartornCity.js?v=20260906-83";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
-  "./assets/C226AF9A-3862-4A3E-BA10-1F43A16A3D8A.PNG?v=20260906-82";
+  "./assets/C226AF9A-3862-4A3E-BA10-1F43A16A3D8A.PNG?v=20260906-83";
 export const generatedCoverAtlas = new Image();
 generatedCoverAtlas.src =
-  "./assets/generated/cover-runtime-atlas.webp?v=20260906-82";
+  "./assets/generated/cover-runtime-atlas.webp?v=20260906-83";
 export const coverShapeAtlas = new Image();
 coverShapeAtlas.src =
-  "./assets/generated/cover/cover-shape-atlas.webp?v=20260906-82";
+  "./assets/generated/cover/cover-shape-atlas.webp?v=20260906-83";
 
 const THEME = {
   jersey: {
