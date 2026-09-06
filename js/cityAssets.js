@@ -21,7 +21,7 @@ coverShapeAtlas.src =
   "./assets/generated/cover/cover-shape-atlas.webp?v=20260906-88";
 export const coverBlockAtlas = new Image();
 coverBlockAtlas.src =
-  "./assets/generated/cover/blocks/atlas.png?v=20260906-88";
+  "./assets/generated/cover/blocks/atlas.png?v=20260906-99";
 const BLOCK_TILE = 40;
 const THEME_ROW = {
   jersey: 0,
