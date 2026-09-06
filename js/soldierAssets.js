@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-71";
+import { loadImage } from "./assets.js?v=20260906-72";
 export const soldierSource = new Image();
 soldierSource.src =
   "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-60";
@@ -178,14 +178,14 @@ const ROWS = {
   standShoot: 6,
 };
 const FPS = {
-  // Keep rates low for short sheets so loops don't stutter.
-  idle: 2.2,
-  run: 7,
-  lowCover: 2.4,
-  tallCover: 2.4,
-  shoot: 9,
-  crouchShoot: 8.5,
-  standShoot: 8.5,
+  // Snappier cycles; short sheets still loop cleanly with reduced blend.
+  idle: 3.5,
+  run: 9,
+  lowCover: 3.0,
+  tallCover: 3.0,
+  shoot: 11,
+  crouchShoot: 10,
+  standShoot: 10,
 };
 const LOOP_STATES = {
   idle: true,
@@ -197,13 +197,13 @@ const LOOP_STATES = {
   standShoot: true,
 };
 const STATE_HOLD_MS = {
-  idle: 220,
-  run: 180,
-  lowCover: 260,
-  tallCover: 260,
-  shoot: 140,
-  crouchShoot: 140,
-  standShoot: 140,
+  idle: 170,
+  run: 140,
+  lowCover: 200,
+  tallCover: 200,
+  shoot: 110,
+  crouchShoot: 110,
+  standShoot: 110,
   death: 99999,
 };
 function nowMs() {
@@ -374,6 +374,13 @@ function stableFacing(actor, state) {
   }
   return actor.__visualFacing;
 }
+
+/** Snap-ish frames: only a tiny ~15% crossfade near the end of each frame. */
+function softenBlend(blend) {
+  var b = Math.max(0, Math.min(1, blend || 0));
+  if (b < 0.85) return 0;
+  return (b - 0.85) / 0.15;
+}
 function frameFor(actor, state, boxes) {
   var frames = boxes[state] || boxes.idle,
     row = ROWS[state] || 0,
@@ -398,19 +405,16 @@ function frameFor(actor, state, boxes) {
         1,
         Math.hypot(actor.targetX - actor.x, actor.targetY - actor.y) / 140,
       );
-    fps = Math.max(5, Math.min(8.5, fps * (0.7 + 0.45 * Math.min(1, spd / 90 || spd))));
+    fps = Math.max(6, Math.min(11, fps * (0.75 + 0.4 * Math.min(1, spd / 90 || spd))));
   }
   var phase = elapsed * fps,
     col = Math.floor(phase) % count,
     next = (col + 1) % count,
-    blend = phase - Math.floor(phase);
-  // Ease the blend so swaps are soft instead of linear pops.
-  blend = blend * blend * (3 - 2 * blend);
+    blend = softenBlend(phase - Math.floor(phase));
   if (!LOOP_STATES[state]) {
     col = Math.min(count - 1, Math.floor(phase));
     next = Math.min(count - 1, col + 1);
-    blend = col === next ? 0 : Math.min(1, phase - col);
-    blend = blend * blend * (3 - 2 * blend);
+    blend = col === next ? 0 : softenBlend(Math.min(1, phase - col));
   }
   return {
     x: col * CELL,
@@ -435,8 +439,7 @@ function deathFrame(actor) {
     phase = Math.min(DEATH_FRAMES - 1.001, elapsed * DEATH_FPS),
     frame = Math.min(DEATH_FRAMES - 1, Math.floor(phase)),
     next = Math.min(DEATH_FRAMES - 1, frame + 1),
-    blend = phase - frame;
-  blend = blend * blend * (3 - 2 * blend);
+    blend = softenBlend(phase - frame);
   return { frame: frame, next: next, blend: blend, elapsed: elapsed };
 }
 function teamFilter(team) {
@@ -513,7 +516,7 @@ function enemyMonsterFrame(actor, state, now) {
     return {
       frame: frame,
       next: next,
-      blend: blend * blend * (3 - 2 * blend),
+      blend: softenBlend(blend),
     };
   }
   var stateStart = Number.isFinite(actor.__monsterStateStart)
@@ -522,25 +525,25 @@ function enemyMonsterFrame(actor, state, now) {
     elapsed = Math.max(0, (now - stateStart) / 1000),
     fps =
       state === "run"
-        ? 6.2
+        ? 7.5
         : state === "shoot"
-          ? 7.5
+          ? 9
           : state === "hit"
-            ? 7
+            ? 8
             : state === "lowCover" || state === "tallCover"
-              ? 2.6
-              : 2.4,
+              ? 3.0
+              : 3.2,
     phase = elapsed * fps;
   if (state === "hit") {
     var hf = Math.min(count - 1, Math.floor(phase)),
       hn = Math.min(count - 1, hf + 1),
       hb = Math.min(1, phase - hf);
-    return { frame: hf, next: hn, blend: hb * hb * (3 - 2 * hb) };
+    return { frame: hf, next: hn, blend: softenBlend(hb) };
   }
   var frame = Math.floor(phase) % count,
     next = (frame + 1) % count,
     blend = phase - Math.floor(phase);
-  return { frame: frame, next: next, blend: blend * blend * (3 - 2 * blend) };
+  return { frame: frame, next: next, blend: softenBlend(blend) };
 }
 
 function drawBlendedSheetFrame(
@@ -557,33 +560,29 @@ function drawBlendedSheetFrame(
   dw,
   dh,
   baseAlpha,
+  inset,
 ) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-  var a0 = baseAlpha * (1 - blend),
+  var pad = Math.max(0, inset || 0),
+    sx0 = frame * frameW + pad,
+    sy0 = row * frameH + pad,
+    sw = Math.max(1, frameW - pad * 2),
+    sh = Math.max(1, frameH - pad * 2),
+    a0 = baseAlpha * (1 - blend),
     a1 = baseAlpha * blend;
   if (a0 > 0.02) {
     ctx.globalAlpha = a0;
-    ctx.drawImage(
-      source,
-      frame * frameW,
-      row * frameH,
-      frameW,
-      frameH,
-      dx,
-      dy,
-      dw,
-      dh,
-    );
+    ctx.drawImage(source, sx0, sy0, sw, sh, dx, dy, dw, dh);
   }
   if (a1 > 0.02 && next !== frame) {
     ctx.globalAlpha = a1;
     ctx.drawImage(
       source,
-      next * frameW,
-      row * frameH,
-      frameW,
-      frameH,
+      next * frameW + pad,
+      sy0,
+      sw,
+      sh,
       dx,
       dy,
       dw,
@@ -638,6 +637,7 @@ export function drawEnemyMonster(ctx, actor, options) {
     dw,
     dh,
     baseAlpha,
+    5,
   );
   ctx.restore();
   return true;
@@ -668,6 +668,7 @@ function drawDeath(ctx, actor, options, scale, flip) {
     dw,
     dh,
     baseAlpha,
+    5,
   );
   ctx.restore();
   return true;

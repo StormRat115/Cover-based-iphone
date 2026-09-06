@@ -1,12 +1,13 @@
-import { getHitChance } from "./cover.js?v=20260906-71";
-import { weaponCopy } from "./weapons.js?v=20260906-71";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-71";
+import { getHitChance } from "./cover.js?v=20260906-72";
+import { weaponCopy } from "./weapons.js?v=20260906-72";
+import { AudioBus } from "./audio.js?v=20260906-72";
+import { drawSoldier } from "./soldierAssets.js?v=20260906-72";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-71";
+} from "./combatStats.js?v=20260906-72";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,
@@ -62,12 +63,25 @@ export function updatePlayerHud(p) {
     lastWeaponHtml = html;
   }
 }
+function loadoutWeaponParts(entry, fallback) {
+  if (typeof entry === "string")
+    return { weapon: entry || fallback || "rifle", attachments: [null, null, null, null] };
+  if (entry && typeof entry === "object")
+    return {
+      weapon: entry.weapon || fallback || "rifle",
+      attachments: Array.isArray(entry.attachments)
+        ? entry.attachments.slice(0, 4)
+        : [null, null, null, null],
+    };
+  return { weapon: fallback || "rifle", attachments: [null, null, null, null] };
+}
 export function createPlayer() {
-  var selected =
-      (typeof window !== "undefined" &&
+  var parts = loadoutWeaponParts(
+      typeof window !== "undefined" &&
         window.__selectedLoadout &&
-        window.__selectedLoadout.player) ||
+        window.__selectedLoadout.player,
       "rifle",
+    ),
     stats = CHARACTER_STATS.player;
   var p = {
     x: 0,
@@ -101,16 +115,16 @@ export function createPlayer() {
     regenDelay: 3,
     regenRate: stats.regen,
     timeSinceDamage: 99,
-    weapon: weaponCopy(selected),
+    weapon: weaponCopy(parts.weapon, parts.attachments),
     keyboardMove: null,
     facingX: 1,
     facingY: 0,
     lastShotHit: false,
     deathTimer: 0,
     deathDuration: 0.8,
-    setWeapon: function (id) {
+    setWeapon: function (id, attachmentIds) {
       if (this.dead || this.downed || this.reloading) return;
-      this.weapon = weaponCopy(id);
+      this.weapon = weaponCopy(id, attachmentIds);
     },
     setDestination: function (x, y, cover) {
       if (this.dead || this.downed) return;
@@ -146,16 +160,20 @@ export function createPlayer() {
       this.reloading = true;
       this.reloadTimer = this.weapon.reload;
       this.state = "reload";
+      AudioBus.playReload();
     },
     fireAt: function (enemy) {
       if (
         this.dead ||
         this.downed ||
         this.reloading ||
-        this.weapon.ammo <= 0 ||
         this.weapon.fireCooldown > 0
       )
         return false;
+      if (this.weapon.ammo <= 0) {
+        AudioBus.playEmpty();
+        return false;
+      }
       var dx = enemy.x - this.x,
         dy = enemy.y - this.y,
         d = Math.hypot(dx, dy) || 1;
@@ -170,6 +188,7 @@ export function createPlayer() {
       this.weapon.ammo--;
       this.weapon.fireCooldown = this.weapon.cooldown;
       this.weapon.recoil = this.weapon.cooldown;
+      AudioBus.playFire(this.weapon);
       this.state = "shoot";
       this.shootTimer = Math.min(0.22, this.weapon.cooldown);
       this.peek = 0.22;
@@ -244,10 +263,10 @@ export function createPlayer() {
     reset: function () {
       shotFeedbackTime = 0;
       if (shotHud) shotHud.style.display = "none";
-      var id =
-        (window.__selectedLoadout && window.__selectedLoadout.player) ||
-        this.weapon.id ||
-        "rifle";
+      var parts = loadoutWeaponParts(
+        window.__selectedLoadout && window.__selectedLoadout.player,
+        this.weapon.id || "rifle",
+      );
       Object.assign(this, {
         x: 0,
         y: 120,
@@ -290,7 +309,7 @@ export function createPlayer() {
         __visualFacing: undefined,
         __faceLockUntil: 0,
         deathTimer: 0,
-        weapon: weaponCopy(id),
+        weapon: weaponCopy(parts.weapon, parts.attachments),
       });
     },
     update: function (dt) {

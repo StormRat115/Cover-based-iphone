@@ -2,8 +2,9 @@ import {
   isLineBlocked,
   getHitChance,
   getCoverSlot,
-} from "./cover.js?v=20260906-71";
-import { weaponCopy } from "./weapons.js?v=20260906-71";
+} from "./cover.js?v=20260906-72";
+import { weaponCopy } from "./weapons.js?v=20260906-72";
+import { AudioBus } from "./audio.js?v=20260906-72";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -11,14 +12,14 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-71";
+} from "./combatAI.js?v=20260906-72";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-71";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-71";
+} from "./combatStats.js?v=20260906-72";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-72";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -101,7 +102,13 @@ export function createAllies() {
     return {
       name: s.name,
       role: s.role,
-      weapon: weaponCopy(chosen[s.name] || s.weapon),
+      weapon: (function () {
+        var entry = chosen[s.name];
+        if (typeof entry === "string") return weaponCopy(entry);
+        if (entry && typeof entry === "object")
+          return weaponCopy(entry.weapon || s.weapon, entry.attachments);
+        return weaponCopy(s.weapon);
+      })(),
       x: pos[0],
       y: pos[1],
       hp: s.hp,
@@ -191,6 +198,7 @@ function reload(a) {
   if (!a.reloading) {
     a.reloading = true;
     a.reloadTimer = a.weapon.reload;
+    AudioBus.playReload({ volume: 0.55 });
   }
 }
 function shoot(a, e, spawnProjectile, covers) {
@@ -210,6 +218,7 @@ function shoot(a, e, spawnProjectile, covers) {
     hit = Math.random() * 100 < chance;
   a.weapon.ammo--;
   a.weapon.fireCooldown = a.weapon.cooldown;
+  AudioBus.playFire(a.weapon, { volume: 0.58 });
   a.muzzle = 0.12;
   a.shotsLeft = Math.max(0, (a.shotsLeft || 1) - 1);
   if (spawnProjectile) spawnProjectile(a, e, "ally", hit ? 1 : 0);

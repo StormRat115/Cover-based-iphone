@@ -1,0 +1,11 @@
+Cover Shooter weapon SFX credits (free / CC0 where noted)
+
+Primary fire / dry-fire clips trimmed from SSE Library GUNS on Internet Archive (CC0 1.0):
+https://archive.org/details/SSE_Library_GUNS
+
+Reload clips from OpenGameArt (CC0):
+- Handgun Reload by zer0_sol
+- Gun reload lock/click by pauliuw
+- Shotgun rack from Shotgun Reload pack by zer0_sol
+
+empty_click also adapted from Mixkit Free SFX License (attribution optional).

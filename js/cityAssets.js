@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-71";
+import { loadImage } from "./assets.js?v=20260906-72";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
@@ -7,11 +7,11 @@ export const generatedCoverAtlas = new Image();
 generatedCoverAtlas.src =
   "./assets/generated/cover-runtime-atlas.webp?v=20260905-62";
 export const groundTile = new Image();
-groundTile.src = "./assets/generated/tile-asphalt.png?v=20260906-71";
+groundTile.src = "./assets/generated/tile-asphalt.png?v=20260906-72";
 export const buildingRuinA = new Image();
-buildingRuinA.src = "./assets/generated/building-ruin-a.png?v=20260906-71";
+buildingRuinA.src = "./assets/generated/building-ruin-a.png?v=20260906-72";
 export const buildingRuinB = new Image();
-buildingRuinB.src = "./assets/generated/building-ruin-b.png?v=20260906-71";
+buildingRuinB.src = "./assets/generated/building-ruin-b.png?v=20260906-72";
 
 export function preloadCityAssets(onProgress) {
   onProgress = onProgress || function () {};
