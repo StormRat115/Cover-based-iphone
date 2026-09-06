@@ -59,3 +59,9 @@ export function attackDamage(weaponDamage, characterDamage) {
     (Number(weaponDamage) || 0) + (Number(characterDamage) || 0),
   );
 }
+
+export function creditKill(actor) {
+  if (!actor) return 0;
+  actor.kills = (actor.kills || 0) + 1;
+  return actor.kills;
+}

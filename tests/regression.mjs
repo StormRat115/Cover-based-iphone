@@ -1194,6 +1194,46 @@ test("living friendlies stay fully opaque every animation frame", async () => {
   }
 });
 
+test("squad HUD shows per-character kill counts", async () => {
+  const h = createHarness();
+  const stats = await h.importModule(`js/combatStats.js?v=${BUILD}`);
+  const hud = await h.importModule(`js/squadHud.js?v=${BUILD}`);
+  const shooter = { kills: 0 };
+  assert.equal(stats.creditKill(shooter), 1);
+  assert.equal(stats.creditKill(shooter), 2);
+  h.window.__battlePlayer = {
+    hp: 100,
+    maxHp: 100,
+    defense: 50,
+    dead: false,
+    downed: false,
+    kills: 3,
+    weapon: { short: "RIFLE" },
+  };
+  h.window.__battleAllies = [
+    {
+      name: "Rook",
+      hp: 150,
+      maxHp: 150,
+      defense: 100,
+      dead: false,
+      downed: false,
+      kills: 2,
+      weapon: { short: "RIFLE" },
+    },
+  ];
+  h.window.__battleMarines = [
+    { name: "Marine 1", dead: false, kills: 4 },
+    { name: "Marine 2", dead: true, kills: 1 },
+  ];
+  hud.updateSquadHud();
+  const html = h.nodes.get("squadHealthHud").innerHTML;
+  assert.match(html, /KILLS 3/);
+  assert.match(html, /KILLS 2/);
+  assert.match(html, /KILLS 4/);
+  assert.match(html, /MARINE 1/);
+});
+
 test("team XP formula levels and grants one skill point per level", async () => {
   const h = createHarness();
   const xp = await h.importModule(`js/teamProgress.js?v=${BUILD}`);

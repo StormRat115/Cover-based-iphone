@@ -1,34 +1,35 @@
-import { getHitChance } from "./cover.js?v=20260906-96";
+import { getHitChance } from "./cover.js?v=20260906-97";
 import {
   resolveSolidMove,
   updateVault,
   planRoute,
   continueRoute,
-} from "./coverCollision.js?v=20260906-96";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-96";
-import { weaponCopy } from "./weapons.js?v=20260906-96";
-import { AudioBus } from "./audio.js?v=20260906-96";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-96";
+} from "./coverCollision.js?v=20260906-97";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260906-97";
+import { weaponCopy } from "./weapons.js?v=20260906-97";
+import { AudioBus } from "./audio.js?v=20260906-97";
+import { drawSoldier } from "./soldierAssets.js?v=20260906-97";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-96";
+  creditKill,
+} from "./combatStats.js?v=20260906-97";
 import {
   finishReload,
   canReloadFromReserve,
   isPrimaryDry,
   getSidearm,
   shouldSwapToSidearm,
-} from "./ammoEconomy.js?v=20260906-96";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-96";
+} from "./ammoEconomy.js?v=20260906-97";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-97";
 import {
   tickSuppression,
   suppressionAccuracyDelta,
   isHardSuppressed,
-} from "./suppression.js?v=20260906-96";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-96";
+} from "./suppression.js?v=20260906-97";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-97";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,
@@ -161,6 +162,7 @@ export function createPlayer() {
     deathDuration: 0.8,
     hardPinSwap: false,
     crawlSettled: false,
+    kills: 0,
     setWeapon: function (id, attachmentIds) {
       if (this.dead || this.downed || this.reloading) return;
       this.primary = weaponCopy(id, attachmentIds);
@@ -289,6 +291,7 @@ export function createPlayer() {
           enemy.hp = 0;
           enemy.dead = true;
           enemy.deathTimer = 0;
+          creditKill(this);
         }
       }
       return hit;
@@ -396,6 +399,7 @@ export function createPlayer() {
         weaponSlot: "primary",
         crawlSettled: false,
         hardPinSwap: false,
+        kills: 0,
       });
       this.weapon = this.primary;
     },

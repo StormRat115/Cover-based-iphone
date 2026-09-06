@@ -74,7 +74,9 @@ export function updateSquadHud() {
         " / " +
         p.maxHp +
         " · DEF " +
-        (p.defense || 0);
+        (p.defense || 0) +
+        " · KILLS " +
+        (p.kills || 0);
     html += bar(
       "PLAYER · " + p.weapon.short,
       pl,
@@ -95,7 +97,9 @@ export function updateSquadHud() {
           " / " +
           a.maxHp +
           " · DEF " +
-          (a.defense || 0);
+          (a.defense || 0) +
+          " · KILLS " +
+          (a.kills || 0);
       return bar(
         a.name + " · " + a.weapon.short,
         label,
@@ -107,6 +111,25 @@ export function updateSquadHud() {
       );
     })
     .join("");
+  var marines = window.__battleMarines || [];
+  if (marines.length) {
+    html +=
+      '<div style="font-size:8px;color:#8fb7c8;letter-spacing:1.4px;margin:7px 0 3px">MARINES</div>';
+    html += marines
+      .map(function (m) {
+        return (
+          '<div style="display:flex;justify-content:space-between;font-size:8px;margin:2px 0;opacity:' +
+          (m.dead ? ".42" : "1") +
+          '"><span>' +
+          (m.name || "MARINE").toUpperCase() +
+          (m.dead ? " · KIA" : "") +
+          '</span><span>KILLS ' +
+          (m.kills || 0) +
+          "</span></div>"
+        );
+      })
+      .join("");
+  }
   if (html !== lastHtml) {
     h.innerHTML = html;
     lastHtml = html;
