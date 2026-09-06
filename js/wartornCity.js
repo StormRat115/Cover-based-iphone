@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-89";
+import { loadImage } from "./assets.js?v=20260906-91";
 
 function plate(file) {
   var image = new Image();
@@ -22,52 +22,64 @@ export const wreckSedan = plate("wreck-burnt-sedan.webp");
 export const wreckPickup = plate("wreck-burnt-pickup.webp");
 export const wreckArmored = plate("wreck-burnt-armored.webp");
 export const skylineSmoke = plate("skyline-smoke-backdrop.webp");
+export const lampPostIntact = plate("lamp-post-intact.webp");
+export const lampPostBent = plate("lamp-post-bent.webp");
+export const lampPostFallen = plate("lamp-post-fallen.webp");
+export const sidewalkCurbEdge = plate("sidewalk-curb-edge.webp");
+export const sidewalkHydrant = plate("sidewalk-hydrant-manhole.webp");
+export const sidewalkShelter = plate("sidewalk-bus-shelter-wreck.webp");
+export const sidewalkTrash = plate("sidewalk-trash-bin-tipped.webp");
+export const sidewalkPlanter = plate("sidewalk-planter-dead.webp");
 
 var ROAD = 980;
+var WALK = 260;
 var OPAQUE_PLATES = [wartornRuin, wartornRubblePile];
 
+// Sidewalk grit anchors — off the playable asphalt, never tiled plates.
 var STREET_SCENES = [
-  { x: -1480, y: 720, s: 1.05 },
-  { x: 1520, y: 680, s: 1.0 },
-  { x: -1620, y: -280, s: 0.98 },
-  { x: 1660, y: -320, s: 0.96 },
-  { x: -1540, y: -1480, s: 1.02 },
-  { x: 1580, y: -1420, s: 1.0 },
-  { x: -1680, y: -2680, s: 0.94 },
-  { x: 1720, y: -2620, s: 0.96 },
-  { x: -1560, y: -3880, s: 1.0 },
-  { x: 1600, y: -3820, s: 0.98 },
-  { x: -1640, y: -5080, s: 0.96 },
-  { x: 1680, y: -5020, s: 1.02 },
-  { x: -1500, y: -6180, s: 0.94 },
-  { x: 1540, y: -6120, s: 0.96 },
+  { x: -1120, y: 720, s: 0.72 },
+  { x: 1140, y: 680, s: 0.7 },
+  { x: -1180, y: -280, s: 0.68 },
+  { x: 1160, y: -320, s: 0.66 },
+  { x: -1100, y: -1480, s: 0.7 },
+  { x: 1180, y: -1420, s: 0.68 },
+  { x: -1160, y: -2680, s: 0.64 },
+  { x: 1120, y: -2620, s: 0.66 },
+  { x: -1140, y: -3880, s: 0.7 },
+  { x: 1160, y: -3820, s: 0.68 },
+  { x: -1180, y: -5080, s: 0.66 },
+  { x: 1100, y: -5020, s: 0.7 },
+  { x: -1120, y: -6180, s: 0.64 },
+  { x: 1140, y: -6120, s: 0.66 },
 ];
 
+// Distant canyon walls: further out than the sidewalk, modest scale so
+// sprites cannot become huge midfield facades over the road.
 var SIDE_DRESSING = [
-  { x: -1280, y: 820, kind: "ruin", s: 0.92 },
-  { x: 1320, y: 780, kind: "apartment", s: 0.88 },
-  { x: -1420, y: 220, kind: "storefront", s: 0.86 },
-  { x: 1460, y: 180, kind: "ruin", s: 0.9 },
-  { x: -1360, y: -280, kind: "apartment", s: 0.84 },
-  { x: 1380, y: -320, kind: "storefront", s: 0.82 },
-  { x: -1480, y: -860, kind: "ruin", s: 0.94 },
-  { x: 1500, y: -820, kind: "apartment", s: 0.9 },
-  { x: -1320, y: -1480, kind: "storefront", s: 0.8 },
-  { x: 1400, y: -1520, kind: "ruin", s: 0.86 },
-  { x: -1440, y: -2140, kind: "apartment", s: 0.88 },
-  { x: 1460, y: -2080, kind: "storefront", s: 0.84 },
-  { x: -1380, y: -2780, kind: "ruin", s: 0.9 },
-  { x: 1420, y: -2720, kind: "apartment", s: 0.86 },
-  { x: -1500, y: -3440, kind: "storefront", s: 0.82 },
-  { x: 1520, y: -3380, kind: "ruin", s: 0.88 },
-  { x: -1340, y: -4100, kind: "apartment", s: 0.9 },
-  { x: 1360, y: -4040, kind: "storefront", s: 0.84 },
-  { x: -1460, y: -4780, kind: "ruin", s: 0.92 },
-  { x: 1480, y: -4720, kind: "apartment", s: 0.88 },
-  { x: -1400, y: -5420, kind: "storefront", s: 0.86 },
-  { x: 1440, y: -5360, kind: "ruin", s: 0.9 },
-  { x: -1280, y: -6080, kind: "apartment", s: 0.84 },
-  { x: 1300, y: -6000, kind: "storefront", s: 0.82 },
+  { x: -1680, y: 820, kind: "ruin", s: 0.46 },
+  { x: 1720, y: 780, kind: "apartment", s: 0.42 },
+  { x: -1760, y: 220, kind: "storefront", s: 0.4 },
+  { x: 1800, y: 180, kind: "ruin", s: 0.44 },
+  { x: -1700, y: -280, kind: "apartment", s: 0.4 },
+  { x: 1740, y: -320, kind: "storefront", s: 0.38 },
+  { x: -1820, y: -860, kind: "ruin", s: 0.46 },
+  { x: 1780, y: -820, kind: "apartment", s: 0.42 },
+  { x: -1660, y: -1480, kind: "storefront", s: 0.38 },
+  { x: 1760, y: -1520, kind: "ruin", s: 0.42 },
+  { x: -1780, y: -2140, kind: "apartment", s: 0.4 },
+  { x: 1820, y: -2080, kind: "storefront", s: 0.4 },
+  { x: -1720, y: -2780, kind: "ruin", s: 0.44 },
+  { x: 1700, y: -2720, kind: "apartment", s: 0.4 },
+  { x: -1840, y: -3440, kind: "storefront", s: 0.38 },
+  { x: 1760, y: -3380, kind: "ruin", s: 0.42 },
+  { x: -1680, y: -4100, kind: "apartment", s: 0.42 },
+  { x: 1740, y: -4040, kind: "storefront", s: 0.4 },
+  { x: -1800, y: -4780, kind: "ruin", s: 0.44 },
+  { x: 1820, y: -4720, kind: "apartment", s: 0.42 },
+  { x: -1740, y: -5420, kind: "storefront", s: 0.4 },
+  { x: 1780, y: -5360, kind: "ruin", s: 0.44 },
+  { x: -1660, y: -6080, kind: "apartment", s: 0.4 },
+  { x: 1700, y: -6000, kind: "storefront", s: 0.38 },
 ];
 
 var RUBBLE = [
@@ -117,6 +129,41 @@ var SMOKE = [
   { x: 1340, y: -2800, s: 0.48 },
   { x: -1260, y: -4000, s: 0.58 },
   { x: 1300, y: -5200, s: 0.52 },
+];
+
+// Phone Art lamps and sidewalk props — sidewalk band only (|x| > ROAD).
+var EDGE_LAMPS = [
+  { x: -1090, y: 640, kind: "intact", s: 0.92 },
+  { x: 1110, y: 280, kind: "bent", s: 0.88 },
+  { x: -1140, y: -180, kind: "fallen", s: 0.86 },
+  { x: 1080, y: -620, kind: "intact", s: 0.9 },
+  { x: -1070, y: -1280, kind: "bent", s: 0.86 },
+  { x: 1160, y: -1860, kind: "intact", s: 0.88 },
+  { x: -1120, y: -2480, kind: "fallen", s: 0.84 },
+  { x: 1090, y: -3120, kind: "bent", s: 0.86 },
+  { x: -1150, y: -3780, kind: "intact", s: 0.9 },
+  { x: 1130, y: -4420, kind: "fallen", s: 0.84 },
+  { x: -1080, y: -5080, kind: "bent", s: 0.86 },
+  { x: 1140, y: -5720, kind: "intact", s: 0.88 },
+];
+
+var SIDEWALK_PROPS = [
+  { x: -1040, y: 820, kind: "curb", s: 0.7 },
+  { x: 1060, y: 520, kind: "hydrant", s: 0.62 },
+  { x: -1180, y: 80, kind: "shelter", s: 0.64 },
+  { x: 1120, y: -220, kind: "trash", s: 0.6 },
+  { x: -1080, y: -720, kind: "planter", s: 0.62 },
+  { x: 1040, y: -980, kind: "curb", s: 0.68 },
+  { x: -1160, y: -1580, kind: "hydrant", s: 0.6 },
+  { x: 1180, y: -2180, kind: "shelter", s: 0.62 },
+  { x: -1050, y: -2680, kind: "trash", s: 0.6 },
+  { x: 1100, y: -3280, kind: "planter", s: 0.62 },
+  { x: -1140, y: -3880, kind: "curb", s: 0.68 },
+  { x: 1070, y: -4480, kind: "hydrant", s: 0.6 },
+  { x: -1170, y: -5080, kind: "trash", s: 0.6 },
+  { x: 1150, y: -5480, kind: "planter", s: 0.62 },
+  { x: -1060, y: -5980, kind: "shelter", s: 0.62 },
+  { x: 1090, y: -6280, kind: "curb", s: 0.68 },
 ];
 
 function ready(image) {
@@ -230,6 +277,34 @@ function spriteForWreck(kind) {
   return wreckSedan;
 }
 
+function spriteForLamp(kind) {
+  if (kind === "bent") return lampPostBent;
+  if (kind === "fallen") return lampPostFallen;
+  return lampPostIntact;
+}
+
+function sizeForLamp(kind, s) {
+  if (kind === "fallen") return { dw: 70 * s, dh: 52 * s };
+  if (kind === "bent") return { dw: 46 * s, dh: 74 * s };
+  return { dw: 34 * s, dh: 76 * s };
+}
+
+function spriteForSidewalk(kind) {
+  if (kind === "hydrant") return sidewalkHydrant;
+  if (kind === "shelter") return sidewalkShelter;
+  if (kind === "trash") return sidewalkTrash;
+  if (kind === "planter") return sidewalkPlanter;
+  return sidewalkCurbEdge;
+}
+
+function sizeForSidewalk(kind, s) {
+  if (kind === "shelter") return { dw: 78 * s, dh: 86 * s };
+  if (kind === "hydrant") return { dw: 50 * s, dh: 42 * s };
+  if (kind === "trash") return { dw: 44 * s, dh: 48 * s };
+  if (kind === "planter") return { dw: 48 * s, dh: 50 * s };
+  return { dw: 58 * s, dh: 36 * s };
+}
+
 function stamp(ctx, image, x, y, dw, dh, alpha) {
   if (!ready(image) && !(image && image.width)) return false;
   var drawable =
@@ -276,26 +351,23 @@ function fallbackRubble(ctx, x, y, s) {
   ctx.restore();
 }
 
-function clipSidewalk(ctx, iso, world, side) {
-  if (!world || !iso) return false;
-  var minX = world.minX == null ? -2300 : world.minX,
-    maxX = world.maxX == null ? 2300 : world.maxX,
-    minY = world.minY == null ? -6600 : world.minY,
-    maxY = world.maxY == null ? 1900 : world.maxY;
-  var pts =
-    side < 0
-      ? [
-          [minX, minY],
-          [-ROAD, minY],
-          [-ROAD, maxY],
-          [minX, maxY],
-        ]
-      : [
-          [ROAD, minY],
-          [maxX, minY],
-          [maxX, maxY],
-          [ROAD, maxY],
-        ];
+function hash01(i) {
+  var n = (i * 374761393 + 668265263) | 0;
+  n = (n ^ (n >>> 13)) * 1274126177;
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
+}
+
+function worldBounds(world) {
+  return {
+    minX: world && world.minX != null ? world.minX : -2300,
+    maxX: world && world.maxX != null ? world.maxX : 2300,
+    minY: world && world.minY != null ? world.minY : -6600,
+    maxY: world && world.maxY != null ? world.maxY : 1900,
+  };
+}
+
+function clipWorldPoly(ctx, iso, pts) {
+  if (!iso || !pts || !pts.length) return false;
   ctx.beginPath();
   var q = iso(pts[0][0], pts[0][1]);
   ctx.moveTo(q[0], q[1]);
@@ -308,32 +380,70 @@ function clipSidewalk(ctx, iso, world, side) {
   return true;
 }
 
-function drawStreetScenes(ctx, iso, world) {
-  var sides, s, pattern, origin;
-  if (!ready(wartornStreet) || !world || !iso) return;
-  sides = [-1, 1];
-  for (s = 0; s < sides.length; s++) {
+function clipOffStreet(ctx, iso, world, side) {
+  if (!world || !iso) return false;
+  var b = worldBounds(world);
+  var edge = side < 0 ? -ROAD : ROAD;
+  var pts =
+    side < 0
+      ? [
+          [b.minX, b.minY],
+          [edge, b.minY],
+          [edge, b.maxY],
+          [b.minX, b.maxY],
+        ]
+      : [
+          [edge, b.minY],
+          [b.maxX, b.minY],
+          [b.maxX, b.maxY],
+          [edge, b.maxY],
+        ];
+  return clipWorldPoly(ctx, iso, pts);
+}
+
+function fillIsoPoly(ctx, iso, pts, fill) {
+  if (!iso || !pts || !pts.length) return;
+  ctx.beginPath();
+  var q = iso(pts[0][0], pts[0][1]);
+  ctx.moveTo(q[0], q[1]);
+  for (var i = 1; i < pts.length; i++) {
+    q = iso(pts[i][0], pts[i][1]);
+    ctx.lineTo(q[0], q[1]);
+  }
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+}
+
+function drawStreetScenes(ctx, iso, world, onScreen) {
+  var i, item, q, w, h;
+  if (!world || !iso) return;
+  for (i = 0; i < STREET_SCENES.length; i++) {
+    item = STREET_SCENES[i];
+    if (onScreen && !onScreen(item.x, item.y, 200)) continue;
+    q = iso(item.x, item.y);
+    w = 54 * item.s;
+    h = 18 * item.s;
     ctx.save();
-    if (!clipSidewalk(ctx, iso, world, sides[s])) {
-      ctx.restore();
-      continue;
-    }
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    ctx.globalAlpha = 0.4;
-    pattern = ctx.createPattern && ctx.createPattern(wartornStreet, "repeat");
-    origin = iso(sides[s] < 0 ? -1400 : 1400, 0);
-    if (pattern) {
-      // Wrap only at the texture's actual repeat period. Arbitrary wrap
-      // distances make the scenery jump whenever the camera crosses one.
-      ctx.translate(
-        origin[0] % wartornStreet.naturalWidth,
-        origin[1] % wartornStreet.naturalHeight,
-      );
-      ctx.fillStyle = pattern;
-      ctx.fillRect(-4000, -4000, 8000, 8000);
-    }
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = i % 2 ? "#4a4034" : "#3a342c";
+    ctx.beginPath();
+    ctx.ellipse(q[0], q[1], w, h, 0.35, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
+    if (i % 3 === 0) {
+      fillIsoPoly(
+        ctx,
+        iso,
+        [
+          [item.x - 18, item.y - 8],
+          [item.x + 22, item.y - 4],
+          [item.x + 10, item.y + 10],
+          [item.x - 14, item.y + 6],
+        ],
+        "#5a504455",
+      );
+    }
   }
 }
 
@@ -357,6 +467,14 @@ export function preloadWartornAssets(onProgress) {
     loadImage(wreckPickup),
     loadImage(wreckArmored),
     loadImage(skylineSmoke),
+    loadImage(lampPostIntact),
+    loadImage(lampPostBent),
+    loadImage(lampPostFallen),
+    loadImage(sidewalkCurbEdge),
+    loadImage(sidewalkHydrant),
+    loadImage(sidewalkShelter),
+    loadImage(sidewalkTrash),
+    loadImage(sidewalkPlanter),
   ]).then(function (images) {
     if (
       images.some(function (img) {
@@ -387,102 +505,246 @@ export function createWartornDressing() {
     smoke: SMOKE.map(function (item) {
       return Object.assign({}, item);
     }),
+    lamps: EDGE_LAMPS.map(function (item) {
+      return Object.assign({}, item);
+    }),
+    sidewalkProps: SIDEWALK_PROPS.map(function (item) {
+      return Object.assign({}, item);
+    }),
     road: ROAD,
+    sidewalk: WALK,
   };
 }
 
-function clipWorldPoly(ctx, iso, pts) {
-  if (!iso || !pts || !pts.length) return false;
-  ctx.beginPath();
-  var q = iso(pts[0][0], pts[0][1]);
-  ctx.moveTo(q[0], q[1]);
-  for (var i = 1; i < pts.length; i++) {
-    q = iso(pts[i][0], pts[i][1]);
-    ctx.lineTo(q[0], q[1]);
+function drawOrganicPatches(ctx, iso, world, onScreen) {
+  var b = worldBounds(world),
+    i,
+    r1,
+    r2,
+    r3,
+    x,
+    y,
+    w,
+    h,
+    colors = [
+      "#2a241c88",
+      "#1c181490",
+      "#4a3a2c70",
+      "#5c463870",
+      "#241e1888",
+      "#6a534070",
+      "#16121099",
+      "#3c2e2478",
+      "#4a302478",
+      "#2e282070",
+    ];
+  for (i = 0; i < 150; i++) {
+    r1 = hash01(i * 17 + 3);
+    r2 = hash01(i * 19 + 11);
+    r3 = hash01(i * 23 + 7);
+    x = (r1 - 0.5) * (ROAD * 1.85);
+    y = b.minY + 80 + r2 * (b.maxY - b.minY - 160);
+    if (onScreen && !onScreen(x, y, 180)) continue;
+    w = 48 + r3 * 140;
+    h = 18 + r1 * 46;
+    fillIsoPoly(
+      ctx,
+      iso,
+      [
+        [x - w * 0.55, y - h * 0.3],
+        [x + w * 0.5, y - h * 0.45],
+        [x + w * 0.4, y + h * 0.55],
+        [x - w * 0.35, y + h * 0.4],
+      ],
+      colors[i % colors.length],
+    );
   }
-  ctx.closePath();
-  ctx.clip();
-  return true;
+  for (i = 0; i < 22; i++) {
+    r1 = hash01(i * 53 + 91);
+    r2 = hash01(i * 59 + 17);
+    r3 = hash01(i * 61 + 3);
+    x = (r1 - 0.5) * (ROAD * 1.6);
+    y = b.minY + 160 + r2 * (b.maxY - b.minY - 320);
+    if (onScreen && !onScreen(x, y, 140)) continue;
+    fillIsoPoly(
+      ctx,
+      iso,
+      [
+        [x - 10 - r3 * 16, y - 4],
+        [x + 14 + r1 * 12, y - 2],
+        [x + 8, y + 6 + r2 * 8],
+        [x - 8, y + 5],
+      ],
+      i % 2 ? "#4a2c2288" : "#1a1816aa",
+    );
+  }
+  for (i = 0; i < 36; i++) {
+    r1 = hash01(i * 31 + 41);
+    r2 = hash01(i * 37 + 13);
+    r3 = hash01(i * 43 + 5);
+    x = (r1 - 0.5) * (ROAD * 1.7);
+    y = b.minY + 200 + r2 * (b.maxY - b.minY - 400);
+    if (onScreen && !onScreen(x, y, 160)) continue;
+    fillIsoPoly(
+      ctx,
+      iso,
+      [
+        [x, y],
+        [x + 4 + r3 * 7, y + 8],
+        [x + 1 + r1 * 4, y + 54 + r3 * 50],
+        [x - 3, y + 48 + r2 * 30],
+      ],
+      "#1a1612b0",
+    );
+  }
 }
 
-export function drawWartornStreetSurface(ctx, iso, world) {
-  var minY, maxY, origin, pattern;
-  if (!ready(wartornStreet) || !world || !iso) return;
-  minY = world.minY == null ? -6600 : world.minY;
-  maxY = world.maxY == null ? 1900 : world.maxY;
+export function drawWartornStreetSurface(ctx, iso, world, onScreen) {
+  var b, walkL, walkR;
+  if (!world || !iso) return;
+  b = worldBounds(world);
+  walkL = -ROAD - WALK;
+  walkR = ROAD + WALK;
   ctx.save();
   if (
     !clipWorldPoly(ctx, iso, [
-      [-ROAD, minY],
-      [ROAD, minY],
-      [ROAD, maxY],
-      [-ROAD, maxY],
+      [walkL, b.minY],
+      [walkR, b.minY],
+      [walkR, b.maxY],
+      [walkL, b.maxY],
     ])
   ) {
     ctx.restore();
     return;
   }
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.globalAlpha = 0.5;
-  pattern = ctx.createPattern && ctx.createPattern(wartornStreet, "repeat");
-  origin = iso(0, 0);
-  if (pattern) {
-    // Same world anchor as the camera, modulo one complete image tile.
-    ctx.translate(
-      origin[0] % wartornStreet.naturalWidth,
-      origin[1] % wartornStreet.naturalHeight,
-    );
-    ctx.fillStyle = pattern;
-    ctx.fillRect(-5000, -5000, 10000, 10000);
-  }
+  drawOrganicPatches(ctx, iso, world, onScreen);
   ctx.restore();
 }
 
-export function drawWartornAtmosphere(ctx, W, H) {
-  var sky =
-    ctx.createLinearGradient && ctx.createLinearGradient(0, 0, 0, H * 0.5);
+function drawFarBackdrop(ctx, iso, world, W, H) {
+  var origin,
+    scroll,
+    i,
+    x,
+    facades,
+    fade,
+    count;
+  facades = [
+    facadeApartment,
+    facadeStorefront,
+    ready(wartornRuinCut) ? wartornRuinCut : punched(wartornRuin),
+    facadeApartment,
+  ];
+  origin = iso(world && world.cameraX != null ? world.cameraX : 0, 0);
+  scroll = ((origin[0] % 168) + 168) % 168;
+  count = Math.ceil((W || 390) / 168) + 3;
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  for (i = -1; i < count; i++) {
+    x = i * 168 - scroll + 28;
+    stamp(ctx, facades[(i + 8) % facades.length], x + 62, H * 0.2, 132, 92, 0.82);
+  }
+  ctx.restore();
+  if (ctx.createLinearGradient) {
+    fade = ctx.createLinearGradient(0, H * 0.06, 0, H * 0.34);
+    if (fade && fade.addColorStop) {
+      fade.addColorStop(0, "rgba(44,40,36,0)");
+      fade.addColorStop(0.62, "rgba(52,48,42,0.08)");
+      fade.addColorStop(1, "rgba(58,54,48,0.72)");
+      ctx.fillStyle = fade;
+      ctx.fillRect(0, H * 0.06, W, H * 0.3);
+    }
+  }
+}
+
+export function drawWartornAtmosphere(ctx, W, H, iso, world) {
+  var sky, fade;
+  sky = ctx.createLinearGradient && ctx.createLinearGradient(0, 0, 0, H * 0.42);
   if (sky && sky.addColorStop) {
     sky.addColorStop(0, "#2a2724");
-    sky.addColorStop(0.45, "#3c3832");
-    sky.addColorStop(1, "#4a453c");
+    sky.addColorStop(0.5, "#3a3630");
+    sky.addColorStop(1, "#3d3933");
     ctx.fillStyle = sky;
-  } else ctx.fillStyle = "#3c3832";
+  } else ctx.fillStyle = "#3a3630";
   ctx.fillRect(0, 0, W, H);
   if (ready(wartornSkyline)) {
     ctx.save();
-    ctx.globalAlpha = 0.78;
+    ctx.globalAlpha = 0.58;
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(wartornSkyline, -W * 0.04, -H * 0.06, W * 1.08, H * 0.56);
+    ctx.drawImage(wartornSkyline, -W * 0.02, -H * 0.04, W * 1.04, H * 0.32);
     ctx.restore();
   }
+  if (iso && world) drawFarBackdrop(ctx, iso, world, W, H);
   if (ready(skylineSmoke)) {
     ctx.save();
-    ctx.globalAlpha = 0.36;
+    ctx.globalAlpha = 0.22;
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(skylineSmoke, -W * 0.03, H * 0.04, W * 1.06, H * 0.28);
+    ctx.drawImage(skylineSmoke, -W * 0.02, H * 0.02, W * 1.04, H * 0.18);
     ctx.restore();
   }
-  ctx.save();
-  ctx.globalAlpha = 0.2;
-  ctx.fillStyle = "#1a1612";
-  ctx.fillRect(0, 0, W, H * 0.26);
-  ctx.restore();
+  if (ctx.createLinearGradient) {
+    fade = ctx.createLinearGradient(0, 0, 0, H * 0.36);
+    if (fade && fade.addColorStop) {
+      fade.addColorStop(0, "rgba(26,22,18,0.28)");
+      fade.addColorStop(0.55, "rgba(42,38,34,0.08)");
+      fade.addColorStop(1, "rgba(58,54,48,0)");
+      ctx.fillStyle = fade;
+      ctx.fillRect(0, 0, W, H * 0.36);
+    }
+  }
+}
+
+function drawEdgeAccents(ctx, iso, world, onScreen) {
+  var i, item, q, img, size, outward;
+  for (i = 0; i < SIDEWALK_PROPS.length; i++) {
+    item = SIDEWALK_PROPS[i];
+    if (onScreen && !onScreen(item.x, item.y, 220)) continue;
+    ctx.save();
+    clipOffStreet(ctx, iso, world, item.x < 0 ? -1 : 1);
+    q = iso(item.x, item.y);
+    img = spriteForSidewalk(item.kind);
+    size = sizeForSidewalk(item.kind, item.s);
+    outward = item.x < 0 ? -size.dw * 0.18 : size.dw * 0.18;
+    stamp(ctx, img, q[0] + outward, q[1] + 4, size.dw, size.dh, 0.92);
+    ctx.restore();
+  }
+  for (i = 0; i < EDGE_LAMPS.length; i++) {
+    item = EDGE_LAMPS[i];
+    if (onScreen && !onScreen(item.x, item.y, 200)) continue;
+    ctx.save();
+    clipOffStreet(ctx, iso, world, item.x < 0 ? -1 : 1);
+    q = iso(item.x, item.y);
+    img = spriteForLamp(item.kind);
+    size = sizeForLamp(item.kind, item.s);
+    outward = item.x < 0 ? -8 : 8;
+    stamp(ctx, img, q[0] + outward, q[1] + 2, size.dw, size.dh, 0.94);
+    ctx.restore();
+  }
+}
+
+function drawSideBuildings(ctx, iso, world, onScreen) {
+  var i, item, q, img, dw, dh, outward;
+  for (i = 0; i < SIDE_DRESSING.length; i++) {
+    item = SIDE_DRESSING[i];
+    if (onScreen && !onScreen(item.x, item.y, 280)) continue;
+    ctx.save();
+    clipOffStreet(ctx, iso, world, item.x < 0 ? -1 : 1);
+    q = iso(item.x, item.y);
+    img = spriteForBuilding(item.kind);
+    dw = item.kind === "ruin" ? 132 * item.s : 108 * item.s;
+    dh = item.kind === "ruin" ? 108 * item.s : 90 * item.s;
+    outward = item.x < 0 ? -dw * 0.28 : dw * 0.28;
+    if (!stamp(ctx, img, q[0] + outward, q[1] + 6, dw, dh, 0.78))
+      fallbackRuin(ctx, q[0] + outward, q[1], dw, dh);
+    ctx.restore();
+  }
 }
 
 export function drawWartornDressing(ctx, iso, world, W, H, onScreen) {
   var i, item, q, img, dw, dh;
-  drawStreetScenes(ctx, iso, world);
-  for (i = 0; i < SIDE_DRESSING.length; i++) {
-    item = SIDE_DRESSING[i];
-    if (onScreen && !onScreen(item.x, item.y, 420)) continue;
-    q = iso(item.x, item.y);
-    img = spriteForBuilding(item.kind);
-    dw = item.kind === "ruin" ? 268 * item.s : 210 * item.s;
-    dh = item.kind === "ruin" ? 214 * item.s : 176 * item.s;
-    if (!stamp(ctx, img, q[0], q[1] + 8, dw, dh, 0.96))
-      fallbackRuin(ctx, q[0], q[1], dw, dh);
-  }
+  drawStreetScenes(ctx, iso, world, onScreen);
+  drawEdgeAccents(ctx, iso, world, onScreen);
+  drawSideBuildings(ctx, iso, world, onScreen);
   for (i = 0; i < WRECKS.length; i++) {
     item = WRECKS[i];
     if (onScreen && !onScreen(item.x, item.y, 220)) continue;
@@ -507,12 +769,12 @@ export function drawWartornDressing(ctx, iso, world, W, H, onScreen) {
     if (onScreen && !onScreen(item.x, item.y, 360)) continue;
     q = iso(item.x, item.y);
     ctx.save();
-    ctx.globalAlpha = 0.3;
+    ctx.globalAlpha = 0.26;
     ctx.fillStyle = "#2a2622";
     ctx.beginPath();
     ctx.ellipse(q[0], q[1] - 78 * item.s, 16 * item.s, 52 * item.s, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = 0.16;
+    ctx.globalAlpha = 0.14;
     ctx.beginPath();
     ctx.ellipse(
       q[0] + 10 * item.s,
@@ -530,4 +792,8 @@ export function drawWartornDressing(ctx, iso, world, W, H, onScreen) {
 
 export function playableStreetHalfWidth() {
   return ROAD;
+}
+
+export function sidewalkWidth() {
+  return WALK;
 }

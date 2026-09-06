@@ -367,14 +367,19 @@ test("cover pieces use explicit square/rect/T/U/L segments that match their art"
   assert.ok(peeking.x !== planted.x || peeking.y < planted.y);
 });
 
-test("street asphalt is solid slabs plus sharp grain, not a stretched tile", () => {
+test("street asphalt is a continuous corridor, not a tiled or stretched plate", () => {
   const source = readFileSync("js/game.js", "utf8");
+  const city = readFileSync("js/wartornCity.js", "utf8");
   assert.equal(source.includes("stretch one texture"), false);
   assert.equal(source.includes("groundTile"), false);
   assert.equal(source.includes("roadSegments"), false);
-  assert.match(source, /getAsphaltGrain/);
-  assert.match(source, /imageSmoothingEnabled = false/);
   assert.match(source, /drawWartornStreetSurface/);
+  assert.match(source, /WALK/);
+  assert.match(source, /drawStreetLamp/);
+  assert.equal(city.includes('createPattern(wartornStreet'), false);
+  assert.equal(city.includes("createPattern(grain"), false);
+  assert.match(city, /drawOrganicPatches/);
+  assert.match(city, /drawFarBackdrop/);
 });
 
 test("mission cover layouts are unique, reproducible, and keep spawn lanes clear", async () => {
@@ -1049,7 +1054,7 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    29,
+    37,
     "soldier/vault/monster/charger sources plus cover atlases and wartorn plates",
   );
   assert.equal(h.metrics.intervals, 0);
@@ -1351,6 +1356,14 @@ test("wartorn city plates load and dress the street sides", async () => {
   assert.match(city.wreckPickup.src, /wreck-burnt-pickup\.webp/);
   assert.match(city.wreckArmored.src, /wreck-burnt-armored\.webp/);
   assert.match(city.skylineSmoke.src, /skyline-smoke-backdrop\.webp/);
+  assert.match(city.lampPostIntact.src, /lamp-post-intact\.webp/);
+  assert.match(city.lampPostBent.src, /lamp-post-bent\.webp/);
+  assert.match(city.lampPostFallen.src, /lamp-post-fallen\.webp/);
+  assert.match(city.sidewalkCurbEdge.src, /sidewalk-curb-edge\.webp/);
+  assert.match(city.sidewalkHydrant.src, /sidewalk-hydrant-manhole\.webp/);
+  assert.match(city.sidewalkShelter.src, /sidewalk-bus-shelter-wreck\.webp/);
+  assert.match(city.sidewalkTrash.src, /sidewalk-trash-bin-tipped\.webp/);
+  assert.match(city.sidewalkPlanter.src, /sidewalk-planter-dead\.webp/);
   [
     "manifest.json",
     "world-preview.png",
@@ -1365,6 +1378,14 @@ test("wartorn city plates load and dress the street sides", async () => {
     "wreck-burnt-pickup.webp",
     "wreck-burnt-armored.webp",
     "skyline-smoke-backdrop.webp",
+    "lamp-post-intact.webp",
+    "lamp-post-bent.webp",
+    "lamp-post-fallen.webp",
+    "sidewalk-curb-edge.webp",
+    "sidewalk-hydrant-manhole.webp",
+    "sidewalk-bus-shelter-wreck.webp",
+    "sidewalk-trash-bin-tipped.webp",
+    "sidewalk-planter-dead.webp",
   ].forEach((file) => {
     assert.ok(
       existsSync("assets/generated/world/" + file),
@@ -1388,13 +1409,34 @@ test("wartorn city plates load and dress the street sides", async () => {
       dressing.wrecks.some((item) => item.kind === kind),
     ),
   );
+  assert.ok(dressing.sidewalk >= 200, "sidewalk strips dress the street edges");
   assert.ok(
-    dressing.buildings.every((item) => Math.abs(item.x) > dressing.road),
-    "ruins stay off the playable street",
+    dressing.buildings.every((item) => Math.abs(item.x) > dressing.road + 400),
+    "ruins stay on the far backdrop, not the midfield street",
+  );
+  assert.ok(dressing.lamps.length >= 8);
+  assert.ok(dressing.sidewalkProps.length >= 8);
+  assert.ok(
+    ["intact", "bent", "fallen"].every((kind) =>
+      dressing.lamps.some((item) => item.kind === kind),
+    ),
+  );
+  assert.ok(
+    ["curb", "hydrant", "shelter", "trash", "planter"].every((kind) =>
+      dressing.sidewalkProps.some((item) => item.kind === kind),
+    ),
   );
   assert.ok(
     dressing.streetScenes.every((item) => Math.abs(item.x) > dressing.road),
-    "sidewalk street tiles stay off the playable asphalt",
+    "sidewalk grit stays off the playable asphalt",
+  );
+  assert.ok(
+    dressing.lamps.every((item) => Math.abs(item.x) > dressing.road),
+    "Phone Art lamps stay on sidewalks, not mid-road",
+  );
+  assert.ok(
+    dressing.sidewalkProps.every((item) => Math.abs(item.x) > dressing.road),
+    "Phone Art sidewalk accents stay on sidewalks, not mid-road",
   );
   assert.ok(
     dressing.wrecks.some((item) => Math.abs(item.x) < dressing.road),
@@ -1404,16 +1446,13 @@ test("wartorn city plates load and dress the street sides", async () => {
     dressing.rubble.some((item) => Math.abs(item.x) < dressing.road),
     "debris piles sit on the street corridor",
   );
+  assert.equal(city.sidewalkWidth(), dressing.sidewalk);
   const ctx = h.document.createElement("canvas").getContext("2d");
-  city.drawWartornAtmosphere(ctx, 390, 844);
-  city.drawWartornDressing(
-    ctx,
-    (x, y) => [x * 0.25, y * 0.125],
-    { minX: -2300, maxX: 2300, minY: -6600, maxY: 1900 },
-    390,
-    844,
-    () => true,
-  );
+  const iso = (x, y) => [x * 0.25, y * 0.125];
+  const world = { minX: -2300, maxX: 2300, minY: -6600, maxY: 1900, cameraX: 0, cameraY: 0 };
+  city.drawWartornAtmosphere(ctx, 390, 844, iso, world);
+  city.drawWartornStreetSurface(ctx, iso, world, () => true);
+  city.drawWartornDressing(ctx, iso, world, 390, 844, () => true);
   await city.preloadWartornAssets();
 });
 

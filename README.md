@@ -139,6 +139,28 @@ Light suppression, generous ammo, impactful squad orders, crawl-to-cover revives
 
 After merge, Pages should read **BUILD 20260906-89**. If PR #5 is not merged yet, merge #5 first (or this PR includes that tip).
 
+## Organic street canyon: 20260906-90
+
+Wartorn street composition lock (TMNT arcade beat-em-up read, kept on the established isometric camera):
+
+- Playable midfield is a continuous asphalt corridor. Repeating street-photo tiles, diamond grids, and hard slab cuts are gone.
+- Sidewalks run along both curbs with a soft grit blend, not a checkerboard of plates.
+- Light posts are sparse and sit on the sidewalks.
+- Building facades are a distant top/far backdrop plus modest side ruins clipped off the road. They are not huge midfield plates.
+- Debris, wrecks, and cover stay on the street. Cover slots, collision, and street objectives are unchanged.
+
+Phone Art street-edge pack (from `chore/street-edge-accents`) stamps lamps and sidewalk props on the curb band only: intact/bent/fallen posts, curb chunks, hydrant/manhole, wrecked bus shelter, tipped trash, dead planter. They are clipped off the playable asphalt so they cannot become mid-road plates.
+
+### Pages verify (BUILD 20260906-91)
+
+1. Open https://stormrat115.github.io/Cover-based-iphone/
+2. Confirm the stamp reads **BUILD 20260906-91**.
+3. The street should look like one organic wartorn road: no sharp tile seams or grid cuts.
+4. Sidewalks and occasional lamps should read along the edges.
+5. Buildings should sit as a far backdrop (top/edges), not over the midfield.
+6. The camera stays isometric — not a pure top-down flatten.
+7. Start a mission and confirm cover, exclusive slots, collision, and street tasks still work.
+
 ## Team XP, skills, armor, and segmented waves: 20260906-81
 
 Shared team XP for the player, allies, and Marines:
