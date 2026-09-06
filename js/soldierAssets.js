@@ -1,7 +1,7 @@
-import { loadImage } from "./assets.js?v=20260906-101";
+import { loadImage } from "./assets.js?v=20260906-102";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
-  "./assets/generated/soldier/player-solid-atlas.png?v=20260906-101";
+  "./assets/generated/soldier/player-solid-atlas.png?v=20260906-102";
 export const soldierSource = new Image();
 soldierSource.src =
   "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260906-88";
@@ -180,14 +180,14 @@ const FRIENDLY_COLS = 4;
 const FRIENDLY_ROWS = {
   idle: 0,
   run: 1,
-  standShoot: 4,
-  crouchShoot: 5,
-  reload: 6,
-  death: 7,
-  shoot: 4,
-  // Cover rows bake a barrier into the sprite — never sample them.
+  standShoot: 2,
+  crouchShoot: 3,
+  reload: 4,
+  death: 5,
+  shoot: 2,
+  // Cover rows were removed — they baked a barrier into the sprite.
   tallCover: 0,
-  lowCover: 5,
+  lowCover: 3,
   vault: 1,
 };
 const FRIENDLY_FPS = {

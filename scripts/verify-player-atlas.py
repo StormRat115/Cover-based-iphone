@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Fail if player-solid-atlas has inverted, clipped, or wrapped cells.
 
-Phone Art v3 is 4×8, cell 192:
-idle, run, tallCover, lowCover, standShoot, crouchShoot, reload, death.
-Every cell must keep the whole body together: head near the top, feet near
-the bottom, padding so nothing clips. Mid-alpha must stay 0.
+Phone Art v4 is 4×6, cell 192:
+idle, run, standShoot, crouchShoot, reload, death.
+Cover rows were removed. Every standing cell must keep the whole body
+together: head near the top, feet near the bottom, padding so nothing clips.
 """
 from __future__ import annotations
 
@@ -19,25 +19,15 @@ ROOT = Path(__file__).resolve().parents[1]
 PNG = ROOT / "assets/generated/soldier/player-solid-atlas.png"
 META = ROOT / "assets/generated/soldier/player-solid-atlas.json"
 CELL = 192
-V3_STATES = [
+V4_STATES = [
     "idle",
     "run",
-    "tallCover",
-    "lowCover",
     "standShoot",
     "crouchShoot",
     "reload",
     "death",
 ]
-STANDING = {
-    "idle",
-    "run",
-    "tallCover",
-    "lowCover",
-    "standShoot",
-    "crouchShoot",
-    "reload",
-}
+STANDING = {"idle", "run", "standShoot", "crouchShoot", "reload"}
 
 
 def components(mask):
@@ -91,14 +81,16 @@ def cell_mask(px, w, h):
 def main() -> int:
     meta = json.loads(META.read_text())
     errors = []
-    if meta.get("cell") != CELL or meta.get("cols") != 4 or meta.get("rows") != 8:
+    if meta.get("cell") != CELL or meta.get("cols") != 4 or meta.get("rows") != 6:
         errors.append(f"unexpected layout {meta}")
     states = meta.get("states") or []
-    if states != V3_STATES:
+    if states != V4_STATES:
         errors.append(f"unexpected states {states}")
+    if "tallCover" in states or "lowCover" in states:
+        errors.append("cover rows must stay off the official sheet")
 
     im = Image.open(PNG).convert("RGBA")
-    if im.size != (768, 1536):
+    if im.size != (768, 1152):
         errors.append(f"unexpected sheet size {im.size}")
 
     for row, state in enumerate(states):
@@ -151,8 +143,8 @@ def main() -> int:
             print(" -", err)
         return 1
     print(
-        "player-solid-atlas framing OK: 4x8 cell 192, v3 eight states, "
-        "upright full-body, binary alpha"
+        "player-solid-atlas framing OK: 4x6 cell 192, v4 six states, "
+        "no cover rows, upright full-body, binary alpha"
     )
     return 0
 
