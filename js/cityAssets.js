@@ -9,43 +9,43 @@ generatedCoverAtlas.src =
 
 const THEME = {
   jersey: {
-    left: "#6d7270",
-    right: "#4f5553",
-    top: "#8b908c",
-    stroke: "#2c302e",
-    accent: "#d56a2a",
+    left: "#8d9290",
+    right: "#5c6361",
+    top: "#c5cac6",
+    stroke: "#2a2e2c",
+    accent: "#ef6a1c",
     accentDark: "#8a3d14",
   },
   sandbags: {
-    left: "#8a7348",
-    right: "#6a5634",
-    top: "#c4a56a",
-    stroke: "#3d311c",
-    accent: "#a8884e",
+    left: "#9a7c42",
+    right: "#6e5528",
+    top: "#e0c07a",
+    stroke: "#3a2c14",
+    accent: "#c8a45c",
     accentDark: "#5a4526",
   },
   crates: {
-    left: "#7a5330",
-    right: "#5a3c22",
-    top: "#b07a45",
-    stroke: "#2c1b10",
-    accent: "#d2a066",
+    left: "#8a4e22",
+    right: "#5c3316",
+    top: "#d08a3c",
+    stroke: "#2a160c",
+    accent: "#f0c070",
     accentDark: "#3d2414",
   },
   wreck: {
-    left: "#5a4a3d",
-    right: "#3d332b",
-    top: "#7a6756",
-    stroke: "#1e1814",
-    accent: "#2a2420",
-    accentDark: "#11100e",
+    left: "#4a5560",
+    right: "#2e353c",
+    top: "#6b7580",
+    stroke: "#14181c",
+    accent: "#8fd0e8",
+    accentDark: "#11151a",
   },
   rubble: {
-    left: "#6a6660",
-    right: "#4c4944",
-    top: "#8a857c",
-    stroke: "#2a2723",
-    accent: "#9a8f7c",
+    left: "#7a756c",
+    right: "#534e46",
+    top: "#b0a898",
+    stroke: "#2a2620",
+    accent: "#d0c4ac",
     accentDark: "#3a362f",
   },
 };
@@ -100,10 +100,14 @@ function fillPoly(ctx, pts, fill, stroke, width) {
 
 function prismHeight(cover, segment) {
   var type = cover.type || "low";
+  var theme = cover.theme || "jersey";
   var long = Math.max(segment.w, segment.h);
-  var base = type === "low" ? 11 : type === "car" ? 17 : 22;
-  if (cover.shape === "square") base += 3;
-  return base + Math.min(6, long * 0.02);
+  var base = type === "low" ? 13 : type === "car" ? 16 : 24;
+  if (theme === "jersey") base = Math.max(base, 26);
+  if (theme === "sandbags") base = Math.min(base, 15);
+  if (theme === "crates" || cover.shape === "square") base = Math.max(base, 18);
+  if (theme === "wreck") base = 15;
+  return base + Math.min(5, long * 0.015);
 }
 
 function drawPrism(ctx, iso, x, y, w, h, z, palette) {
@@ -139,107 +143,135 @@ function alongTop(prism, t) {
 }
 
 function decorateJersey(ctx, prism) {
-  var midA = [
-      (prism.A[0] + prism.D[0]) / 2,
-      (prism.A[1] + prism.D[1]) / 2,
+  var stripe = [
+    [
+      prism.A[0] * 0.55 + prism.D[0] * 0.45,
+      prism.A[1] * 0.55 + prism.D[1] * 0.45,
     ],
-    midB = [
-      (prism.B[0] + prism.C[0]) / 2,
-      (prism.B[1] + prism.C[1]) / 2,
-    ];
+    [
+      prism.B[0] * 0.55 + prism.C[0] * 0.45,
+      prism.B[1] * 0.55 + prism.C[1] * 0.45,
+    ],
+    [
+      prism.B[0] * 0.45 + prism.C[0] * 0.55,
+      prism.B[1] * 0.45 + prism.C[1] * 0.55,
+    ],
+    [
+      prism.A[0] * 0.45 + prism.D[0] * 0.55,
+      prism.A[1] * 0.45 + prism.D[1] * 0.55,
+    ],
+  ];
+  fillPoly(ctx, stripe, "#ef6a1c", "#8a3d14", 1);
   ctx.save();
-  ctx.strokeStyle = "#d56a2a";
-  ctx.lineWidth = 3;
-  ctx.lineCap = "butt";
+  ctx.strokeStyle = "#ffe08a";
+  ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.moveTo(midA[0], midA[1]);
-  ctx.lineTo(midB[0], midB[1]);
-  ctx.stroke();
-  ctx.strokeStyle = "#f0d38a";
-  ctx.lineWidth = 1.2;
+  ctx.moveTo(stripe[0][0], stripe[0][1]);
+  ctx.lineTo(stripe[1][0], stripe[1][1]);
   ctx.stroke();
   ctx.restore();
 }
 
 function decorateSandbags(ctx, prism, segment) {
-  var count = Math.max(3, Math.round(Math.max(segment.w, segment.h) / 28));
+  var count = Math.max(4, Math.round(Math.max(segment.w, segment.h) / 22));
   ctx.save();
-  for (var i = 0; i < count; i++) {
-    var t = (i + 0.5) / count;
-    var p = alongTop(prism, t);
-    ctx.fillStyle = i % 2 ? "#d2b57a" : "#b89658";
-    ctx.strokeStyle = "#3d311c";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.ellipse(p[0], p[1] - 2, 7, 4.2, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+  for (var row = 0; row < 2; row++) {
+    for (var i = 0; i < count; i++) {
+      var t = (i + (row ? 0.15 : 0.5)) / count;
+      if (t <= 0 || t >= 1) continue;
+      var p = alongTop(prism, t);
+      ctx.fillStyle = (i + row) % 2 ? "#efd08a" : "#c8a45c";
+      ctx.strokeStyle = "#3a2c14";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.ellipse(p[0], p[1] - 1 - row * 5, 8.5, 5, -0.25, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
   }
   ctx.restore();
 }
 
 function decorateCrates(ctx, prism) {
   ctx.save();
-  ctx.strokeStyle = "#3d2414";
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = "#2a160c";
+  ctx.lineWidth = 1.4;
   ctx.beginPath();
   ctx.moveTo(prism.A[0], prism.A[1]);
   ctx.lineTo(prism.C[0], prism.C[1]);
   ctx.moveTo(prism.B[0], prism.B[1]);
   ctx.lineTo(prism.D[0], prism.D[1]);
   ctx.stroke();
-  ctx.strokeStyle = "#d2a066";
-  ctx.lineWidth = 1.4;
-  ctx.strokeRect(
-    (prism.A[0] + prism.C[0]) / 2 - 5,
-    (prism.A[1] + prism.C[1]) / 2 - 3,
-    10,
-    6,
-  );
+  var cx = (prism.A[0] + prism.C[0]) / 2,
+    cy = (prism.A[1] + prism.C[1]) / 2;
+  ctx.fillStyle = "#5c3316";
+  ctx.fillRect(cx - 7, cy - 5, 14, 9);
+  ctx.strokeStyle = "#f0c070";
+  ctx.lineWidth = 1.6;
+  ctx.strokeRect(cx - 7, cy - 5, 14, 9);
   ctx.restore();
 }
 
 function decorateWreck(ctx, prism) {
   var cabin = [
     [
-      prism.A[0] * 0.35 + prism.B[0] * 0.35 + prism.D[0] * 0.15 + prism.C[0] * 0.15,
-      prism.A[1] * 0.35 + prism.B[1] * 0.35 + prism.D[1] * 0.15 + prism.C[1] * 0.15 - 6,
+      prism.A[0] * 0.42 + prism.B[0] * 0.28 + prism.D[0] * 0.18 + prism.C[0] * 0.12,
+      prism.A[1] * 0.42 + prism.B[1] * 0.28 + prism.D[1] * 0.18 + prism.C[1] * 0.12 - 10,
     ],
     [
-      prism.A[0] * 0.15 + prism.B[0] * 0.55 + prism.D[0] * 0.1 + prism.C[0] * 0.2,
-      prism.A[1] * 0.15 + prism.B[1] * 0.55 + prism.D[1] * 0.1 + prism.C[1] * 0.2 - 6,
+      prism.A[0] * 0.18 + prism.B[0] * 0.52 + prism.D[0] * 0.1 + prism.C[0] * 0.2,
+      prism.A[1] * 0.18 + prism.B[1] * 0.52 + prism.D[1] * 0.1 + prism.C[1] * 0.2 - 10,
     ],
     [
-      (prism.C[0] + prism.B[0]) / 2,
-      (prism.C[1] + prism.B[1]) / 2 - 1,
+      prism.C[0] * 0.55 + prism.B[0] * 0.45,
+      prism.C[1] * 0.55 + prism.B[1] * 0.45 - 2,
     ],
     [
-      (prism.D[0] + prism.A[0]) / 2,
-      (prism.D[1] + prism.A[1]) / 2 - 1,
+      prism.D[0] * 0.55 + prism.A[0] * 0.45,
+      prism.D[1] * 0.55 + prism.A[1] * 0.45 - 2,
     ],
   ];
-  fillPoly(ctx, cabin, "#2c3538", "#11100e", 1);
+  fillPoly(ctx, cabin, "#8fd0e8", "#14181c", 1);
+  fillPoly(
+    ctx,
+    [
+      cabin[0],
+      cabin[1],
+      [
+        cabin[1][0] * 0.7 + cabin[2][0] * 0.3,
+        cabin[1][1] * 0.7 + cabin[2][1] * 0.3,
+      ],
+      [
+        cabin[0][0] * 0.7 + cabin[3][0] * 0.3,
+        cabin[0][1] * 0.7 + cabin[3][1] * 0.3,
+      ],
+    ],
+    "#2a3338",
+    "#14181c",
+    1,
+  );
   ctx.save();
-  ctx.fillStyle = "#1a1816";
+  ctx.fillStyle = "#11151a";
   ctx.beginPath();
-  ctx.ellipse(prism.d[0] + 4, prism.d[1] + 1, 5, 2.4, 0, 0, Math.PI * 2);
-  ctx.ellipse(prism.c[0] - 4, prism.c[1] + 1, 5, 2.4, 0, 0, Math.PI * 2);
+  ctx.ellipse(prism.d[0] + 6, prism.d[1] + 2, 6, 2.8, 0, 0, Math.PI * 2);
+  ctx.ellipse(prism.c[0] - 6, prism.c[1] + 2, 6, 2.8, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
 
 function decorateRubble(ctx, prism) {
   ctx.save();
-  ctx.fillStyle = "#9a8f7c";
+  ctx.fillStyle = "#d0c4ac";
   ctx.beginPath();
-  ctx.moveTo(prism.A[0] + 6, prism.A[1] + 2);
-  ctx.lineTo(prism.B[0] - 8, prism.B[1] + 1);
-  ctx.lineTo((prism.B[0] + prism.C[0]) / 2, (prism.B[1] + prism.C[1]) / 2 + 2);
+  ctx.moveTo(prism.A[0] + 8, prism.A[1] + 1);
+  ctx.lineTo(prism.B[0] - 10, prism.B[1] + 2);
+  ctx.lineTo((prism.B[0] + prism.C[0]) / 2 - 4, (prism.B[1] + prism.C[1]) / 2);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = "#5a564e";
+  ctx.fillStyle = "#534e46";
   ctx.beginPath();
-  ctx.arc(prism.D[0] + 8, prism.D[1] - 4, 3.2, 0, Math.PI * 2);
+  ctx.arc(prism.D[0] + 10, prism.D[1] - 5, 4, 0, Math.PI * 2);
+  ctx.arc(prism.C[0] - 12, prism.C[1] - 3, 3.2, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }

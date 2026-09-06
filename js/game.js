@@ -912,23 +912,28 @@ function drawCrosswalk(y) {
 var asphaltGrainCanvas = null;
 function getAsphaltGrain() {
   if (asphaltGrainCanvas) return asphaltGrainCanvas;
+  var size = 192;
   var c = document.createElement("canvas");
-  c.width = 96;
-  c.height = 96;
+  c.width = size;
+  c.height = size;
   var g = c.getContext && c.getContext("2d");
   if (!g || typeof g.createImageData !== "function") return null;
-  var data = g.createImageData(96, 96);
+  var data = g.createImageData(size, size);
   if (!data || !data.data) return null;
   var i = 0;
-  for (var y = 0; y < 96; y++) {
-    for (var x = 0; x < 96; x++) {
-      var n = (x * 157 + y * 313) ^ (x * y * 17 + (x << 3) + (y << 5));
+  for (var y = 0; y < size; y++) {
+    for (var x = 0; x < size; x++) {
+      var n =
+        (x * 127 + y * 311 + x * y * 13) ^
+        ((x * 19 + 41) * (y * 23 + 17) + (x << 2) + (y << 4));
       n = n & 255;
-      var speck = n > 246 ? 230 : n < 12 ? 18 : 78 + (n % 36);
+      var speck = n > 248 ? 220 : n < 10 ? 22 : 82 + (n % 28);
+      var edge = Math.min(x, y, size - 1 - x, size - 1 - y);
+      var fade = edge < 12 ? edge / 12 : 1;
       data.data[i++] = speck;
-      data.data[i++] = speck + 3;
-      data.data[i++] = speck - 2;
-      data.data[i++] = n > 228 || n < 18 ? 70 : 20;
+      data.data[i++] = speck + 2;
+      data.data[i++] = speck - 1;
+      data.data[i++] = Math.round((n > 232 || n < 16 ? 54 : 16) * fade);
     }
   }
   g.putImageData(data, 0, 0);
@@ -999,7 +1004,7 @@ function drawMapDecor() {
       [curbR, world.maxY],
       [curbL, world.maxY],
     ],
-    "#313735",
+    "#3c4442",
   );
   worldPoly(
     [
@@ -1008,7 +1013,7 @@ function drawMapDecor() {
       [80, world.maxY],
       [-80, world.maxY],
     ],
-    "#353b39",
+    "#4a524e",
   );
   worldPoly(
     [
@@ -1017,7 +1022,7 @@ function drawMapDecor() {
       [curbL + 120, world.maxY],
       [curbL, world.maxY],
     ],
-    "#2e3331",
+    "#363d3b",
   );
   worldPoly(
     [
@@ -1026,7 +1031,7 @@ function drawMapDecor() {
       [curbR, world.maxY],
       [curbR - 120, world.maxY],
     ],
-    "#2e3331",
+    "#363d3b",
   );
   worldPoly(
     [
@@ -1063,10 +1068,10 @@ function drawMapDecor() {
     ctx.closePath();
     ctx.clip();
     ctx.imageSmoothingEnabled = false;
-    ctx.globalAlpha = 0.2;
+    ctx.globalAlpha = 0.16;
     var pattern = ctx.createPattern(grain, "repeat");
     if (pattern) {
-      ctx.translate(origin[0] % 96, origin[1] % 96);
+      ctx.translate(origin[0] % 192, origin[1] % 192);
       ctx.fillStyle = pattern;
       ctx.fillRect(-W - 96, -H - 96, W * 2 + 192, H * 2 + 192);
     }
@@ -1080,7 +1085,7 @@ function drawMapDecor() {
         [9, y + 48],
         [-9, y + 48],
       ],
-      "#b8a45e66",
+      "#d4c078aa",
     );
   for (var crossY = world.minY + 420; crossY < world.maxY; crossY += 900)
     drawCrosswalk(crossY);
