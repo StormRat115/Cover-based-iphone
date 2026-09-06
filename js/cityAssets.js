@@ -137,11 +137,11 @@ function prismHeight(cover, segment) {
   var type = cover.type || "low";
   var theme = cover.theme || "jersey";
   var long = Math.max(segment.w, segment.h);
-  var base = type === "low" ? 13 : type === "car" ? 16 : 24;
-  if (theme === "jersey") base = Math.max(base, 26);
-  if (theme === "sandbags") base = Math.min(base, 15);
-  if (theme === "crates" || cover.shape === "square") base = Math.max(base, 18);
-  if (theme === "wreck") base = 15;
+  var base = type === "low" ? 16 : type === "car" ? 18 : 28;
+  if (theme === "jersey" || cover.shape === "wall") base = Math.max(base, 30);
+  if (theme === "sandbags" || cover.shape === "halfwall") base = Math.min(22, Math.max(base, 16));
+  if (theme === "crates" || cover.shape === "square") base = Math.max(base, 22);
+  if (theme === "wreck") base = 17;
   return base + Math.min(5, long * 0.015);
 }
 
@@ -190,43 +190,52 @@ function skinTile(theme, mask, shape, face) {
   return tile;
 }
 
-function stampTexturedQuad(ctx, tile, p00, p10, p01, shade) {
-  if (!tile || !ctx || !p00 || !p10 || !p01) return false;
-  var w = tile.naturalWidth,
-    h = tile.naturalHeight,
-    p11 = [p10[0] + (p01[0] - p00[0]), p10[1] + (p01[1] - p00[1])];
-  if (w < 2 || h < 2) return false;
-  ctx.save();
+function facePath(ctx, p00, p10, p11, p01) {
   ctx.beginPath();
   ctx.moveTo(p00[0], p00[1]);
   ctx.lineTo(p10[0], p10[1]);
   ctx.lineTo(p11[0], p11[1]);
   ctx.lineTo(p01[0], p01[1]);
   ctx.closePath();
+}
+
+function stampTexturedQuad(ctx, tile, p00, p10, p01, shade) {
+  if (!tile || !ctx || !p00 || !p10 || !p01) return false;
+  var w = tile.naturalWidth,
+    h = tile.naturalHeight,
+    p11 = [p10[0] + (p01[0] - p00[0]), p10[1] + (p01[1] - p00[1])],
+    minX = Math.min(p00[0], p10[0], p11[0], p01[0]),
+    maxX = Math.max(p00[0], p10[0], p11[0], p01[0]),
+    minY = Math.min(p00[1], p10[1], p11[1], p01[1]),
+    maxY = Math.max(p00[1], p10[1], p11[1], p01[1]);
+  if (w < 2 || h < 2 || maxX - minX < 2 || maxY - minY < 2) return false;
+  ctx.save();
+  facePath(ctx, p00, p10, p11, p01);
   ctx.clip();
   ctx.imageSmoothingEnabled = false;
-  ctx.transform(
-    (p10[0] - p00[0]) / w,
-    (p10[1] - p00[1]) / w,
-    (p01[0] - p00[0]) / h,
-    (p01[1] - p00[1]) / h,
-    p00[0],
-    p00[1],
+  ctx.globalAlpha = 1;
+  ctx.drawImage(
+    tile,
+    0,
+    0,
+    w,
+    h,
+    minX,
+    minY,
+    Math.max(3, maxX - minX),
+    Math.max(3, maxY - minY),
   );
-  ctx.drawImage(tile, 0, 0);
   ctx.restore();
+  ctx.save();
+  facePath(ctx, p00, p10, p11, p01);
   if (shade) {
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(p00[0], p00[1]);
-    ctx.lineTo(p10[0], p10[1]);
-    ctx.lineTo(p11[0], p11[1]);
-    ctx.lineTo(p01[0], p01[1]);
-    ctx.closePath();
     ctx.fillStyle = shade;
     ctx.fill();
-    ctx.restore();
   }
+  ctx.strokeStyle = "#0d0b09";
+  ctx.lineWidth = 1.15;
+  ctx.stroke();
+  ctx.restore();
   return true;
 }
 
@@ -239,19 +248,38 @@ function stampBlockFaces(ctx, prism, theme, mask, shape) {
     east = hideEast ? null : skinTile(theme, mask, shape, "east"),
     painted = 0;
   if (!hideSouth && south)
-    painted += stampTexturedQuad(ctx, south, prism.D, prism.C, prism.d, "rgba(20,14,8,0.28)")
+    painted += stampTexturedQuad(
+      ctx,
+      south,
+      prism.D,
+      prism.C,
+      prism.d,
+      "rgba(18,12,8,0.38)",
+    )
       ? 1
       : 0;
   if (!hideEast && east)
-    painted += stampTexturedQuad(ctx, east, prism.C, prism.B, prism.c, "rgba(8,10,12,0.4)")
+    painted += stampTexturedQuad(
+      ctx,
+      east,
+      prism.C,
+      prism.B,
+      prism.c,
+      "rgba(6,8,10,0.52)",
+    )
       ? 1
       : 0;
   if (top)
-    painted += stampTexturedQuad(ctx, top, prism.A, prism.B, prism.D, "rgba(255,255,240,0.06)")
+    painted += stampTexturedQuad(
+      ctx,
+      top,
+      prism.A,
+      prism.B,
+      prism.D,
+      "rgba(255,252,235,0.1)",
+    )
       ? 1
       : 0;
-  if (painted)
-    fillPoly(ctx, [prism.A, prism.B, prism.C, prism.D], null, "#1a1612", 1.05);
   return painted > 0;
 }
 

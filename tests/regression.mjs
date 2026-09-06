@@ -455,13 +455,25 @@ test("cover pieces are uniform blocks assembled into random playable shapes", as
     ),
     "street should include 5-8 long walls or half-walls",
   );
-  const iso = (x, y) => [x * 0.25, y * 0.125];
+  const iso = (x, y) => [x * 0.25 - y * 0.25, (x + y) * 0.125];
   const ctx = h.document.createElement("canvas").getContext("2d");
+  const cube = city.makeShapedCover({
+    id: "cube-faces",
+    x: 0,
+    y: 0,
+    theme: "crates",
+    cells: [[0, 0]],
+  });
   const beforeSkins = h.metrics.drawImages.length;
+  assets.drawShapedCover(ctx, cube, iso);
+  assert.ok(
+    h.metrics.drawImages.length - beforeSkins >= 3,
+    "an isolated block must stamp Phone Art skins on top and both visible side faces",
+  );
   assets.drawShapedCover(ctx, wideU, iso);
   assert.ok(
-    h.metrics.drawImages.length - beforeSkins >= wideU.blocks.length * 2,
-    "each block must stamp Phone Art skins on top and visible side faces",
+    h.metrics.drawImages.length - beforeSkins > cube.blocks.length * 3,
+    "shaped pieces keep stamping skins on remaining visible faces",
   );
 
   const rect = city.makeShapedCover({

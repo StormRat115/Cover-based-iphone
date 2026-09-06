@@ -275,12 +275,12 @@ export function coverShieldKind(unit) {
 
 function shieldPath(ctx) {
   ctx.beginPath();
-  ctx.moveTo(0, -7);
-  ctx.lineTo(6.2, -3.6);
-  ctx.lineTo(5.2, 2.2);
-  ctx.lineTo(0, 7.4);
-  ctx.lineTo(-5.2, 2.2);
-  ctx.lineTo(-6.2, -3.6);
+  ctx.moveTo(0, -9);
+  ctx.lineTo(7.6, -4.4);
+  ctx.lineTo(6.4, 2.8);
+  ctx.lineTo(0, 9.2);
+  ctx.lineTo(-6.4, 2.8);
+  ctx.lineTo(-7.6, -4.4);
   ctx.closePath();
 }
 
