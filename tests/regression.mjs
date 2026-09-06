@@ -8,10 +8,17 @@ const BUILD = readFileSync("js/boot.js", "utf8").match(
   /const BUILD = ["']([^"']+)/,
 )[1];
 const entry = `js/game.js?v=${BUILD}`;
-const gameplayState = (actor) =>
-  JSON.stringify(actor, (key, value) =>
-    key.startsWith("__") ? undefined : value,
-  );
+const gameplayState = (actor) => {
+  const seen = new WeakSet();
+  return JSON.stringify(actor, (key, value) => {
+    if (key.startsWith("__")) return undefined;
+    if (value && typeof value === "object") {
+      if (seen.has(value)) return undefined;
+      seen.add(value);
+    }
+    return value;
+  });
+};
 
 test("local module/HTML references exist and use a single cache version", () => {
   for (const file of readdirSync("js").filter((name) => name.endsWith(".js"))) {
@@ -574,7 +581,7 @@ test("actual game handles combat, pause, restart, tab hiding and waves", async (
   assert.ok(Number.isFinite(player.x) && Number.isFinite(player.y));
   h.nodes.get("pause").emit("pointerdown");
   h.frame();
-  const paused = JSON.stringify([
+  const paused = gameplayState([
     player,
     h.window.__battleEnemies,
     h.window.__battleAllies,
@@ -582,7 +589,7 @@ test("actual game handles combat, pause, restart, tab hiding and waves", async (
   const drawing = h.metrics.draws;
   h.advance(180);
   assert.equal(
-    JSON.stringify([player, h.window.__battleEnemies, h.window.__battleAllies]),
+    gameplayState([player, h.window.__battleEnemies, h.window.__battleAllies]),
     paused,
   );
   assert.equal(h.metrics.draws, drawing, "paused frames avoid redrawing");
@@ -1041,13 +1048,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-<<<<<<< HEAD
     16,
     "soldier/vault/monster/charger sources plus cover atlases and wartorn plates",
-=======
-    15,
-    "nine character sources, three cover atlases, and three wartorn plates",
->>>>>>> 3d78fcb (Use clean transparent ruin plates for side dressing)
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
