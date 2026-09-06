@@ -1,7 +1,7 @@
-import { mitigateDamage, creditKill } from "./combatStats.js?v=20260906-98";
-import { AudioBus } from "./audio.js?v=20260906-98";
-import { getSkillMods } from "./skillTree.js?v=20260906-98";
-import { damageCover, isSoftCover } from "./destructibleCover.js?v=20260906-98";
+import { mitigateDamage, creditKill } from "./combatStats.js?v=20260906-99";
+import { AudioBus } from "./audio.js?v=20260906-99";
+import { getSkillMods } from "./skillTree.js?v=20260906-99";
+import { damageCover, isSoftCover } from "./destructibleCover.js?v=20260906-99";
 
 var grenades = [];
 

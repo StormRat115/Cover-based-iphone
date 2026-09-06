@@ -1,7 +1,7 @@
-import { loadImage } from "./assets.js?v=20260906-98";
+import { loadImage } from "./assets.js?v=20260906-99";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
-  "./assets/generated/soldier/player-ally-atlas.png?v=20260906-98";
+  "./assets/generated/soldier/player-solid-atlas.png?v=20260906-99";
 export const soldierSource = new Image();
 soldierSource.src =
   "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260906-88";
@@ -12,7 +12,7 @@ export const deathSource = new Image();
 deathSource.src = "./assets/soldier_death_sheet.png?v=20260906-88";
 export const vaultSheetSource = new Image();
 vaultSheetSource.src =
-  "./assets/generated/soldier/vault-sheet.png?v=20260906-98";
+  "./assets/generated/soldier/vault-sheet.png?v=20260906-99";
 
 const ENEMY_MONSTER_SHEET_WIDTH = 1536,
   ENEMY_MONSTER_SHEET_HEIGHT = 1022,
@@ -175,25 +175,24 @@ const ENEMY_FRAME_BOXES = {
     [850, 928, 170, 158],
   ],
 };
-const FRIENDLY_CELL = 160;
-const FRIENDLY_COLS = 6;
+const FRIENDLY_CELL = 192;
+const FRIENDLY_COLS = 4;
 const FRIENDLY_ROWS = {
   idle: 0,
   run: 1,
-  tallCover: 2,
+  standShoot: 2,
+  crouchShoot: 3,
+  reload: 4,
+  death: 5,
+  shoot: 2,
+  // Cover rows were removed — they baked a barrier into the sprite.
+  tallCover: 0,
   lowCover: 3,
-  standShoot: 4,
-  crouchShoot: 5,
-  reload: 6,
-  death: 7,
-  shoot: 4,
   vault: 1,
 };
 const FRIENDLY_FPS = {
   idle: 3.2,
   run: 9,
-  tallCover: 3,
-  lowCover: 3,
   standShoot: 10,
   crouchShoot: 10,
   shoot: 10,
@@ -204,8 +203,6 @@ const FRIENDLY_FPS = {
 export const FRIENDLY_ATLAS_STATES = [
   "idle",
   "run",
-  "tallCover",
-  "lowCover",
   "standShoot",
   "crouchShoot",
   "reload",
@@ -511,14 +508,17 @@ function desiredSoldierState(actor) {
   if (!actor) return "idle";
   if (zeroHealth(actor)) return "death";
   if (actor.vaulting || actor.state === "vault") return "vault";
-  if (actor.downed) return "lowCover";
+  if (actor.downed) return "crouchShoot";
   if (actor.reloading || actor.state === "reload") return "reload";
   if (shooting(actor)) {
     if (lowCover(actor)) return "crouchShoot";
-    if (actor.cover) return "shoot";
     return "standShoot";
   }
-  if (actor.cover) return lowCover(actor) ? "lowCover" : "tallCover";
+  // World cover props are drawn separately — never use a baked barrier pose.
+  if (actor.cover) {
+    if (lowCover(actor)) return "crouchShoot";
+    return peekingFromCover(actor) ? "standShoot" : "idle";
+  }
   if (moving(actor)) return "run";
   return "idle";
 }
@@ -605,6 +605,8 @@ function stableFacing(actor, state) {
 
 function frameForFriendly(actor, state) {
   var rowKey = state === "shoot" ? "standShoot" : state;
+  if (rowKey === "tallCover") rowKey = "idle";
+  if (rowKey === "lowCover") rowKey = "crouchShoot";
   if (FRIENDLY_ROWS[rowKey] == null) rowKey = "idle";
   var row = FRIENDLY_ROWS[rowKey];
   var now = nowMs();
@@ -992,7 +994,7 @@ export function drawSoldier(ctx, actor, options) {
       (vaultSrc.naturalWidth > 0 || vaultSrc.width > 0);
   var useFriendly = !isEnemy && runtimeFriendlyAtlas;
   // Atlas cells include padding so the figure is smaller than the cell.
-  if (useFriendly) scale *= 1.68;
+  if (useFriendly) scale *= 1.15;
   var r = useVault
       ? vaultFrame(actor)
       : useFriendly
@@ -1113,8 +1115,6 @@ export function getSoldierAtlasInfo() {
     frameCounts: {
       idle: FRIENDLY_COLS,
       run: FRIENDLY_COLS,
-      lowCover: FRIENDLY_COLS,
-      tallCover: FRIENDLY_COLS,
       shoot: FRIENDLY_COLS,
       crouchShoot: FRIENDLY_COLS,
       standShoot: FRIENDLY_COLS,
@@ -1122,11 +1122,11 @@ export function getSoldierAtlasInfo() {
       death: FRIENDLY_COLS,
       vault: VAULT_COLS,
     },
-    friendlyAtlas: "player-ally-atlas.png",
-    friendlyAtlasWebp: "player-ally-atlas.webp",
+    friendlyAtlas: "player-solid-atlas.png",
     friendlyCell: FRIENDLY_CELL,
     friendlyCols: FRIENDLY_COLS,
     friendlyStates: FRIENDLY_ATLAS_STATES.slice(),
+    coverRows: "mapped",
     vaultSheet: "vault-sheet.png",
     vaultCell: VAULT_CELL,
   };

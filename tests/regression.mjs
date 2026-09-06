@@ -1209,34 +1209,51 @@ test("living friendlies stay fully opaque every animation frame", async () => {
     }),
     "reload",
   );
+  assert.equal(
+    sprites.getSoldierState({
+      hp: 100,
+      dead: false,
+      downed: false,
+      cover: { type: "tall", x: 0, y: 0, w: 40, h: 40 },
+    }),
+    "idle",
+    "tall cover must not use a baked barrier pose",
+  );
+  assert.equal(
+    sprites.getSoldierState({
+      hp: 100,
+      dead: false,
+      downed: false,
+      cover: { type: "low", x: 0, y: 0, w: 40, h: 20 },
+    }),
+    "crouchShoot",
+    "low cover maps to crouchShoot",
+  );
 });
 
-test("player-ally atlas is an 8-state solid binary-alpha sheet", () => {
+test("Phone Art player-solid-atlas is the wired 6-state opaque sheet", () => {
   const meta = JSON.parse(
-    readFileSync("assets/generated/soldier/player-ally-atlas.json", "utf8"),
+    readFileSync("assets/generated/soldier/player-solid-atlas.json", "utf8"),
   );
-  assert.equal(meta.cols, 6);
-  assert.equal(meta.rows, 8);
-  assert.equal(meta.cell, 160);
-  assert.ok(meta.padding >= 16);
+  assert.equal(meta.cols, 4);
+  assert.equal(meta.rows, 6);
+  assert.equal(meta.cell, 192);
   assert.equal(meta.opaque, true);
-  assert.equal(meta.binaryAlpha, true);
-  assert.equal(meta.interiorHoles, 0);
+  assert.equal(meta.alphaHardened, true);
   assert.deepEqual(meta.states, [
     "idle",
     "run",
-    "tallCover",
-    "lowCover",
     "standShoot",
     "crouchShoot",
     "reload",
     "death",
   ]);
-  const png = readFileSync("assets/generated/soldier/player-ally-atlas.png");
-  const webp = readFileSync("assets/generated/soldier/player-ally-atlas.webp");
-  assert.equal(png[25], 6, "player atlas must be an RGBA PNG");
-  assert.ok(webp.length > 1000);
-  assert.ok(webp.length < png.length, "webp should be the mobile-sized file");
+  assert.ok(!meta.states.includes("tallCover"));
+  assert.ok(!meta.states.includes("lowCover"));
+  const png = readFileSync("assets/generated/soldier/player-solid-atlas.png");
+  assert.equal(png[25], 6, "player-solid-atlas must be an RGBA PNG");
+  assert.ok(png.length > 200000);
+  assert.ok(png.length < 1200000, "keep the official sheet mobile-sized");
 });
 
 test("squad HUD shows per-character kill counts", async () => {
