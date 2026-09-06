@@ -308,8 +308,8 @@ function clipSidewalk(ctx, iso, world, side) {
   return true;
 }
 
-function drawStreetScenes(ctx, iso, world, onScreen) {
-  var sides, s, i, item, q, tileW, tileH;
+function drawStreetScenes(ctx, iso, world) {
+  var sides, s, pattern, origin;
   if (!ready(wartornStreet) || !world || !iso) return;
   sides = [-1, 1];
   for (s = 0; s < sides.length; s++) {
@@ -320,15 +320,13 @@ function drawStreetScenes(ctx, iso, world, onScreen) {
     }
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    ctx.globalAlpha = 0.5;
-    for (i = 0; i < STREET_SCENES.length; i++) {
-      item = STREET_SCENES[i];
-      if ((item.x < 0) !== (sides[s] < 0)) continue;
-      if (onScreen && !onScreen(item.x, item.y, 520)) continue;
-      q = iso(item.x, item.y);
-      tileW = 320 * item.s;
-      tileH = 180 * item.s;
-      ctx.drawImage(wartornStreet, q[0] - tileW / 2, q[1] - tileH * 0.55, tileW, tileH);
+    ctx.globalAlpha = 0.34;
+    pattern = ctx.createPattern && ctx.createPattern(wartornStreet, "repeat");
+    origin = iso(sides[s] < 0 ? -1400 : 1400, 0);
+    if (pattern) {
+      ctx.translate(origin[0] % 160, origin[1] % 90);
+      ctx.fillStyle = pattern;
+      ctx.fillRect(-4000, -4000, 8000, 8000);
     }
     ctx.restore();
   }
@@ -421,7 +419,7 @@ export function drawWartornAtmosphere(ctx, W, H) {
 
 export function drawWartornDressing(ctx, iso, world, W, H, onScreen) {
   var i, item, q, img, dw, dh;
-  drawStreetScenes(ctx, iso, world, onScreen);
+  drawStreetScenes(ctx, iso, world);
   for (i = 0; i < SIDE_DRESSING.length; i++) {
     item = SIDE_DRESSING[i];
     if (onScreen && !onScreen(item.x, item.y, 420)) continue;
