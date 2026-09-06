@@ -1,4 +1,4 @@
-import { getTeamProgress, spendSkill } from "./teamProgress.js?v=20260906-97";
+import { getTeamProgress, spendSkill } from "./teamProgress.js?v=20260906-102";
 
 export const SKILL_BRANCHES = [
   {

@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { createHarness } from "./runtime-harness.mjs";
@@ -1192,6 +1193,88 @@ test("living friendlies stay fully opaque every animation frame", async () => {
       assert.equal(drawn[0].filter, "none", "live " + team + " must not stack teamFilter");
     }
   }
+  const ellipsesBefore = h.metrics.ellipses.length;
+  sprites.drawSoldier(ctx, actor, { team: "player", alpha: 0.4 });
+  assert.equal(
+    h.metrics.ellipses.length - ellipsesBefore,
+    1,
+    "live player draws a ground shadow only — no ghost body plate",
+  );
+  assert.equal(
+    sprites.getSoldierState({
+      hp: 100,
+      dead: false,
+      downed: false,
+      reloading: true,
+      state: "reload",
+    }),
+    "reload",
+  );
+  assert.equal(
+    sprites.getSoldierState({
+      hp: 100,
+      dead: false,
+      downed: false,
+      cover: { type: "tall", x: 0, y: 0, w: 40, h: 40 },
+    }),
+    "idle",
+    "tall cover must not use a baked barrier pose",
+  );
+  assert.equal(
+    sprites.getSoldierState({
+      hp: 100,
+      dead: false,
+      downed: false,
+      cover: { type: "low", x: 0, y: 0, w: 40, h: 20 },
+    }),
+    "crouchShoot",
+    "low cover maps to crouchShoot",
+  );
+  assert.equal(
+    JSON.stringify(sprites.FRIENDLY_ATLAS_STATES),
+    JSON.stringify([
+      "idle",
+      "run",
+      "standShoot",
+      "crouchShoot",
+      "reload",
+      "death",
+    ]),
+  );
+  assert.equal(sprites.getSoldierAtlasInfo().coverRows, "mapped");
+});
+
+test("Phone Art player-solid-atlas is the wired 6-state opaque sheet", () => {
+  const meta = JSON.parse(
+    readFileSync("assets/generated/soldier/player-solid-atlas.json", "utf8"),
+  );
+  assert.equal(meta.cols, 4);
+  assert.equal(meta.rows, 6);
+  assert.equal(meta.cell, 192);
+  assert.equal(meta.opaque, true);
+  assert.equal(meta.alphaHardened, true);
+  assert.deepEqual(meta.states, [
+    "idle",
+    "run",
+    "standShoot",
+    "crouchShoot",
+    "reload",
+    "death",
+  ]);
+  assert.ok(!meta.states.includes("tallCover"));
+  assert.ok(!meta.states.includes("lowCover"));
+  const png = readFileSync("assets/generated/soldier/player-solid-atlas.png");
+  assert.equal(png[25], 6, "player-solid-atlas must be an RGBA PNG");
+  assert.ok(png.length > 200000);
+  assert.ok(png.length < 1200000, "keep the official sheet mobile-sized");
+  const framing = spawnSync("python3", ["scripts/verify-player-atlas.py"], {
+    encoding: "utf8",
+  });
+  assert.equal(
+    framing.status,
+    0,
+    framing.stdout + framing.stderr || "run/idle cells must stay upright full-body",
+  );
 });
 
 test("squad HUD shows per-character kill counts", async () => {

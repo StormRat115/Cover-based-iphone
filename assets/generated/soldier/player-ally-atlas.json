@@ -1,7 +1,8 @@
 {
-  "cols": 4,
-  "rows": 7,
+  "cols": 6,
+  "rows": 8,
   "cell": 160,
+  "padding": 18,
   "states": [
     "idle",
     "run",
@@ -9,6 +10,7 @@
     "lowCover",
     "standShoot",
     "crouchShoot",
+    "reload",
     "death"
   ],
   "fps": {
@@ -18,6 +20,14 @@
     "lowCover": 3,
     "standShoot": 10,
     "crouchShoot": 10,
+    "reload": 8,
     "death": 7
-  }
+  },
+  "opaque": true,
+  "binaryAlpha": true,
+  "interiorHoles": 0,
+  "file": "player-ally-atlas.png",
+  "webp": "player-ally-atlas.webp",
+  "pngBytes": 575157,
+  "webpBytes": 366366
 }

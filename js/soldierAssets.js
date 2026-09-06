@@ -1,7 +1,7 @@
-import { loadImage } from "./assets.js?v=20260906-97";
+import { loadImage } from "./assets.js?v=20260906-102";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
-  "./assets/generated/soldier/player-ally-atlas.png?v=20260906-88";
+  "./assets/generated/soldier/player-solid-atlas.png?v=20260906-102";
 export const soldierSource = new Image();
 soldierSource.src =
   "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260906-88";
@@ -12,7 +12,7 @@ export const deathSource = new Image();
 deathSource.src = "./assets/soldier_death_sheet.png?v=20260906-88";
 export const vaultSheetSource = new Image();
 vaultSheetSource.src =
-  "./assets/generated/soldier/vault-sheet.png?v=20260906-88";
+  "./assets/generated/soldier/vault-sheet.png?v=20260906-99";
 
 const ENEMY_MONSTER_SHEET_WIDTH = 1536,
   ENEMY_MONSTER_SHEET_HEIGHT = 1022,
@@ -175,30 +175,39 @@ const ENEMY_FRAME_BOXES = {
     [850, 928, 170, 158],
   ],
 };
-const FRIENDLY_CELL = 160;
+const FRIENDLY_CELL = 192;
 const FRIENDLY_COLS = 4;
 const FRIENDLY_ROWS = {
   idle: 0,
   run: 1,
-  tallCover: 2,
+  standShoot: 2,
+  crouchShoot: 3,
+  reload: 4,
+  death: 5,
+  shoot: 2,
+  // Cover rows were removed — they baked a barrier into the sprite.
+  tallCover: 0,
   lowCover: 3,
-  standShoot: 4,
-  crouchShoot: 5,
-  death: 6,
-  shoot: 4,
   vault: 1,
 };
 const FRIENDLY_FPS = {
   idle: 3.2,
   run: 9,
-  tallCover: 3,
-  lowCover: 3,
   standShoot: 10,
   crouchShoot: 10,
   shoot: 10,
+  reload: 8,
   death: 7,
   vault: 10,
 };
+export const FRIENDLY_ATLAS_STATES = [
+  "idle",
+  "run",
+  "standShoot",
+  "crouchShoot",
+  "reload",
+  "death",
+];
 const VAULT_COLS = 4;
 const VAULT_CELL = 168;
 let runtimeFriendlyAtlas = null;
@@ -239,6 +248,7 @@ const STATE_HOLD_MS = {
   crouchShoot: 110,
   standShoot: 110,
   vault: 70,
+  reload: 220,
   death: 99999,
 };
 function nowMs() {
@@ -247,7 +257,8 @@ function nowMs() {
     : Date.now();
 }
 
-/** Snap milky/soft atlas pixels to binary alpha and zero leftover RGB. */
+/** Snap milky/soft atlas pixels to binary alpha and zero leftover RGB.
+ *  Does not wash colors — pale lifts were reading as ghosts. */
 export function hardenSheetAlpha(source, cut) {
   if (!source || !(source.naturalWidth || source.width)) return source;
   cut = cut == null ? 40 : cut;
@@ -262,18 +273,89 @@ export function hardenSheetAlpha(source, cut) {
     g.drawImage(source, 0, 0);
     var img = g.getImageData(0, 0, c.width, c.height);
     if (!img || !img.data) return source;
-    var d = img.data;
-    for (var i = 0; i < d.length; i += 4) {
+    var d = img.data,
+      w = c.width,
+      h = c.height,
+      i,
+      x,
+      y,
+      idx,
+      mid = 0;
+    for (i = 0; i < d.length; i += 4) {
       if (d[i + 3] < cut) {
         d[i] = 0;
         d[i + 1] = 0;
         d[i + 2] = 0;
         d[i + 3] = 0;
       } else {
-        // Lift dark body pixels so they read as solid figures on asphalt.
-        d[i] = Math.min(255, Math.round(d[i] * 1.62 + 30));
-        d[i + 1] = Math.min(255, Math.round(d[i + 1] * 1.62 + 30));
-        d[i + 2] = Math.min(255, Math.round(d[i + 2] * 1.62 + 30));
+        if (d[i + 3] < 255) mid++;
+        d[i + 3] = 255;
+      }
+    }
+    if (!mid) {
+      g.putImageData(img, 0, 0);
+      return c;
+    }
+    // Soft source: fill enclosed transparent pockets so the road cannot show through.
+    var opaque = new Uint8Array(w * h),
+      exterior = new Uint8Array(w * h),
+      stack = [];
+    for (i = 0; i < opaque.length; i++) opaque[i] = d[i * 4 + 3] === 255 ? 1 : 0;
+    function push(px, py) {
+      if (px < 0 || py < 0 || px >= w || py >= h) return;
+      var p = py * w + px;
+      if (opaque[p] || exterior[p]) return;
+      exterior[p] = 1;
+      stack.push(p);
+    }
+    for (x = 0; x < w; x++) {
+      push(x, 0);
+      push(x, h - 1);
+    }
+    for (y = 0; y < h; y++) {
+      push(0, y);
+      push(w - 1, y);
+    }
+    while (stack.length) {
+      var p = stack.pop(),
+        px = p % w,
+        py = (p - px) / w;
+      push(px - 1, py);
+      push(px + 1, py);
+      push(px, py - 1);
+      push(px, py + 1);
+    }
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) {
+        idx = y * w + x;
+        if (opaque[idx] || exterior[idx]) continue;
+        var sr = 0,
+          sg = 0,
+          sb = 0,
+          n = 0,
+          k;
+        for (k = 0; k < 4; k++) {
+          var nx = x + (k === 0 ? -1 : k === 1 ? 1 : 0),
+            ny = y + (k === 2 ? -1 : k === 3 ? 1 : 0);
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          var ni = (ny * w + nx) * 4;
+          if (d[ni + 3] === 255) {
+            sr += d[ni];
+            sg += d[ni + 1];
+            sb += d[ni + 2];
+            n++;
+          }
+        }
+        i = idx * 4;
+        if (n) {
+          d[i] = Math.round(sr / n);
+          d[i + 1] = Math.round(sg / n);
+          d[i + 2] = Math.round(sb / n);
+        } else {
+          d[i] = 58;
+          d[i + 1] = 52;
+          d[i + 2] = 44;
+        }
         d[i + 3] = 255;
       }
     }
@@ -426,13 +508,17 @@ function desiredSoldierState(actor) {
   if (!actor) return "idle";
   if (zeroHealth(actor)) return "death";
   if (actor.vaulting || actor.state === "vault") return "vault";
-  if (actor.downed) return "lowCover";
+  if (actor.downed) return "crouchShoot";
+  if (actor.reloading || actor.state === "reload") return "reload";
   if (shooting(actor)) {
     if (lowCover(actor)) return "crouchShoot";
-    if (actor.cover) return "shoot";
     return "standShoot";
   }
-  if (actor.cover) return lowCover(actor) ? "lowCover" : "tallCover";
+  // World cover props are drawn separately — never use a baked barrier pose.
+  if (actor.cover) {
+    if (lowCover(actor)) return "crouchShoot";
+    return peekingFromCover(actor) ? "standShoot" : "idle";
+  }
   if (moving(actor)) return "run";
   return "idle";
 }
@@ -461,6 +547,7 @@ export function getSoldierState(actor) {
     desired === "shoot" ||
     desired === "crouchShoot" ||
     desired === "standShoot" ||
+    desired === "reload" ||
     actor.__visualAnimState === "death";
   if (urgent || now >= (actor.__animLockUntil || 0)) {
     actor.__visualAnimState = desired;
@@ -518,6 +605,8 @@ function stableFacing(actor, state) {
 
 function frameForFriendly(actor, state) {
   var rowKey = state === "shoot" ? "standShoot" : state;
+  if (rowKey === "tallCover") rowKey = "idle";
+  if (rowKey === "lowCover") rowKey = "crouchShoot";
   if (FRIENDLY_ROWS[rowKey] == null) rowKey = "idle";
   var row = FRIENDLY_ROWS[rowKey];
   var now = nowMs();
@@ -904,6 +993,7 @@ export function drawSoldier(ctx, actor, options) {
       (vaultSrc.complete !== false) &&
       (vaultSrc.naturalWidth > 0 || vaultSrc.width > 0);
   var useFriendly = !isEnemy && runtimeFriendlyAtlas;
+  // Atlas cells include padding so the figure is smaller than the cell.
   if (useFriendly) scale *= 1.15;
   var r = useVault
       ? vaultFrame(actor)
@@ -932,9 +1022,7 @@ export function drawSoldier(ctx, actor, options) {
     ctx.globalAlpha *= 0.82;
   }
   ctx.scale(flip, 1);
-  // Live friendlies: no filter, no blend crossfade, alpha forced to 1.
-  // Verified: atlas alpha is already binary, but leftover RGB + vault mid-alpha
-  // + cover overdraw made soldiers look milky. Harden + single opaque blit.
+  // Live friendlies: one opaque blit. No filter, no crossfade, no ghost plate.
   ctx.filter = liveFriendly ? "none" : teamFilter(team);
   ctx.imageSmoothingEnabled = true;
   var drawAtlas = useVault
@@ -949,11 +1037,9 @@ export function drawSoldier(ctx, actor, options) {
       ctx.globalAlpha = 1;
       ctx.filter = "none";
       ctx.globalCompositeOperation = "source-over";
-      ctx.fillStyle =
-        team === "ally" ? "#3a5368" : team === "marine" ? "#4a4f38" : "#4f4d46";
-      ctx.beginPath();
-      ctx.ellipse(0, -dh * 0.44, dw * 0.3, dh * 0.46, 0, 0, Math.PI * 2);
-      ctx.fill();
+      // Nearest-neighbor keeps binary atlas alpha; bilinear smoothing
+      // invents milky fringe when the 160px cell is drawn small.
+      ctx.imageSmoothingEnabled = false;
       ctx.drawImage(
         drawAtlas,
         r.col * cellW,
@@ -1027,16 +1113,20 @@ export function getSoldierAtlasInfo() {
       rows: ENEMY_MONSTER_ROWS,
     },
     frameCounts: {
-      idle: 5,
-      run: 8,
-      lowCover: 7,
-      tallCover: 7,
-      shoot: 7,
-      crouchShoot: 6,
-      standShoot: 5,
-      death: DEATH_FRAMES,
+      idle: FRIENDLY_COLS,
+      run: FRIENDLY_COLS,
+      shoot: FRIENDLY_COLS,
+      crouchShoot: FRIENDLY_COLS,
+      standShoot: FRIENDLY_COLS,
+      reload: FRIENDLY_COLS,
+      death: FRIENDLY_COLS,
       vault: VAULT_COLS,
     },
+    friendlyAtlas: "player-solid-atlas.png",
+    friendlyCell: FRIENDLY_CELL,
+    friendlyCols: FRIENDLY_COLS,
+    friendlyStates: FRIENDLY_ATLAS_STATES.slice(),
+    coverRows: "mapped",
     vaultSheet: "vault-sheet.png",
     vaultCell: VAULT_CELL,
   };
