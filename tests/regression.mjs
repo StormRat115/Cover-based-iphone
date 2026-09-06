@@ -398,7 +398,7 @@ test("mission cover layouts are unique, reproducible, and keep spawn lanes clear
     different,
     "different missions need different layouts",
   );
-  assert.ok(first.length >= 52 && first.length <= 58);
+  assert.ok(first.length >= 26 && first.length <= 32);
   assert.ok(first.some((cover) => cover.y < -5000));
   assert.ok(first.some((cover) => cover.id === "fort-front"));
   for (const cover of first) {
@@ -412,13 +412,43 @@ test("mission cover layouts are unique, reproducible, and keep spawn lanes clear
     for (let j = i + 1; j < first.length; j++) {
       const a = first[i];
       const b = first[j];
+      const fortPair = city.isFortCover(a) && city.isFortCover(b);
+      if (fortPair) {
+        assert.ok(
+          Math.abs(a.x - b.x) >= (a.w + b.w) / 2 + 40 ||
+            Math.abs(a.y - b.y) >= (a.h + b.h) / 2 + 36,
+          "fort set pieces may cluster but must not sit on the same XY",
+        );
+        continue;
+      }
+      if (city.isFortCover(a) || city.isFortCover(b)) {
+        assert.ok(
+          Math.abs(a.x - b.x) >= (a.w + b.w) / 2 + 90 ||
+            Math.abs(a.y - b.y) >= (a.h + b.h) / 2 + 72,
+          "procedural cover must not overlap the fort",
+        );
+        continue;
+      }
+      assert.equal(
+        city.coversTooClose(a, b),
+        false,
+        "street cover must stay spaced along the corridor",
+      );
       assert.ok(
-        Math.abs(a.x - b.x) >= (a.w + b.w) / 2 + 90 ||
-          Math.abs(a.y - b.y) >= (a.h + b.h) / 2 + 72,
-        "procedural cover must not overlap",
+        Math.hypot(a.x - b.x, a.y - b.y) >= city.STREET_COVER_MIN_DIST,
+        "street cover must not pile at the same XY",
+      );
+      assert.ok(
+        Math.abs(a.x) <= city.STREET_COVER_HALF,
+        "cover stays on the asphalt, not the sidewalks",
       );
     }
   }
+  const street = first.filter((cover) => !city.isFortCover(cover));
+  const xs = street.map((cover) => cover.x);
+  const ys = street.map((cover) => cover.y);
+  assert.ok(Math.min(...xs) < -300 && Math.max(...xs) > 300, "lanes use the street width");
+  assert.ok(Math.min(...ys) < -4500 && Math.max(...ys) > -800, "cover runs the corridor");
 });
 
 test("optimized cover checks match the original 35-sample rule", async () => {
@@ -1128,6 +1158,9 @@ test("living friendlies stay fully opaque every animation frame", async () => {
   const h = createHarness();
   const sprites = await h.importModule(`js/soldierAssets.js?v=${BUILD}`);
   await sprites.preloadSoldierAssets();
+  assert.equal(typeof sprites.hardenSheetAlpha, "function");
+  assert.equal(sprites.isLiveFriendly({ hp: 80, dead: false, downed: false }, "ally"), true);
+  assert.equal(sprites.isLiveFriendly({ hp: 0, dead: true }, "player"), false);
   const actor = {
     x: 0,
     y: 0,
@@ -1142,16 +1175,63 @@ test("living friendlies stay fully opaque every animation frame", async () => {
     downed: false,
   };
   const ctx = h.document.createElement("canvas").getContext("2d");
-  for (let i = 0; i < 36; i++) {
-    h.frame(40);
-    const before = h.metrics.drawImages.length;
-    sprites.drawSoldier(ctx, actor, { team: "player", alpha: 1 });
-    assert.ok(
-      h.metrics.drawImages.length > before,
-      "alive soldiers must draw a sprite every frame",
-    );
-    sprites.drawSoldier(ctx, actor, { team: "ally", alpha: 1 });
+  for (const team of ["player", "ally", "marine"]) {
+    for (let i = 0; i < 36; i++) {
+      h.frame(40);
+      ctx.globalAlpha = 0.35;
+      ctx.filter = "sepia(1) saturate(1.2)";
+      const before = h.metrics.drawImages.length;
+      sprites.drawSoldier(ctx, actor, { team, alpha: 0.4 });
+      const drawn = h.metrics.drawImages.slice(before);
+      assert.equal(
+        drawn.length,
+        1,
+        "alive " + team + " must blit one opaque frame (no mid-alpha blend)",
+      );
+      assert.equal(drawn[0].globalAlpha, 1, "live " + team + " globalAlpha must be 1");
+      assert.equal(drawn[0].filter, "none", "live " + team + " must not stack teamFilter");
+    }
   }
+});
+
+test("squad HUD shows per-character kill counts", async () => {
+  const h = createHarness();
+  const stats = await h.importModule(`js/combatStats.js?v=${BUILD}`);
+  const hud = await h.importModule(`js/squadHud.js?v=${BUILD}`);
+  const shooter = { kills: 0 };
+  assert.equal(stats.creditKill(shooter), 1);
+  assert.equal(stats.creditKill(shooter), 2);
+  h.window.__battlePlayer = {
+    hp: 100,
+    maxHp: 100,
+    defense: 50,
+    dead: false,
+    downed: false,
+    kills: 3,
+    weapon: { short: "RIFLE" },
+  };
+  h.window.__battleAllies = [
+    {
+      name: "Rook",
+      hp: 150,
+      maxHp: 150,
+      defense: 100,
+      dead: false,
+      downed: false,
+      kills: 2,
+      weapon: { short: "RIFLE" },
+    },
+  ];
+  h.window.__battleMarines = [
+    { name: "Marine 1", dead: false, kills: 4 },
+    { name: "Marine 2", dead: true, kills: 1 },
+  ];
+  hud.updateSquadHud();
+  const html = h.nodes.get("squadHealthHud").innerHTML;
+  assert.match(html, /KILLS 3/);
+  assert.match(html, /KILLS 2/);
+  assert.match(html, /KILLS 4/);
+  assert.match(html, /MARINE 1/);
 });
 
 test("team XP formula levels and grants one skill point per level", async () => {

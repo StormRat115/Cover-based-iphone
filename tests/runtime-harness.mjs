@@ -128,7 +128,14 @@ export function createHarness({
               if (key in target) return target[key];
               return (...args) => {
                 if (key === "ellipse") metrics.ellipses.push(args);
-                if (key === "drawImage") metrics.drawImages.push(args);
+                if (key === "drawImage") {
+                  args.globalAlpha =
+                    target.globalAlpha == null ? 1 : target.globalAlpha;
+                  args.filter = target.filter || "none";
+                  args.globalCompositeOperation =
+                    target.globalCompositeOperation || "source-over";
+                  metrics.drawImages.push(args);
+                }
                 if (key === "stroke")
                   metrics.strokes.push({
                     strokeStyle: target.strokeStyle,

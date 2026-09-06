@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-91";
+import { loadImage } from "./assets.js?v=20260906-97";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
   "./assets/generated/soldier/player-ally-atlas.png?v=20260906-88";
@@ -51,7 +51,8 @@ const DEATH_FRAMES = 6,
   DEATH_DURATION = (DEATH_FRAMES - 1) / DEATH_FPS,
   DEATH_SCALE = 0.62;
 let runtimeAtlas = null,
-  runtimeEnemyAtlas = null;
+  runtimeEnemyAtlas = null,
+  runtimeVaultSheet = null;
 const FRAME_BOXES = {
   idle: [
     [200, 0, 120, 165],
@@ -245,6 +246,52 @@ function nowMs() {
     ? performance.now()
     : Date.now();
 }
+
+/** Snap milky/soft atlas pixels to binary alpha and zero leftover RGB. */
+export function hardenSheetAlpha(source, cut) {
+  if (!source || !(source.naturalWidth || source.width)) return source;
+  cut = cut == null ? 40 : cut;
+  try {
+    var c = document.createElement("canvas");
+    c.width = source.naturalWidth || source.width;
+    c.height = source.naturalHeight || source.height;
+    if (!c.width || !c.height) return source;
+    var g = c.getContext("2d", { willReadFrequently: true });
+    if (!g || typeof g.getImageData !== "function") return source;
+    g.clearRect(0, 0, c.width, c.height);
+    g.drawImage(source, 0, 0);
+    var img = g.getImageData(0, 0, c.width, c.height);
+    if (!img || !img.data) return source;
+    var d = img.data;
+    for (var i = 0; i < d.length; i += 4) {
+      if (d[i + 3] < cut) {
+        d[i] = 0;
+        d[i + 1] = 0;
+        d[i + 2] = 0;
+        d[i + 3] = 0;
+      } else {
+        // Lift dark body pixels so they read as solid figures on asphalt.
+        d[i] = Math.min(255, Math.round(d[i] * 1.62 + 30));
+        d[i + 1] = Math.min(255, Math.round(d[i + 1] * 1.62 + 30));
+        d[i + 2] = Math.min(255, Math.round(d[i + 2] * 1.62 + 30));
+        d[i + 3] = 255;
+      }
+    }
+    g.putImageData(img, 0, 0);
+    return c;
+  } catch (err) {
+    return source;
+  }
+}
+
+export function isLiveFriendly(actor, team) {
+  return !!(
+    actor &&
+    team !== "enemy" &&
+    !zeroHealth(actor) &&
+    !actor.downed
+  );
+}
 function buildAtlas(source, boxes) {
   var c = document.createElement("canvas");
   c.width = COLS * CELL;
@@ -290,7 +337,8 @@ export function preloadSoldierAssets(onProgress) {
     onProgress(0.68, "BUILDING CHARACTER ANIMATIONS");
     if (imgs.some((image) => !image))
       throw new Error("Character images are not ready");
-    runtimeFriendlyAtlas = friendlyAtlasSource;
+    runtimeFriendlyAtlas = hardenSheetAlpha(friendlyAtlasSource) || friendlyAtlasSource;
+    runtimeVaultSheet = hardenSheetAlpha(vaultSheetSource) || vaultSheetSource;
     // Legacy crop atlas kept as fallback; enemies still use monster atlas path.
     const soldierAtlas = buildAtlas(soldierSource, FRAME_BOXES);
     const monsterAtlas = buildAtlas(enemySource, ENEMY_FRAME_BOXES);
@@ -300,13 +348,24 @@ export function preloadSoldierAssets(onProgress) {
     return { soldierAtlas: runtimeAtlas, monsterAtlas };
   });
 }
+function vaultSheet() {
+  return runtimeVaultSheet || vaultSheetSource;
+}
+
 function vaultFrame(actor) {
   var u = actor && actor.vaulting ? Math.min(0.999, (actor.vaultT || 0) / 0.46) : 0;
   var col = u < 0.22 ? 0 : u < 0.5 ? 1 : u < 0.78 ? 2 : 3;
-  var sheet = vaultSheetSource;
+  var sheet = vaultSheet();
   var cellW =
-    sheet.naturalWidth > 0 ? Math.round(sheet.naturalWidth / VAULT_COLS) : VAULT_CELL;
-  var cellH = sheet.naturalHeight > 0 ? sheet.naturalHeight : VAULT_CELL;
+    sheet.naturalWidth > 0
+      ? Math.round(sheet.naturalWidth / VAULT_COLS)
+      : sheet.width
+        ? Math.round(sheet.width / VAULT_COLS)
+        : VAULT_CELL;
+  var cellH =
+    sheet.naturalHeight > 0
+      ? sheet.naturalHeight
+      : sheet.height || VAULT_CELL;
   return { col: col, nextCol: col, blend: 0, row: 0, w: cellW, h: cellH, state: "vault" };
 }
 function moving(actor) {
@@ -825,7 +884,9 @@ export function drawSoldier(ctx, actor, options) {
     (options.x || 0) + plant.x,
     (options.y || 0) + bob + plant.y - vaultLift,
   );
-  var liveFriendly = !isEnemy && !zeroHealth(actor) && !actor.downed;
+  var liveFriendly = isLiveFriendly(actor, team);
+  ctx.globalCompositeOperation = "source-over";
+  ctx.filter = liveFriendly ? "none" : teamFilter(team);
   ctx.globalAlpha = liveFriendly ? 1 : options.alpha == null ? 1 : options.alpha;
   if (state === "death") {
     if (isEnemy) {
@@ -836,10 +897,12 @@ export function drawSoldier(ctx, actor, options) {
       return;
     } else if (!runtimeFriendlyAtlas) state = "lowCover";
   }
+  var vaultSrc = vaultSheet();
   var useVault =
       state === "vault" &&
-      vaultSheetSource.complete &&
-      vaultSheetSource.naturalWidth > 0;
+      vaultSrc &&
+      (vaultSrc.complete !== false) &&
+      (vaultSrc.naturalWidth > 0 || vaultSrc.width > 0);
   var useFriendly = !isEnemy && runtimeFriendlyAtlas;
   if (useFriendly) scale *= 1.15;
   var r = useVault
@@ -869,11 +932,13 @@ export function drawSoldier(ctx, actor, options) {
     ctx.globalAlpha *= 0.82;
   }
   ctx.scale(flip, 1);
-  // CSS filters on live friendlies were a hypothesized vanish path; keep them off.
+  // Live friendlies: no filter, no blend crossfade, alpha forced to 1.
+  // Verified: atlas alpha is already binary, but leftover RGB + vault mid-alpha
+  // + cover overdraw made soldiers look milky. Harden + single opaque blit.
   ctx.filter = liveFriendly ? "none" : teamFilter(team);
   ctx.imageSmoothingEnabled = true;
   var drawAtlas = useVault
-    ? vaultSheetSource
+    ? vaultSrc
     : useFriendly
       ? runtimeFriendlyAtlas
       : atlas;
@@ -883,6 +948,12 @@ export function drawSoldier(ctx, actor, options) {
     if (liveFriendly) {
       ctx.globalAlpha = 1;
       ctx.filter = "none";
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle =
+        team === "ally" ? "#3a5368" : team === "marine" ? "#4a4f38" : "#4f4d46";
+      ctx.beginPath();
+      ctx.ellipse(0, -dh * 0.44, dw * 0.3, dh * 0.46, 0, 0, Math.PI * 2);
+      ctx.fill();
       ctx.drawImage(
         drawAtlas,
         r.col * cellW,

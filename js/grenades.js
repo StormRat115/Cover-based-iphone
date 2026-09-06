@@ -1,7 +1,7 @@
-import { mitigateDamage } from "./combatStats.js?v=20260906-91";
-import { AudioBus } from "./audio.js?v=20260906-91";
-import { getSkillMods } from "./skillTree.js?v=20260906-91";
-import { damageCover, isSoftCover } from "./destructibleCover.js?v=20260906-91";
+import { mitigateDamage, creditKill } from "./combatStats.js?v=20260906-97";
+import { AudioBus } from "./audio.js?v=20260906-97";
+import { getSkillMods } from "./skillTree.js?v=20260906-97";
+import { damageCover, isSoftCover } from "./destructibleCover.js?v=20260906-97";
 
 var grenades = [];
 
@@ -66,6 +66,7 @@ export function throwGrenade(from, target, mods) {
     radius: mods.grenadeRadius || 150,
     damage: mods.grenadeDamage || 38,
     sparks: [],
+    owner: from,
   };
   grenades.push(g);
   from.grenadeReadyAt = (from.grenadeReadyAt || 0) + 0.01;
@@ -105,6 +106,7 @@ function applyBlast(g, enemies) {
       e.hp = 0;
       e.dead = true;
       e.deathTimer = 0;
+      creditKill(g.owner);
     }
   });
   if (AudioBus && AudioBus.playBoom) AudioBus.playBoom({ volume: 0.7, priority: 3 });

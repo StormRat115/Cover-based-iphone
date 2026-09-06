@@ -231,8 +231,36 @@ function shuffled(items, random) {
   return result;
 }
 
+// Asphalt half-width matches wartornCity ROAD. Cover stays on the road;
+// sidewalks/buildings stay on the edges as backdrop.
+export const STREET_ROAD_HALF = 980;
+export const STREET_COVER_HALF = 720;
+export const STREET_COVER_LANES = [-580, 0, 580];
+export const STREET_COVER_Y0 = -320;
+export const STREET_COVER_Y1 = -5180;
+export const STREET_COVER_GAP_X = 200;
+export const STREET_COVER_GAP_Y = 280;
+export const STREET_COVER_MIN_DIST = 400;
+
+export function isFortCover(cover) {
+  return !!(cover && cover.id && String(cover.id).indexOf("fort-") === 0);
+}
+
+export function coversTooClose(a, b, padX, padY, minDist) {
+  if (!a || !b) return false;
+  padX = padX == null ? STREET_COVER_GAP_X : padX;
+  padY = padY == null ? STREET_COVER_GAP_Y : padY;
+  minDist = minDist == null ? STREET_COVER_MIN_DIST : minDist;
+  if (Math.hypot(a.x - b.x, a.y - b.y) < minDist) return true;
+  return (
+    Math.abs(a.x - b.x) < (a.w + b.w) / 2 + padX &&
+    Math.abs(a.y - b.y) < (a.h + b.h) / 2 + padY
+  );
+}
+
 function isClear(candidate, placed) {
   const extent = Math.max(candidate.w, candidate.h) / 2;
+  if (Math.abs(candidate.x) > STREET_COVER_HALF) return false;
   if (
     Math.hypot(
       candidate.x - PLAYER_SAFE_ZONE.x,
@@ -263,35 +291,68 @@ function isClear(candidate, placed) {
   )
     return false;
   return placed.every(function (other) {
-    return !(
-      Math.abs(candidate.x - other.x) < (candidate.w + other.w) / 2 + 90 &&
-      Math.abs(candidate.y - other.y) < (candidate.h + other.h) / 2 + 72
-    );
+    return !coversTooClose(candidate, other);
+  });
+}
+
+function cloneCover(template, id, x, y) {
+  return Object.assign({}, template, {
+    id: id,
+    x: Math.round(x),
+    y: Math.round(y),
+    segments: template.segments
+      ? template.segments.map((segment) => Object.assign({}, segment))
+      : null,
   });
 }
 
 export function createCityCoverLayout(random = Math.random) {
   const templates = shuffled(createCityCoverTemplates(), random);
-  const targetCount = 48 + Math.floor(random() * 7);
+  const targetCount = 22 + Math.floor(random() * 4);
   const placed = [];
+  const lanes = STREET_COVER_LANES;
+  const rows = Math.max(1, Math.ceil(targetCount / lanes.length));
+  const yStride = (STREET_COVER_Y0 - STREET_COVER_Y1) / rows;
+
+  function tryPlace(template, slot, x, y) {
+    x = Math.max(-STREET_COVER_HALF, Math.min(STREET_COVER_HALF, x));
+    y = Math.max(STREET_COVER_Y1, Math.min(STREET_COVER_Y0, y));
+    const candidate = cloneCover(
+      template,
+      "street-" + slot + "-" + template.id,
+      x,
+      y,
+    );
+    if (!isClear(candidate, placed)) return false;
+    placed.push(candidate);
+    return true;
+  }
+
   for (let slot = 0; slot < targetCount; slot++) {
     const template = templates[slot % templates.length];
-    for (let attempt = 0; attempt < 140; attempt++) {
-      const progress = (slot + 1) / (targetCount + 2);
-      const lane = ((slot + attempt) % 5) - 2;
-      const candidate = Object.assign({}, template, {
-        id: "street-" + slot + "-" + template.id,
-        x: Math.round(lane * 270 + (random() - 0.5) * 190),
-        y: Math.round(-250 - progress * 5000 + (random() - 0.5) * 280),
-        segments: template.segments
-          ? template.segments.map((segment) => Object.assign({}, segment))
-          : null,
-      });
-      if (isClear(candidate, placed)) {
-        placed.push(candidate);
-        break;
-      }
+    const lane = slot % lanes.length;
+    const row = Math.floor(slot / lanes.length);
+    // Stagger odd lanes by half a stride so exclusive slots do not form a wall.
+    const yBase = STREET_COVER_Y0 - (row + 0.5) * yStride - (lane % 2) * (yStride * 0.35);
+    let placedSlot = false;
+    for (let attempt = 0; attempt < 180 && !placedSlot; attempt++) {
+      const laneX = lanes[(lane + attempt) % lanes.length];
+      const x = laneX + (random() - 0.5) * 72;
+      const y = yBase + (random() - 0.5) * 48 + (attempt % 9 - 4) * (yStride * 0.22);
+      placedSlot = tryPlace(template, slot, x, y);
     }
+  }
+
+  // Fill holes so street + fort stay in the 26–32 piece band.
+  let extra = 0;
+  while (placed.length < targetCount && extra < 220) {
+    const template = templates[extra % templates.length];
+    const laneX = lanes[extra % lanes.length];
+    const t = (extra * 0.173) % 1;
+    const x = laneX + (random() - 0.5) * 80;
+    const y = STREET_COVER_Y0 - t * (STREET_COVER_Y0 - STREET_COVER_Y1);
+    tryPlace(template, placed.length, x, y);
+    extra++;
   }
   placed.push(
     makeShapedCover({
