@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-76";
+import { loadImage } from "./assets.js?v=20260906-77";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
@@ -7,16 +7,22 @@ export const generatedCoverAtlas = new Image();
 generatedCoverAtlas.src =
   "./assets/generated/cover-runtime-atlas.webp?v=20260905-62";
 export const groundTile = new Image();
-groundTile.src = "./assets/generated/tile-asphalt.png?v=20260906-76";
+groundTile.src = "./assets/generated/tile-asphalt.png?v=20260906-77";
 export const buildingRuinA = new Image();
-buildingRuinA.src = "./assets/generated/building-ruin-a.png?v=20260906-76";
+buildingRuinA.src = "./assets/generated/building-ruin-a.png?v=20260906-77";
 export const buildingRuinB = new Image();
-buildingRuinB.src = "./assets/generated/building-ruin-b.png?v=20260906-76";
+buildingRuinB.src = "./assets/generated/building-ruin-b.png?v=20260906-77";
+export const roadSegments = {
+  plain: Object.assign(new Image(), { src: "./assets/generated/road/seg-plain.png?v=20260906-77" }),
+  lane: Object.assign(new Image(), { src: "./assets/generated/road/seg-lane.png?v=20260906-77" }),
+  crosswalk: Object.assign(new Image(), { src: "./assets/generated/road/seg-crosswalk.png?v=20260906-77" }),
+  stain: Object.assign(new Image(), { src: "./assets/generated/road/seg-stain.png?v=20260906-77" }),
+};
 export const organicCovers = {
-  jersey: Object.assign(new Image(), { src: "./assets/generated/cover-jersey-organic.png?v=20260906-76" }),
-  sandbags: Object.assign(new Image(), { src: "./assets/generated/cover-sandbags-organic.png?v=20260906-76" }),
-  crates: Object.assign(new Image(), { src: "./assets/generated/cover-crates-organic.png?v=20260906-76" }),
-  sedan: Object.assign(new Image(), { src: "./assets/generated/cover-sedan-organic.png?v=20260906-76" }),
+  jersey: Object.assign(new Image(), { src: "./assets/generated/cover-jersey-organic.png?v=20260906-77" }),
+  sandbags: Object.assign(new Image(), { src: "./assets/generated/cover-sandbags-organic.png?v=20260906-77" }),
+  crates: Object.assign(new Image(), { src: "./assets/generated/cover-crates-organic.png?v=20260906-77" }),
+  sedan: Object.assign(new Image(), { src: "./assets/generated/cover-sedan-organic.png?v=20260906-77" }),
 };
 
 export function preloadCityAssets(onProgress) {
@@ -25,6 +31,9 @@ export function preloadCityAssets(onProgress) {
   var organicList = Object.keys(organicCovers).map(function (k) {
     return loadImage(organicCovers[k]);
   });
+  var roadList = Object.keys(roadSegments).map(function (k) {
+    return loadImage(roadSegments[k]);
+  });
   return Promise.all(
     [
       loadImage(cityAtlas),
@@ -32,7 +41,7 @@ export function preloadCityAssets(onProgress) {
       loadImage(groundTile),
       loadImage(buildingRuinA),
       loadImage(buildingRuinB),
-    ].concat(organicList),
+    ].concat(organicList, roadList),
   ).then(function (images) {
     if (images.some(function (img) { return !img; }))
       throw new Error("City environment images are not ready");

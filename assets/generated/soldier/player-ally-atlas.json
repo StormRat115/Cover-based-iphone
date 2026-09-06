@@ -1,0 +1,23 @@
+{
+  "cols": 4,
+  "rows": 7,
+  "cell": 160,
+  "states": [
+    "idle",
+    "run",
+    "tallCover",
+    "lowCover",
+    "standShoot",
+    "crouchShoot",
+    "death"
+  ],
+  "fps": {
+    "idle": 3.2,
+    "run": 9,
+    "tallCover": 3,
+    "lowCover": 3,
+    "standShoot": 10,
+    "crouchShoot": 10,
+    "death": 7
+  }
+}

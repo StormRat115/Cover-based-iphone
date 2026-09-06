@@ -1,63 +1,64 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-76";
+import { createGameLoop } from "./gameLoop.js?v=20260906-77";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-76";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-76";
+} from "./geometry.js?v=20260906-77";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-77";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-76";
-import { updateSquadHud } from "./squadHud.js?v=20260906-76";
-import { updateCombatHud } from "./combatHud.js?v=20260906-76";
-import { updatePlayerHud } from "./player.js?v=20260906-76";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-76";
-import "./squadDrawer.js?v=20260906-76";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-76";
+} from "./bloodEffects.js?v=20260906-77";
+import { updateSquadHud } from "./squadHud.js?v=20260906-77";
+import { updateCombatHud } from "./combatHud.js?v=20260906-77";
+import { updatePlayerHud } from "./player.js?v=20260906-77";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-77";
+import "./squadDrawer.js?v=20260906-77";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-77";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-76";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-76";
+} from "./enemy.js?v=20260906-77";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-77";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-76";
+} from "./marines.js?v=20260906-77";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-76";
+} from "./streetMission.js?v=20260906-77";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-76";
+} from "./supportVehicle.js?v=20260906-77";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260906-76";
+} from "./cover.js?v=20260906-77";
 import {
   groundTile,
   buildingRuinA,
   buildingRuinB,
-} from "./cityAssets.js?v=20260906-76";
+  roadSegments,
+} from "./cityAssets.js?v=20260906-77";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-76";
-import { initTactical } from "./tactical.js?v=20260906-76";
-import { AudioBus } from "./audio.js?v=20260906-76";
+} from "./input.js?v=20260906-77";
+import { initTactical } from "./tactical.js?v=20260906-77";
+import { AudioBus } from "./audio.js?v=20260906-77";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -1002,7 +1003,32 @@ function drawMapDecor() {
     drawCrosswalk(crossY);
 
   // Buildings parked — street-only map for now.
-  // Street lamps along the wide curbs
+  // Isometric road segment accents (overlapping, irregular — not a grid).
+  if (roadSegments) {
+    var kinds = ["plain", "lane", "stain", "plain", "crosswalk", "plain", "stain"];
+    var idx = 0;
+    for (var ry = world.minY + 80; ry < world.maxY; ry += 210) {
+      for (var rx = -720; rx <= 720; rx += 260) {
+        var img = roadSegments[kinds[idx++ % kinds.length]];
+        if (!img || !img.complete || !img.naturalWidth) continue;
+        if (!onScreen(rx, ry, 220)) continue;
+        // jitter so seams do not align into a lattice
+        var jx = ((ry * 17 + rx * 13) % 70) - 35;
+        var jy = ((ry * 11 + rx * 7) % 50) - 25;
+        var q = iso(rx + jx, ry + jy);
+        var dw = 210,
+          dh = 120;
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(img, q[0] - dw * 0.5, q[1] - dh * 0.45, dw, dh);
+        ctx.restore();
+      }
+    }
+  }
+
+    // Street lamps along the wide curbs
   for (var ly = world.minY + 160; ly <= world.maxY; ly += 420) {
     drawStreetLamp(curbL + 50, ly);
     drawStreetLamp(curbR - 50, ly);

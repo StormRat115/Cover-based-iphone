@@ -1,4 +1,7 @@
-import { loadImage } from "./assets.js?v=20260906-76";
+import { loadImage } from "./assets.js?v=20260906-77";
+export const friendlyAtlasSource = new Image();
+friendlyAtlasSource.src =
+  "./assets/generated/soldier/player-ally-atlas.png?v=20260906-77";
 export const soldierSource = new Image();
 soldierSource.src =
   "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-60";
@@ -168,6 +171,29 @@ const ENEMY_FRAME_BOXES = {
     [850, 928, 170, 158],
   ],
 };
+const FRIENDLY_CELL = 160;
+const FRIENDLY_COLS = 4;
+const FRIENDLY_ROWS = {
+  idle: 0,
+  run: 1,
+  tallCover: 2,
+  lowCover: 3,
+  standShoot: 4,
+  crouchShoot: 5,
+  death: 6,
+  shoot: 4,
+};
+const FRIENDLY_FPS = {
+  idle: 3.2,
+  run: 9,
+  tallCover: 3,
+  lowCover: 3,
+  standShoot: 10,
+  crouchShoot: 10,
+  shoot: 10,
+  death: 7,
+};
+let runtimeFriendlyAtlas = null;
 const ROWS = {
   idle: 0,
   run: 1,
@@ -244,6 +270,7 @@ export function preloadSoldierAssets(onProgress) {
   onProgress = onProgress || function () {};
   onProgress(0.1, "LOADING CHARACTER ANIMATION ATLASES");
   return Promise.all([
+    loadImage(friendlyAtlasSource),
     loadImage(soldierSource),
     loadImage(enemySource),
     loadImage(deathSource),
@@ -254,14 +281,14 @@ export function preloadSoldierAssets(onProgress) {
     onProgress(0.68, "BUILDING CHARACTER ANIMATIONS");
     if (imgs.some((image) => !image))
       throw new Error("Character images are not ready");
-    // Publish both atlases together only after every source has decoded and both
-    // canvases have been built. A partial atlas set cannot start the mission.
+    runtimeFriendlyAtlas = friendlyAtlasSource;
+    // Legacy crop atlas kept as fallback; enemies still use monster atlas path.
     const soldierAtlas = buildAtlas(soldierSource, FRAME_BOXES);
     const monsterAtlas = buildAtlas(enemySource, ENEMY_FRAME_BOXES);
-    runtimeAtlas = soldierAtlas;
+    runtimeAtlas = runtimeFriendlyAtlas || soldierAtlas;
     runtimeEnemyAtlas = monsterAtlas;
     onProgress(1, "SOLDIERS + MONSTERS READY");
-    return { soldierAtlas, monsterAtlas };
+    return { soldierAtlas: runtimeAtlas, monsterAtlas };
   });
 }
 function moving(actor) {
@@ -376,6 +403,48 @@ function stableFacing(actor, state) {
 }
 
 /** Snap-ish frames: only a tiny ~15% crossfade near the end of each frame. */
+
+function frameForFriendly(actor, state) {
+  var rowKey = state === "shoot" ? "standShoot" : state;
+  if (FRIENDLY_ROWS[rowKey] == null) rowKey = "idle";
+  var row = FRIENDLY_ROWS[rowKey];
+  var now = nowMs();
+  if (actor.__lastSoldierState !== state) {
+    actor.__lastSoldierState = state;
+    actor.__soldierStateStart = now;
+  }
+  var elapsed = Math.max(0, (now - (actor.__soldierStateStart || now)) / 1000);
+  var fps = FRIENDLY_FPS[rowKey] || 4;
+  if (rowKey === "run" && actor) {
+    var spd = 0;
+    if (typeof actor.vx === "number" && typeof actor.vy === "number")
+      spd = Math.hypot(actor.vx, actor.vy);
+    fps = Math.max(6, Math.min(11, fps * (0.75 + 0.4 * Math.min(1, spd / 90 || spd || 0.5))));
+  }
+  var count = FRIENDLY_COLS;
+  var phase = elapsed * fps;
+  var col, next, blend;
+  if (rowKey === "death") {
+    phase = Math.min(count - 1.001, phase);
+    col = Math.min(count - 1, Math.floor(phase));
+    next = Math.min(count - 1, col + 1);
+    blend = softenBlend(phase - col);
+  } else {
+    col = Math.floor(phase) % count;
+    next = (col + 1) % count;
+    blend = softenBlend(phase - Math.floor(phase));
+  }
+  return {
+    col: col,
+    nextCol: next,
+    blend: blend,
+    row: row,
+    w: FRIENDLY_CELL,
+    h: FRIENDLY_CELL,
+    state: rowKey,
+  };
+}
+
 function softenBlend(blend) {
   var b = Math.max(0, Math.min(1, blend || 0));
   if (b < 0.85) return 0;
@@ -692,14 +761,18 @@ export function drawSoldier(ctx, actor, options) {
     if (isEnemy) {
       state = "lowCover";
       enemyCorpse = true;
-    } else if (drawDeath(ctx, actor, options, scale, flip)) {
+    } else if (!runtimeFriendlyAtlas && drawDeath(ctx, actor, options, scale, flip)) {
       ctx.restore();
       return;
-    } else state = "lowCover";
+    } else if (!runtimeFriendlyAtlas) state = "lowCover";
   }
-  var r = frameFor(actor, state, boxes),
-    dw = r.w * scale,
-    dh = r.h * scale;
+  var useFriendly = !isEnemy && runtimeFriendlyAtlas;
+  var r = useFriendly
+      ? frameForFriendly(actor, state)
+      : frameFor(actor, state, boxes),
+    cell = useFriendly ? FRIENDLY_CELL : CELL,
+    dw = (useFriendly ? FRIENDLY_CELL : r.w) * scale,
+    dh = (useFriendly ? FRIENDLY_CELL : r.h) * scale;
   ctx.fillStyle = "#0007";
   ctx.beginPath();
   ctx.ellipse(
@@ -720,18 +793,19 @@ export function drawSoldier(ctx, actor, options) {
   ctx.scale(flip, 1);
   ctx.filter = teamFilter(team);
   ctx.imageSmoothingEnabled = true;
-  if (atlas) {
+  var drawAtlas = useFriendly ? runtimeFriendlyAtlas : atlas;
+  if (drawAtlas) {
     var baseAlpha = options.alpha == null ? 1 : options.alpha;
     if (enemyCorpse) baseAlpha *= 0.82;
     drawBlendedSheetFrame(
       ctx,
-      atlas,
+      drawAtlas,
       r.col,
       r.nextCol,
       r.blend || 0,
-      ROWS[r.state] || 0,
-      CELL,
-      CELL,
+      useFriendly ? r.row : ROWS[r.state] || 0,
+      useFriendly ? FRIENDLY_CELL : CELL,
+      useFriendly ? FRIENDLY_CELL : CELL,
       -dw * 0.5,
       -dh,
       dw,
