@@ -25,6 +25,18 @@
       "assets/generated/world/wreck-burnt-sedan.webp",
       "assets/generated/world/wreck-burnt-pickup.webp",
       "assets/generated/world/wreck-burnt-armored.webp"
+    ],
+    "street": [
+      "assets/generated/world/lamp-post-intact.webp",
+      "assets/generated/world/lamp-post-bent.webp",
+      "assets/generated/world/lamp-post-fallen.webp"
+    ],
+    "sidewalk": [
+      "assets/generated/world/sidewalk-curb-edge.webp",
+      "assets/generated/world/sidewalk-hydrant-manhole.webp",
+      "assets/generated/world/sidewalk-bus-shelter-wreck.webp",
+      "assets/generated/world/sidewalk-trash-bin-tipped.webp",
+      "assets/generated/world/sidewalk-planter-dead.webp"
     ]
   }
 }

@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-90";
+import { loadImage } from "./assets.js?v=20260906-91";
 
 function plate(file) {
   var image = new Image();
@@ -22,6 +22,14 @@ export const wreckSedan = plate("wreck-burnt-sedan.webp");
 export const wreckPickup = plate("wreck-burnt-pickup.webp");
 export const wreckArmored = plate("wreck-burnt-armored.webp");
 export const skylineSmoke = plate("skyline-smoke-backdrop.webp");
+export const lampPostIntact = plate("lamp-post-intact.webp");
+export const lampPostBent = plate("lamp-post-bent.webp");
+export const lampPostFallen = plate("lamp-post-fallen.webp");
+export const sidewalkCurbEdge = plate("sidewalk-curb-edge.webp");
+export const sidewalkHydrant = plate("sidewalk-hydrant-manhole.webp");
+export const sidewalkShelter = plate("sidewalk-bus-shelter-wreck.webp");
+export const sidewalkTrash = plate("sidewalk-trash-bin-tipped.webp");
+export const sidewalkPlanter = plate("sidewalk-planter-dead.webp");
 
 var ROAD = 980;
 var WALK = 260;
@@ -121,6 +129,41 @@ var SMOKE = [
   { x: 1340, y: -2800, s: 0.48 },
   { x: -1260, y: -4000, s: 0.58 },
   { x: 1300, y: -5200, s: 0.52 },
+];
+
+// Phone Art lamps and sidewalk props — sidewalk band only (|x| > ROAD).
+var EDGE_LAMPS = [
+  { x: -1090, y: 640, kind: "intact", s: 0.92 },
+  { x: 1110, y: 280, kind: "bent", s: 0.88 },
+  { x: -1140, y: -180, kind: "fallen", s: 0.86 },
+  { x: 1080, y: -620, kind: "intact", s: 0.9 },
+  { x: -1070, y: -1280, kind: "bent", s: 0.86 },
+  { x: 1160, y: -1860, kind: "intact", s: 0.88 },
+  { x: -1120, y: -2480, kind: "fallen", s: 0.84 },
+  { x: 1090, y: -3120, kind: "bent", s: 0.86 },
+  { x: -1150, y: -3780, kind: "intact", s: 0.9 },
+  { x: 1130, y: -4420, kind: "fallen", s: 0.84 },
+  { x: -1080, y: -5080, kind: "bent", s: 0.86 },
+  { x: 1140, y: -5720, kind: "intact", s: 0.88 },
+];
+
+var SIDEWALK_PROPS = [
+  { x: -1040, y: 820, kind: "curb", s: 0.7 },
+  { x: 1060, y: 520, kind: "hydrant", s: 0.62 },
+  { x: -1180, y: 80, kind: "shelter", s: 0.64 },
+  { x: 1120, y: -220, kind: "trash", s: 0.6 },
+  { x: -1080, y: -720, kind: "planter", s: 0.62 },
+  { x: 1040, y: -980, kind: "curb", s: 0.68 },
+  { x: -1160, y: -1580, kind: "hydrant", s: 0.6 },
+  { x: 1180, y: -2180, kind: "shelter", s: 0.62 },
+  { x: -1050, y: -2680, kind: "trash", s: 0.6 },
+  { x: 1100, y: -3280, kind: "planter", s: 0.62 },
+  { x: -1140, y: -3880, kind: "curb", s: 0.68 },
+  { x: 1070, y: -4480, kind: "hydrant", s: 0.6 },
+  { x: -1170, y: -5080, kind: "trash", s: 0.6 },
+  { x: 1150, y: -5480, kind: "planter", s: 0.62 },
+  { x: -1060, y: -5980, kind: "shelter", s: 0.62 },
+  { x: 1090, y: -6280, kind: "curb", s: 0.68 },
 ];
 
 function ready(image) {
@@ -232,6 +275,34 @@ function spriteForWreck(kind) {
   if (kind === "pickup") return wreckPickup;
   if (kind === "armored") return wreckArmored;
   return wreckSedan;
+}
+
+function spriteForLamp(kind) {
+  if (kind === "bent") return lampPostBent;
+  if (kind === "fallen") return lampPostFallen;
+  return lampPostIntact;
+}
+
+function sizeForLamp(kind, s) {
+  if (kind === "fallen") return { dw: 70 * s, dh: 52 * s };
+  if (kind === "bent") return { dw: 46 * s, dh: 74 * s };
+  return { dw: 34 * s, dh: 76 * s };
+}
+
+function spriteForSidewalk(kind) {
+  if (kind === "hydrant") return sidewalkHydrant;
+  if (kind === "shelter") return sidewalkShelter;
+  if (kind === "trash") return sidewalkTrash;
+  if (kind === "planter") return sidewalkPlanter;
+  return sidewalkCurbEdge;
+}
+
+function sizeForSidewalk(kind, s) {
+  if (kind === "shelter") return { dw: 78 * s, dh: 86 * s };
+  if (kind === "hydrant") return { dw: 50 * s, dh: 42 * s };
+  if (kind === "trash") return { dw: 44 * s, dh: 48 * s };
+  if (kind === "planter") return { dw: 48 * s, dh: 50 * s };
+  return { dw: 58 * s, dh: 36 * s };
 }
 
 function stamp(ctx, image, x, y, dw, dh, alpha) {
@@ -396,6 +467,14 @@ export function preloadWartornAssets(onProgress) {
     loadImage(wreckPickup),
     loadImage(wreckArmored),
     loadImage(skylineSmoke),
+    loadImage(lampPostIntact),
+    loadImage(lampPostBent),
+    loadImage(lampPostFallen),
+    loadImage(sidewalkCurbEdge),
+    loadImage(sidewalkHydrant),
+    loadImage(sidewalkShelter),
+    loadImage(sidewalkTrash),
+    loadImage(sidewalkPlanter),
   ]).then(function (images) {
     if (
       images.some(function (img) {
@@ -424,6 +503,12 @@ export function createWartornDressing() {
       return Object.assign({}, item);
     }),
     smoke: SMOKE.map(function (item) {
+      return Object.assign({}, item);
+    }),
+    lamps: EDGE_LAMPS.map(function (item) {
+      return Object.assign({}, item);
+    }),
+    sidewalkProps: SIDEWALK_PROPS.map(function (item) {
       return Object.assign({}, item);
     }),
     road: ROAD,
@@ -609,6 +694,34 @@ export function drawWartornAtmosphere(ctx, W, H, iso, world) {
   }
 }
 
+function drawEdgeAccents(ctx, iso, world, onScreen) {
+  var i, item, q, img, size, outward;
+  for (i = 0; i < SIDEWALK_PROPS.length; i++) {
+    item = SIDEWALK_PROPS[i];
+    if (onScreen && !onScreen(item.x, item.y, 220)) continue;
+    ctx.save();
+    clipOffStreet(ctx, iso, world, item.x < 0 ? -1 : 1);
+    q = iso(item.x, item.y);
+    img = spriteForSidewalk(item.kind);
+    size = sizeForSidewalk(item.kind, item.s);
+    outward = item.x < 0 ? -size.dw * 0.18 : size.dw * 0.18;
+    stamp(ctx, img, q[0] + outward, q[1] + 4, size.dw, size.dh, 0.92);
+    ctx.restore();
+  }
+  for (i = 0; i < EDGE_LAMPS.length; i++) {
+    item = EDGE_LAMPS[i];
+    if (onScreen && !onScreen(item.x, item.y, 200)) continue;
+    ctx.save();
+    clipOffStreet(ctx, iso, world, item.x < 0 ? -1 : 1);
+    q = iso(item.x, item.y);
+    img = spriteForLamp(item.kind);
+    size = sizeForLamp(item.kind, item.s);
+    outward = item.x < 0 ? -8 : 8;
+    stamp(ctx, img, q[0] + outward, q[1] + 2, size.dw, size.dh, 0.94);
+    ctx.restore();
+  }
+}
+
 function drawSideBuildings(ctx, iso, world, onScreen) {
   var i, item, q, img, dw, dh, outward;
   for (i = 0; i < SIDE_DRESSING.length; i++) {
@@ -630,6 +743,7 @@ function drawSideBuildings(ctx, iso, world, onScreen) {
 export function drawWartornDressing(ctx, iso, world, W, H, onScreen) {
   var i, item, q, img, dw, dh;
   drawStreetScenes(ctx, iso, world, onScreen);
+  drawEdgeAccents(ctx, iso, world, onScreen);
   drawSideBuildings(ctx, iso, world, onScreen);
   for (i = 0; i < WRECKS.length; i++) {
     item = WRECKS[i];
