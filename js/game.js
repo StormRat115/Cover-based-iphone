@@ -1,64 +1,58 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-78";
+import { createGameLoop } from "./gameLoop.js?v=20260906-79";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-78";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-78";
+} from "./geometry.js?v=20260906-79";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-79";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-78";
-import { updateSquadHud } from "./squadHud.js?v=20260906-78";
-import { updateCombatHud } from "./combatHud.js?v=20260906-78";
-import { updatePlayerHud } from "./player.js?v=20260906-78";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-78";
-import "./squadDrawer.js?v=20260906-78";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-78";
+} from "./bloodEffects.js?v=20260906-79";
+import { updateSquadHud } from "./squadHud.js?v=20260906-79";
+import { updateCombatHud } from "./combatHud.js?v=20260906-79";
+import { updatePlayerHud } from "./player.js?v=20260906-79";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-79";
+import "./squadDrawer.js?v=20260906-79";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-79";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-78";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-78";
+} from "./enemy.js?v=20260906-79";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-79";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-78";
+} from "./marines.js?v=20260906-79";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-78";
+} from "./streetMission.js?v=20260906-79";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-78";
+} from "./supportVehicle.js?v=20260906-79";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260906-78";
-import {
-  groundTile,
-  buildingRuinA,
-  buildingRuinB,
-  roadSegments,
-} from "./cityAssets.js?v=20260906-78";
+} from "./cover.js?v=20260906-79";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-78";
-import { initTactical } from "./tactical.js?v=20260906-78";
-import { AudioBus } from "./audio.js?v=20260906-78";
+} from "./input.js?v=20260906-79";
+import { initTactical } from "./tactical.js?v=20260906-79";
+import { AudioBus } from "./audio.js?v=20260906-79";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -848,26 +842,8 @@ function worldPoly(points, fill, stroke) {
     ctx.stroke();
   }
 }
-function drawBuilding(x, y, w, h, roof, variant) {
+function drawBuilding(x, y, w, h, roof) {
   if (!onScreen(x, y, ((w + h) * world.scaleX) / 2 + 520)) return;
-  var q = iso(x, y);
-  var img = variant === "b" ? buildingRuinB : buildingRuinA;
-  if (img && img.complete && img.naturalWidth > 0) {
-    var scale = Math.max(w, h) / 260;
-    var dw = img.naturalWidth * scale;
-    var dh = img.naturalHeight * scale;
-    ctx.save();
-    // Grounding shadow under the ruin footprint.
-    ctx.fillStyle = "#00000055";
-    ctx.beginPath();
-    ctx.ellipse(q[0], q[1] + 4, dw * 0.34, dh * 0.08, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(img, q[0] - dw * 0.5, q[1] - dh * 0.92, dw, dh);
-    ctx.restore();
-    return;
-  }
   var pts = [
       [x - w / 2, y - h / 2],
       [x + w / 2, y - h / 2],
@@ -933,9 +909,82 @@ function drawCrosswalk(y) {
       "#d1d0c5aa",
     );
 }
+var asphaltGrainCanvas = null;
+function getAsphaltGrain() {
+  if (asphaltGrainCanvas) return asphaltGrainCanvas;
+  var size = 192;
+  var c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+  var g = c.getContext && c.getContext("2d");
+  if (!g || typeof g.createImageData !== "function") return null;
+  var data = g.createImageData(size, size);
+  if (!data || !data.data) return null;
+  var i = 0;
+  for (var y = 0; y < size; y++) {
+    for (var x = 0; x < size; x++) {
+      var n =
+        (x * 127 + y * 311 + x * y * 13) ^
+        ((x * 19 + 41) * (y * 23 + 17) + (x << 2) + (y << 4));
+      n = n & 255;
+      var speck = n > 248 ? 220 : n < 10 ? 22 : 82 + (n % 28);
+      var edge = Math.min(x, y, size - 1 - x, size - 1 - y);
+      var fade = edge < 12 ? edge / 12 : 1;
+      data.data[i++] = speck;
+      data.data[i++] = speck + 2;
+      data.data[i++] = speck - 1;
+      data.data[i++] = Math.round((n > 232 || n < 16 ? 54 : 16) * fade);
+    }
+  }
+  g.putImageData(data, 0, 0);
+  asphaltGrainCanvas = c;
+  return c;
+}
+function drawSharpStreetMarks(curbL, curbR) {
+  var stains = [
+    [-220, world.minY + 980, 90, 36, "#2a2f2d55"],
+    [260, world.minY + 1560, 80, 30, "#2c322f50"],
+    [-90, world.minY + 2200, 70, 28, "#262b2958"],
+    [140, world.minY + 3100, 86, 32, "#2a302e52"],
+    [-300, world.minY + 4020, 74, 26, "#2c322f4d"],
+    [40, world.minY + 4880, 64, 24, "#262b2955"],
+  ];
+  for (var i = 0; i < stains.length; i++) {
+    var s = stains[i];
+    if (!onScreen(s[0], s[1], 220)) continue;
+    worldPoly(
+      [
+        [s[0] - s[2] / 2, s[1] - s[3] / 2],
+        [s[0] + s[2] / 2, s[1] - s[3] / 3],
+        [s[0] + s[2] / 3, s[1] + s[3] / 2],
+        [s[0] - s[2] / 3, s[1] + s[3] / 3],
+      ],
+      s[4],
+    );
+  }
+  var cracks = [
+    [-40, world.minY + 760, 8, 110],
+    [180, world.minY + 1680, 6, 90],
+    [-160, world.minY + 2680, 7, 100],
+    [70, world.minY + 3600, 6, 86],
+    [-250, world.minY + 4500, 7, 94],
+  ];
+  for (var c = 0; c < cracks.length; c++) {
+    var k = cracks[c];
+    if (!onScreen(k[0], k[1], 180)) continue;
+    worldPoly(
+      [
+        [k[0], k[1]],
+        [k[0] + k[2], k[1] + 10],
+        [k[0] + 2, k[1] + k[3]],
+        [k[0] - 2, k[1] + k[3] - 8],
+      ],
+      "#1c201ecc",
+    );
+  }
+}
 function drawMapDecor() {
-  // Wide urban street: playable asphalt corridor with thin shoulders.
-  // No repeating texture pattern — those always read as a grid on phone.
+  // Wide urban street: solid slabs, sharp grain, no stretched photo tile.
   var ROAD = 980;
   var curbL = -ROAD,
     curbR = ROAD;
@@ -948,7 +997,6 @@ function drawMapDecor() {
     ],
     "#2b302e",
   );
-  // Continuous street slab (main play space).
   worldPoly(
     [
       [curbL, world.minY],
@@ -956,19 +1004,35 @@ function drawMapDecor() {
       [curbR, world.maxY],
       [curbL, world.maxY],
     ],
-    "#313735",
+    "#3c4442",
   );
-  // Soft center lane wash — solid, not tiled.
   worldPoly(
     [
-      [-70, world.minY],
-      [70, world.minY],
-      [70, world.maxY],
-      [-70, world.maxY],
+      [-80, world.minY],
+      [80, world.minY],
+      [80, world.maxY],
+      [-80, world.maxY],
     ],
-    "#353b39",
+    "#4a524e",
   );
-  // Shoulder gutters
+  worldPoly(
+    [
+      [curbL, world.minY],
+      [curbL + 120, world.minY],
+      [curbL + 120, world.maxY],
+      [curbL, world.maxY],
+    ],
+    "#363d3b",
+  );
+  worldPoly(
+    [
+      [curbR - 120, world.minY],
+      [curbR, world.minY],
+      [curbR, world.maxY],
+      [curbR - 120, world.maxY],
+    ],
+    "#363d3b",
+  );
   worldPoly(
     [
       [curbL - 40, world.minY],
@@ -987,7 +1051,32 @@ function drawMapDecor() {
     ],
     "#262b29",
   );
-  // Sparse lane dashes (not a grid).
+  var grain = getAsphaltGrain();
+  if (grain) {
+    var corners = [
+      iso(curbL, world.minY),
+      iso(curbR, world.minY),
+      iso(curbR, world.maxY),
+      iso(curbL, world.maxY),
+    ];
+    var origin = iso(0, 0);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(corners[0][0], corners[0][1]);
+    for (var ci = 1; ci < corners.length; ci++)
+      ctx.lineTo(corners[ci][0], corners[ci][1]);
+    ctx.closePath();
+    ctx.clip();
+    ctx.imageSmoothingEnabled = false;
+    ctx.globalAlpha = 0.16;
+    var pattern = ctx.createPattern(grain, "repeat");
+    if (pattern) {
+      ctx.translate(origin[0] % 192, origin[1] % 192);
+      ctx.fillStyle = pattern;
+      ctx.fillRect(-W - 96, -H - 96, W * 2 + 192, H * 2 + 192);
+    }
+    ctx.restore();
+  }
   for (var y = world.minY + 120; y <= world.maxY - 80; y += 160)
     worldPoly(
       [
@@ -996,84 +1085,11 @@ function drawMapDecor() {
         [9, y + 48],
         [-9, y + 48],
       ],
-      "#b8a45e66",
+      "#d4c078aa",
     );
-  // Occasional crosswalks
   for (var crossY = world.minY + 420; crossY < world.maxY; crossY += 900)
     drawCrosswalk(crossY);
-
-  // Buildings parked — street-only map for now.
-  // Continuous asphalt: clip to the street slab and stretch one texture across it.
-  var asphaltImg =
-    (groundTile && groundTile.complete && groundTile.naturalWidth && groundTile) ||
-    (roadSegments &&
-      roadSegments.plain &&
-      roadSegments.plain.complete &&
-      roadSegments.plain.naturalWidth &&
-      roadSegments.plain) ||
-    null;
-  if (asphaltImg) {
-    var corners = [
-      iso(curbL, world.minY),
-      iso(curbR, world.minY),
-      iso(curbR, world.maxY),
-      iso(curbL, world.maxY),
-    ];
-    var minSx = Math.min(corners[0][0], corners[1][0], corners[2][0], corners[3][0]);
-    var maxSx = Math.max(corners[0][0], corners[1][0], corners[2][0], corners[3][0]);
-    var minSy = Math.min(corners[0][1], corners[1][1], corners[2][1], corners[3][1]);
-    var maxSy = Math.max(corners[0][1], corners[1][1], corners[2][1], corners[3][1]);
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(corners[0][0], corners[0][1]);
-    for (var ci = 1; ci < corners.length; ci++)
-      ctx.lineTo(corners[ci][0], corners[ci][1]);
-    ctx.closePath();
-    ctx.clip();
-    // Stretch asphalt across the clipped street — one continuous surface.
-    ctx.globalAlpha = 0.88;
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    var pad = 40;
-    ctx.drawImage(
-      asphaltImg,
-      minSx - pad,
-      minSy - pad,
-      maxSx - minSx + pad * 2,
-      maxSy - minSy + pad * 2,
-    );
-    // Soft center wash so it still reads as a road, not a photo slab.
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = "#2a302e";
-    ctx.fillRect(minSx - pad, minSy - pad, maxSx - minSx + pad * 2, maxSy - minSy + pad * 2);
-    ctx.restore();
-
-    // Rare lane / stain / crosswalk marks only (props, not tiling).
-    if (roadSegments) {
-      var accents = [
-        { k: "crosswalk", x: 0, y: world.minY + 420, w: 640, h: 170 },
-        { k: "lane", x: -30, y: world.minY + 780, w: 120, h: 320 },
-        { k: "stain", x: -260, y: world.minY + 980, w: 300, h: 170 },
-        { k: "crosswalk", x: 0, y: world.minY + 1320, w: 640, h: 170 },
-        { k: "stain", x: 280, y: world.minY + 1560, w: 280, h: 160 },
-        { k: "lane", x: 20, y: world.minY + 1880, w: 120, h: 300 },
-        { k: "stain", x: -120, y: world.minY + 2200, w: 260, h: 150 },
-      ];
-      for (var ai = 0; ai < accents.length; ai++) {
-        var a = accents[ai];
-        var img = roadSegments[a.k];
-        if (!img || !img.complete || !img.naturalWidth) continue;
-        if (!onScreen(a.x, a.y, 320)) continue;
-        var p = iso(a.x, a.y);
-        ctx.save();
-        ctx.globalAlpha = a.k === "stain" ? 0.5 : 0.65;
-        ctx.drawImage(img, p[0] - a.w * 0.5, p[1] - a.h * 0.45, a.w, a.h);
-        ctx.restore();
-      }
-    }
-  }
-
-  // Street lamps along the wide curbs
+  drawSharpStreetMarks(curbL, curbR);
   for (var ly = world.minY + 160; ly <= world.maxY; ly += 420) {
     drawStreetLamp(curbL + 50, ly);
     drawStreetLamp(curbR - 50, ly);
@@ -1241,7 +1257,20 @@ function draw(now) {
   drawPlayerEngagementRange();
   drawBlood(ctx, iso);
   drawProjectiles();
-  for (const layer of layers) layer.y = layer.o.x + layer.o.y;
+  for (const layer of layers) {
+    var o = layer.o;
+    layer.y = o.x + o.y;
+    if (
+      o.cover &&
+      !o.exposed &&
+      !o.dead &&
+      (layer.type === "player" ||
+        layer.type === "ally" ||
+        layer.type === "marine" ||
+        layer.type === "enemy")
+    )
+      layer.y = o.cover.x + o.cover.y + 0.4;
+  }
   layers.sort(function (a, b) {
     return a.y - b.y;
   });

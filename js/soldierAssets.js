@@ -1,15 +1,15 @@
-import { loadImage } from "./assets.js?v=20260906-78";
+import { loadImage } from "./assets.js?v=20260906-79";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
-  "./assets/generated/soldier/player-ally-atlas.png?v=20260906-78";
+  "./assets/generated/soldier/player-ally-atlas.png?v=20260906-79";
 export const soldierSource = new Image();
 soldierSource.src =
-  "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-60";
+  "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260906-79";
 export const enemySource = new Image();
 enemySource.src =
-  "./assets/198C101B-E186-4852-A270-3F04D83451ED.png?v=20260905-60";
+  "./assets/198C101B-E186-4852-A270-3F04D83451ED.png?v=20260906-79";
 export const deathSource = new Image();
-deathSource.src = "./assets/soldier_death_sheet.png?v=20260905-60";
+deathSource.src = "./assets/soldier_death_sheet.png?v=20260906-79";
 
 const ENEMY_MONSTER_SHEET_WIDTH = 1536,
   ENEMY_MONSTER_SHEET_HEIGHT = 1022,
@@ -34,7 +34,7 @@ const ENEMY_MONSTER_FILES = {
 const enemyMonsterSources = Object.fromEntries(
   Object.entries(ENEMY_MONSTER_FILES).map(function ([type, file]) {
     const image = new Image();
-    image.src = "./assets/generated/enemies/" + file + "?v=20260905-65";
+    image.src = "./assets/generated/enemies/" + file + "?v=20260906-79";
     return [type, image];
   }),
 );
@@ -308,6 +308,38 @@ function shooting(actor) {
 }
 function lowCover(actor) {
   return !!(actor && actor.cover && actor.cover.type === "low");
+}
+function peekingFromCover(actor) {
+  return !!(
+    actor &&
+    actor.cover &&
+    (actor.exposed ||
+      actor.combatState === "exposed" ||
+      actor.combatState === "peeking" ||
+      (actor.peek && actor.peek > 0))
+  );
+}
+export function coverPlantOffset(actor) {
+  if (!actor || !actor.cover || actor.dead || actor.downed)
+    return { x: 0, y: 0, squat: 0 };
+  var c = actor.cover,
+    dx = c.x - actor.x,
+    dy = c.y - actor.y,
+    dist = Math.hypot(dx, dy),
+    reach = Math.max(c.w, c.h) * 0.7 + 46;
+  if (dist > reach) return { x: 0, y: 0, squat: 0 };
+  var len = dist || 1,
+    sx = (dx - dy) / len,
+    sy = (dx + dy) / len,
+    peeking = peekingFromCover(actor),
+    low = lowCover(actor),
+    pull = peeking ? -6 : 8,
+    squat = low ? (peeking ? 2 : 7) : peeking ? 0 : 3;
+  return {
+    x: sx * pull,
+    y: sy * pull * 0.42 + squat,
+    squat: squat,
+  };
 }
 function zeroHealth(actor) {
   return !!(actor && (actor.hp <= 0 || actor.dead));
@@ -678,8 +710,9 @@ export function drawEnemyMonster(ctx, actor, options) {
     dh = ENEMY_MONSTER_FRAME_HEIGHT * scale,
     flip = stableFacing(actor, state),
     baseAlpha = options.alpha == null ? 1 : options.alpha;
+  var plant = coverPlantOffset(actor);
   ctx.save();
-  ctx.translate(options.x || 0, options.y || 0);
+  ctx.translate((options.x || 0) + plant.x, (options.y || 0) + plant.y);
   ctx.globalAlpha = baseAlpha;
   ctx.fillStyle = "#0007";
   ctx.beginPath();
@@ -704,7 +737,7 @@ export function drawEnemyMonster(ctx, actor, options) {
     ENEMY_MONSTER_FRAME_WIDTH,
     ENEMY_MONSTER_FRAME_HEIGHT,
     -dw * 0.5,
-    -dh,
+    -dh + (state === "lowCover" ? 4 : state === "tallCover" ? 2 : 0),
     dw,
     dh,
     baseAlpha,
@@ -755,9 +788,13 @@ export function drawSoldier(ctx, actor, options) {
     scale = baseScale * (actor && actor.scale ? actor.scale : 1),
     flip = stableFacing(actor, state),
     bob = state === "run" ? Math.sin(nowMs() * 0.012) * 0.28 : 0,
+    plant = coverPlantOffset(actor),
     enemyCorpse = false;
   ctx.save();
-  ctx.translate(options.x || 0, (options.y || 0) + bob);
+  ctx.translate(
+    (options.x || 0) + plant.x,
+    (options.y || 0) + bob + plant.y,
+  );
   ctx.globalAlpha = options.alpha == null ? 1 : options.alpha;
   if (state === "death") {
     if (isEnemy) {
@@ -810,7 +847,12 @@ export function drawSoldier(ctx, actor, options) {
       useFriendly ? FRIENDLY_CELL : CELL,
       useFriendly ? FRIENDLY_CELL : CELL,
       -dw * 0.5,
-      -dh,
+      -dh +
+        (state === "lowCover" || state === "crouchShoot"
+          ? 5
+          : state === "tallCover"
+            ? 2
+            : 0),
       dw,
       dh,
       baseAlpha,
