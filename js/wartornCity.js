@@ -368,12 +368,13 @@ function getSeamlessGrit() {
       u = (x / size) * Math.PI * 2;
       v = (y / size) * Math.PI * 2;
       n =
-        Math.sin(u * 2 + v) * 28 +
-        Math.sin(u * 5 - v * 3) * 16 +
-        Math.sin(u * 11 + v * 7) * 9 +
-        Math.sin(u * 17 - v * 13) * 5;
-      speck = 70 + n;
-      a = 18 + (n > 22 ? 14 : n < -18 ? 10 : 0);
+        Math.sin(u * 3 + v * 2) * 22 +
+        Math.sin(u * 7 - v * 5) * 18 +
+        Math.sin(u * 13 + v * 11) * 14 +
+        Math.sin(u * 23 - v * 17) * 10 +
+        Math.sin(u * 31 + v * 29) * 7;
+      speck = 64 + n;
+      a = 28 + (n > 18 ? 22 : n < -16 ? 16 : 8);
       data.data[i++] = speck + 6;
       data.data[i++] = speck;
       data.data[i++] = speck - 8;
@@ -483,24 +484,26 @@ function drawOrganicPatches(ctx, iso, world, onScreen) {
     w,
     h,
     colors = [
-      "#2a241c55",
-      "#1c181466",
-      "#3a322868",
-      "#4a3c3050",
-      "#241e1860",
-      "#5a4a3a44",
-      "#16121070",
-      "#3c2e2458",
+      "#2a241c88",
+      "#1c181490",
+      "#4a3a2c70",
+      "#5c463870",
+      "#241e1888",
+      "#6a534070",
+      "#16121099",
+      "#3c2e2478",
+      "#4a302478",
+      "#2e282070",
     ];
-  for (i = 0; i < 72; i++) {
+  for (i = 0; i < 110; i++) {
     r1 = hash01(i * 17 + 3);
     r2 = hash01(i * 19 + 11);
     r3 = hash01(i * 23 + 7);
     x = (r1 - 0.5) * (ROAD * 1.85);
     y = b.minY + 80 + r2 * (b.maxY - b.minY - 160);
     if (onScreen && !onScreen(x, y, 180)) continue;
-    w = 36 + r3 * 92;
-    h = 14 + r1 * 32;
+    w = 48 + r3 * 140;
+    h = 18 + r1 * 46;
     fillIsoPoly(
       ctx,
       iso,
@@ -510,10 +513,29 @@ function drawOrganicPatches(ctx, iso, world, onScreen) {
         [x + w * 0.4, y + h * 0.55],
         [x - w * 0.35, y + h * 0.4],
       ],
-      colors[i & 7],
+      colors[i % colors.length],
     );
   }
-  for (i = 0; i < 28; i++) {
+  for (i = 0; i < 22; i++) {
+    r1 = hash01(i * 53 + 91);
+    r2 = hash01(i * 59 + 17);
+    r3 = hash01(i * 61 + 3);
+    x = (r1 - 0.5) * (ROAD * 1.6);
+    y = b.minY + 160 + r2 * (b.maxY - b.minY - 320);
+    if (onScreen && !onScreen(x, y, 140)) continue;
+    fillIsoPoly(
+      ctx,
+      iso,
+      [
+        [x - 10 - r3 * 16, y - 4],
+        [x + 14 + r1 * 12, y - 2],
+        [x + 8, y + 6 + r2 * 8],
+        [x - 8, y + 5],
+      ],
+      i % 2 ? "#4a2c2288" : "#1a1816aa",
+    );
+  }
+  for (i = 0; i < 36; i++) {
     r1 = hash01(i * 31 + 41);
     r2 = hash01(i * 37 + 13);
     r3 = hash01(i * 43 + 5);
@@ -557,7 +579,7 @@ export function drawWartornStreetSurface(ctx, iso, world, onScreen) {
   if (grain && ctx.createPattern) {
     ctx.save();
     ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = 0.34;
+    ctx.globalAlpha = 0.48;
     pattern = ctx.createPattern(grain, "repeat");
     if (pattern) {
       ctx.translate(
@@ -594,7 +616,7 @@ function drawFarBackdrop(ctx, iso, world, W, H) {
   ctx.globalAlpha = 0.55;
   for (i = -1; i < count; i++) {
     x = i * 168 - scroll + 28;
-    stamp(ctx, facades[(i + 8) % facades.length], x + 62, H * 0.22, 118, 78, 0.72);
+    stamp(ctx, facades[(i + 8) % facades.length], x + 62, H * 0.2, 132, 92, 0.82);
   }
   ctx.restore();
   if (ctx.createLinearGradient) {

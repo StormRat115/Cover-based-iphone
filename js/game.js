@@ -1135,13 +1135,15 @@ function drawMapDecor() {
   // Continuous street corridor: soft asphalt + sidewalks, no tiled plates.
   var ROAD = 980,
     WALK = 260,
+    INNER = 160,
     curbL = -ROAD,
     curbR = ROAD,
     walkL = curbL - WALK,
     walkR = curbR + WALK,
     y,
     ly,
-    blend;
+    step,
+    fade;
   worldPoly(
     [
       [world.minX, world.minY],
@@ -1149,25 +1151,25 @@ function drawMapDecor() {
       [world.maxX, world.maxY],
       [world.minX, world.maxY],
     ],
-    "#2c2924",
+    "#322e29",
   );
   worldPoly(
     [
       [walkL, world.minY],
-      [curbL, world.minY],
-      [curbL, world.maxY],
+      [curbL + INNER, world.minY],
+      [curbL + INNER, world.maxY],
       [walkL, world.maxY],
     ],
-    "#4a4640",
+    "#454038",
   );
   worldPoly(
     [
-      [curbR, world.minY],
+      [curbR - INNER, world.minY],
       [walkR, world.minY],
       [walkR, world.maxY],
-      [curbR, world.maxY],
+      [curbR - INNER, world.maxY],
     ],
-    "#4a4640",
+    "#454038",
   );
   worldPoly(
     [
@@ -1178,42 +1180,52 @@ function drawMapDecor() {
     ],
     "#3b3731",
   );
-  for (blend = 0; blend < 5; blend++) {
+  for (step = 0; step < 8; step++) {
     worldPoly(
       [
-        [curbL - 28 + blend * 10, world.minY],
-        [curbL + 36 + blend * 12, world.minY],
-        [curbL + 36 + blend * 12, world.maxY],
-        [curbL - 28 + blend * 10, world.maxY],
+        [curbL - 70 + step * 28, world.minY],
+        [curbL + 20 + step * 28, world.minY],
+        [curbL + 20 + step * 28, world.maxY],
+        [curbL - 70 + step * 28, world.maxY],
       ],
-      blend % 2 ? "#403c3655" : "#38342e66",
+      "rgba(58,54,48," + (0.1 + step * 0.04).toFixed(2) + ")",
     );
     worldPoly(
       [
-        [curbR - 36 - blend * 12, world.minY],
-        [curbR + 28 - blend * 10, world.minY],
-        [curbR + 28 - blend * 10, world.maxY],
-        [curbR - 36 - blend * 12, world.maxY],
+        [curbR - 20 - step * 28, world.minY],
+        [curbR + 70 - step * 28, world.minY],
+        [curbR + 70 - step * 28, world.maxY],
+        [curbR - 20 - step * 28, world.maxY],
       ],
-      blend % 2 ? "#403c3655" : "#38342e66",
+      "rgba(58,54,48," + (0.1 + step * 0.04).toFixed(2) + ")",
     );
   }
   drawWartornStreetSurface(ctx, iso, world, onScreen);
-  for (y = world.minY + 140; y <= world.maxY - 80; y += 210)
+  for (y = world.minY + 140; y <= world.maxY - 80; y += 240)
     worldPoly(
       [
-        [-7 + ((y / 210) | 0) % 3, y],
-        [7, y + 4],
-        [6, y + 36],
-        [-6, y + 32],
+        [-8 + ((y / 240) | 0) % 4, y],
+        [8, y + 5],
+        [6, y + 28],
+        [-5, y + 24],
       ],
-      "#8a7a5244",
+      "#7a6c4838",
     );
   for (var crossY = world.minY + 420; crossY < world.maxY; crossY += 1100)
     drawCrosswalk(crossY);
   for (ly = world.minY + 280; ly <= world.maxY; ly += 820) {
-    drawStreetLamp(walkL + 90, ly);
-    drawStreetLamp(walkR - 90, ly + 410);
+    drawStreetLamp(curbL + 70, ly);
+    drawStreetLamp(curbR - 70, ly + 410);
+  }
+  if (ctx.createLinearGradient) {
+    fade = ctx.createLinearGradient(0, 0, 0, H * 0.3);
+    if (fade && fade.addColorStop) {
+      fade.addColorStop(0, "rgba(42,38,34,0.55)");
+      fade.addColorStop(0.45, "rgba(48,44,40,0.18)");
+      fade.addColorStop(1, "rgba(58,54,48,0)");
+      ctx.fillStyle = fade;
+      ctx.fillRect(0, 0, W, H * 0.3);
+    }
   }
 }
 function drawStreetObjective() {
