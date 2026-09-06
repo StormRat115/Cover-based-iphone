@@ -10,7 +10,7 @@ const fireButton=document.querySelector('#fire'),reloadButton=document.querySele
 const restartButton=document.querySelector('#restart'),message=document.querySelector('#message');
 const messageTitle=document.querySelector('#messageTitle'),messageText=document.querySelector('#messageText'),messageButton=document.querySelector('#messageButton');
 const waveBanner=document.querySelector('#waveBanner');
-let W=0,H=0,dpr=1,last=0,gameOver=false,won=false,target=null,kills=0,wave=1,waveAnnounce=0,spawning=false;
+let W=0,H=0,dpr=1,last=0,gameOver=false,won=false,target=null,kills=0,wave=1,waveAnnounce=0,spawning=false,firing=false;
 const world={scaleX:.72,scaleY:.38,offsetY:-40};
 const player=createPlayer(),dylan=createDylan(),covers=createCover();
 let enemies=createBandits(1);
@@ -25,8 +25,9 @@ function setTarget(e){target=e;player.aimTarget=e}
 function attemptFire(){if(gameOver||won||player.reloading)return;const e=target&&!target.dead?target:nearestEnemy();if(!e)return;if(distance(player,e)>player.weapon.range)return;if(player.weapon.ammo<=0){reload();return}const blocked=isLineBlocked(player,e,covers);if(blocked&&!player.cover)return;const result=player.fireAt(e);if(result&&e.dead){kills+=1;checkWaveClear()}}
 function reload(){if(!player.reloading&&player.weapon.ammo<player.weapon.magazine)player.startReload()}
 function checkWaveClear(){if(!enemies.every(e=>e.dead))return;if(wave===1&&!spawning){spawning=true;waveAnnounce=2.2;if(waveBanner){waveBanner.textContent='WAVE 2';waveBanner.classList.remove('hidden')}setTimeout(()=>{wave=2;enemies=createBandits(2);spawning=false;target=null;if(waveBanner)waveBanner.classList.add('hidden')},1600);return}if(wave>=2)finish(true)}
-fireButton.addEventListener('pointerdown',e=>{e.preventDefault();fireButton.classList.add('active');attemptFire()});
-addEventListener('pointerup',()=>fireButton.classList.remove('active'));
+fireButton.addEventListener('pointerdown',e=>{e.preventDefault();firing=true;fireButton.classList.add('active');attemptFire()});
+addEventListener('pointerup',()=>{firing=false;fireButton.classList.remove('active')});
+addEventListener('pointercancel',()=>{firing=false;fireButton.classList.remove('active')});
 reloadButton.addEventListener('pointerdown',e=>{e.preventDefault();reload()});
 restartButton.addEventListener('pointerdown',reset);messageButton.addEventListener('pointerdown',reset);
 canvas.addEventListener('pointerdown',e=>{if(gameOver||won)return;if(e.target!==canvas)return;const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top;for(const enemy of enemies){if(enemy.dead)continue;const[x,y]=iso(enemy.x,enemy.y);if(Math.hypot(sx-x,sy-(y-28))<38){setTarget(enemy);return}}const p=screenToWorld(sx,sy);player.setDestination(p.x,p.y,findCoverForPoint(p.x,p.y,covers))});
@@ -37,8 +38,9 @@ function drawAsphalt(){const tile=images.asphalt;ctx.fillStyle='#1a2226';ctx.fil
 function drawBuildings(){for(const b of [...buildings].sort((a,b)=>(a.x+a.y)-(b.x+b.y))){const img=b.img==='ruinA'?images.ruinA:images.ruinB;if(!img)continue;const[sx,sy]=iso(b.x,b.y),w=160*b.scale,h=w*(img.height/img.width);ctx.save();ctx.globalAlpha=.95;ctx.drawImage(img,sx-w/2,sy-h*.88,w,h);ctx.restore()}}
 function depthKey(o){return o.x+o.y}
 function drawWorld(){drawAsphalt();drawBuildings();covers.forEach(c=>drawCover(ctx,c,iso));if(target&&!target.dead){const a=iso(player.x,player.y),b=iso(target.x,target.y);ctx.strokeStyle='#f5d54799';ctx.setLineDash([5,6]);ctx.beginPath();ctx.moveTo(a[0],a[1]-30);ctx.lineTo(b[0],b[1]-30);ctx.stroke();ctx.setLineDash([])}}
-function update(dt){if(gameOver||won)return;if(waveAnnounce>0)waveAnnounce-=dt;const mv=getMoveVector();if(mv)player.setKeyboardMove(mv);else if(player.keyboardMove){player.keyboardMove=null;player.tx=player.x;player.ty=player.y;player.state='idle'}player.update(dt,covers);if(player.hp<=0){finish(false);return}updateDylan(dylan,dt,enemies,covers,player);if(dylan.hp<=0&&!dylan.dead)dylan.dead=true;updateBandits(enemies,dt,player,covers,[dylan]);if(target?.dead)target=null;if(!spawning&&enemies.every(e=>e.dead))checkWaveClear()}
+function update(dt){if(gameOver||won)return;if(waveAnnounce>0)waveAnnounce-=dt;if(firing)attemptFire();const mv=getMoveVector();if(mv)player.setKeyboardMove(mv);else if(player.keyboardMove){player.keyboardMove=null;player.tx=player.x;player.ty=player.y;player.state='idle'}player.update(dt,covers);if(player.hp<=0){finish(false);return}updateDylan(dylan,dt,enemies,covers,player);if(dylan.hp<=0&&!dylan.dead)dylan.dead=true;updateBandits(enemies,dt,player,covers,[dylan]);if(target?.dead)target=null;if(!spawning&&enemies.every(e=>e.dead))checkWaveClear()}
 function draw(){drawWorld();const sprites=[];for(const e of enemies)if(!e.dead)sprites.push({z:depthKey(e),kind:'enemy',ref:e});if(!dylan.dead)sprites.push({z:depthKey(dylan),kind:'dylan',ref:dylan});sprites.push({z:depthKey(player),kind:'player',ref:player});sprites.sort((a,b)=>a.z-b.z);for(const s of sprites){if(s.kind==='enemy')drawBandit(ctx,s.ref,iso,target===s.ref);else if(s.kind==='dylan')drawDylan(ctx,s.ref,iso);else drawPlayer(ctx,s.ref,iso)}const alive=enemies.filter(e=>!e.dead).length;status.innerHTML=`<span class="hp">HP ${Math.max(0,Math.ceil(player.hp))}</span> * <span class="ammo">AMMO ${player.weapon.ammo}/${player.weapon.magazine}</span> * <span class="kills">KILLS ${kills}</span> * W${wave} (${alive} left)`+(player.cover?' * IN COVER':'')+(target&&!target.dead?' * TARGET LOCKED':'');hint.textContent=player.reloading?'RELOADING...':'Joystick / WASD move * Tap target * FIRE * R reload';reloadButton.classList.toggle('hidden',player.weapon.ammo===player.weapon.magazine&&!player.reloading)}
 function loop(t){const dt=Math.min(.033,(t-last)/1000||0);last=t;update(dt);draw();requestAnimationFrame(loop)}
 let started=false;function start(){if(started)return;started=true;requestAnimationFrame(loop)}
 loadAssets().finally(start);setTimeout(start,2500);
+if(waveBanner){waveBanner.textContent='WAVE 1';waveBanner.classList.remove('hidden');waveAnnounce=1.6;setTimeout(()=>{if(wave===1&&waveBanner)waveBanner.classList.add('hidden')},1600);}

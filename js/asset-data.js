@@ -1,7 +1,5 @@
-// Prefer files under assets/generated/ (loaded via assets.js fallbacks).
-export const assetData = {
-  tileAsphalt: null,
-  ruinA: null,
-  ruinB: null,
-  jersey: null,
-};
+import tileAsphalt from "./asset-tileAsphalt.js";
+import ruinA from "./asset-ruinA.js";
+import ruinB from "./asset-ruinB.js";
+import jersey from "./asset-jersey.js";
+export const assetData = { tileAsphalt, ruinA, ruinB, jersey };
