@@ -367,14 +367,18 @@ test("cover pieces use explicit square/rect/T/U/L segments that match their art"
   assert.ok(peeking.x !== planted.x || peeking.y < planted.y);
 });
 
-test("street asphalt is solid slabs plus sharp grain, not a stretched tile", () => {
+test("street asphalt is a continuous corridor, not a tiled or stretched plate", () => {
   const source = readFileSync("js/game.js", "utf8");
+  const city = readFileSync("js/wartornCity.js", "utf8");
   assert.equal(source.includes("stretch one texture"), false);
   assert.equal(source.includes("groundTile"), false);
   assert.equal(source.includes("roadSegments"), false);
-  assert.match(source, /getAsphaltGrain/);
-  assert.match(source, /imageSmoothingEnabled = false/);
   assert.match(source, /drawWartornStreetSurface/);
+  assert.match(source, /WALK/);
+  assert.match(source, /drawStreetLamp/);
+  assert.equal(city.includes('createPattern(wartornStreet'), false);
+  assert.match(city, /getSeamlessGrit/);
+  assert.match(city, /drawFarBackdrop/);
 });
 
 test("mission cover layouts are unique, reproducible, and keep spawn lanes clear", async () => {
@@ -1388,13 +1392,14 @@ test("wartorn city plates load and dress the street sides", async () => {
       dressing.wrecks.some((item) => item.kind === kind),
     ),
   );
+  assert.ok(dressing.sidewalk >= 200, "sidewalk strips dress the street edges");
   assert.ok(
-    dressing.buildings.every((item) => Math.abs(item.x) > dressing.road),
-    "ruins stay off the playable street",
+    dressing.buildings.every((item) => Math.abs(item.x) > dressing.road + 400),
+    "ruins stay on the far backdrop, not the midfield street",
   );
   assert.ok(
     dressing.streetScenes.every((item) => Math.abs(item.x) > dressing.road),
-    "sidewalk street tiles stay off the playable asphalt",
+    "sidewalk grit stays off the playable asphalt",
   );
   assert.ok(
     dressing.wrecks.some((item) => Math.abs(item.x) < dressing.road),
@@ -1404,16 +1409,13 @@ test("wartorn city plates load and dress the street sides", async () => {
     dressing.rubble.some((item) => Math.abs(item.x) < dressing.road),
     "debris piles sit on the street corridor",
   );
+  assert.equal(city.sidewalkWidth(), dressing.sidewalk);
   const ctx = h.document.createElement("canvas").getContext("2d");
-  city.drawWartornAtmosphere(ctx, 390, 844);
-  city.drawWartornDressing(
-    ctx,
-    (x, y) => [x * 0.25, y * 0.125],
-    { minX: -2300, maxX: 2300, minY: -6600, maxY: 1900 },
-    390,
-    844,
-    () => true,
-  );
+  const iso = (x, y) => [x * 0.25, y * 0.125];
+  const world = { minX: -2300, maxX: 2300, minY: -6600, maxY: 1900, cameraX: 0, cameraY: 0 };
+  city.drawWartornAtmosphere(ctx, 390, 844, iso, world);
+  city.drawWartornStreetSurface(ctx, iso, world, () => true);
+  city.drawWartornDressing(ctx, iso, world, 390, 844, () => true);
   await city.preloadWartornAssets();
 });
 

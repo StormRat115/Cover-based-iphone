@@ -2,7 +2,7 @@ import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-89";
+} from "./bloodEffects.js?v=20260906-90";
 var game = document.getElementById("game"),
   overlay = document.createElement("canvas");
 overlay.id = "bloodCanvas";

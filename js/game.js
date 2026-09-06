@@ -1,43 +1,43 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-89";
+import { createGameLoop } from "./gameLoop.js?v=20260906-90";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-89";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-89";
+} from "./geometry.js?v=20260906-90";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-90";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-89";
-import { updateSquadHud } from "./squadHud.js?v=20260906-89";
-import { updateCombatHud } from "./combatHud.js?v=20260906-89";
-import { updatePlayerHud } from "./player.js?v=20260906-89";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-89";
-import "./squadDrawer.js?v=20260906-89";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-89";
+} from "./bloodEffects.js?v=20260906-90";
+import { updateSquadHud } from "./squadHud.js?v=20260906-90";
+import { updateCombatHud } from "./combatHud.js?v=20260906-90";
+import { updatePlayerHud } from "./player.js?v=20260906-90";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-90";
+import "./squadDrawer.js?v=20260906-90";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-90";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-89";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-89";
+} from "./enemy.js?v=20260906-90";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-90";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-89";
+} from "./marines.js?v=20260906-90";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-89";
+} from "./streetMission.js?v=20260906-90";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-89";
+} from "./supportVehicle.js?v=20260906-90";
 import {
   createCover,
   findCoverForPoint,
@@ -46,75 +46,75 @@ import {
   isLineBlocked,
   firstCoverOnSegment,
   registerCover,
-} from "./cover.js?v=20260906-89";
+} from "./cover.js?v=20260906-90";
 import {
   isCoverFull,
   nearestFreeSlot,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260906-89";
+} from "./coverSlots.js?v=20260906-90";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-89";
-import { initTactical } from "./tactical.js?v=20260906-89";
-import { AudioBus } from "./audio.js?v=20260906-89";
+} from "./input.js?v=20260906-90";
+import { initTactical } from "./tactical.js?v=20260906-90";
+import { AudioBus } from "./audio.js?v=20260906-90";
 import {
   segmentWave,
   updateWaveSegments,
   waveFullyCleared,
   pendingHostiles,
-} from "./waveSegments.js?v=20260906-89";
+} from "./waveSegments.js?v=20260906-90";
 import {
   grantKillXp,
   grantWaveXp,
   getTeamProgress,
-} from "./teamProgress.js?v=20260906-89";
+} from "./teamProgress.js?v=20260906-90";
 import {
   updateGrenades,
   drawGrenades,
   trySquadGrenades,
   resetGrenades,
-} from "./grenades.js?v=20260906-89";
+} from "./grenades.js?v=20260906-90";
 import {
   applyRunModifiers,
   updateMarineReinforcements,
   resetMarineTimer,
-} from "./runModifiers.js?v=20260906-89";
+} from "./runModifiers.js?v=20260906-90";
 import {
   drawWartornAtmosphere,
   drawWartornDressing,
   drawWartornStreetSurface,
-} from "./wartornCity.js?v=20260906-89";
+} from "./wartornCity.js?v=20260906-90";
 import {
   updateSquadDialog,
   drawDialogBubbles,
   resetSquadDialog,
-} from "./squadDialog.js?v=20260906-89";
+} from "./squadDialog.js?v=20260906-90";
 import {
   unstickOverlappingUnits,
   resetUnitUnstick,
-} from "./unitCollision.js?v=20260906-89";
+} from "./unitCollision.js?v=20260906-90";
 import {
   camModeLabel,
   cameraLookAt,
   easeCameraToward,
-} from "./frontLineCam.js?v=20260906-89";
+} from "./frontLineCam.js?v=20260906-90";
 import {
   spraySuppression,
-} from "./suppression.js?v=20260906-89";
+} from "./suppression.js?v=20260906-90";
 import {
   updateAmmoDrops,
   drawAmmoDrops,
   spawnKillAmmo,
   spawnWaveAmmo,
-} from "./ammoEconomy.js?v=20260906-89";
+} from "./ammoEconomy.js?v=20260906-90";
 import {
   damageCover,
   tickCoverVisuals,
-} from "./destructibleCover.js?v=20260906-89";
+} from "./destructibleCover.js?v=20260906-90";
 import {
   createStreetObjectives,
   resetStreetObjectives,
@@ -122,7 +122,7 @@ import {
   currentPushGoal,
   objectiveStatusLine,
   drawStreetTask,
-} from "./streetObjectives.js?v=20260906-89";
+} from "./streetObjectives.js?v=20260906-90";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -1099,16 +1099,22 @@ function drawStreetLamp(x, y) {
   if (!onScreen(x, y, 180)) return;
   var q = iso(x, y);
   ctx.save();
-  ctx.strokeStyle = "#252b2a";
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = "#2a2620";
+  ctx.lineWidth = 2.2;
   ctx.beginPath();
   ctx.moveTo(q[0], q[1]);
-  ctx.lineTo(q[0], q[1] - 28);
-  ctx.lineTo(q[0] + 6, q[1] - 33);
+  ctx.lineTo(q[0], q[1] - 34);
+  ctx.lineTo(q[0] + 8, q[1] - 40);
   ctx.stroke();
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = "#d8c47a";
+  ctx.beginPath();
+  ctx.arc(q[0] + 9, q[1] - 40, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
   ctx.fillStyle = "#c6b979";
   ctx.beginPath();
-  ctx.arc(q[0] + 7, q[1] - 33, 2.5, 0, Math.PI * 2);
+  ctx.arc(q[0] + 9, q[1] - 40, 2.6, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
@@ -1122,96 +1128,20 @@ function drawCrosswalk(y) {
         [x + 32, y + 13],
         [x, y + 13],
       ],
-      "#8a8274aa",
+      "#8a827466",
     );
-}
-var asphaltGrainCanvas = null;
-function getAsphaltGrain() {
-  if (asphaltGrainCanvas) return asphaltGrainCanvas;
-  var size = 192;
-  var c = document.createElement("canvas");
-  c.width = size;
-  c.height = size;
-  var g = c.getContext && c.getContext("2d");
-  if (!g || typeof g.createImageData !== "function") return null;
-  var data = g.createImageData(size, size);
-  if (!data || !data.data) return null;
-  var i = 0;
-  for (var y = 0; y < size; y++) {
-    for (var x = 0; x < size; x++) {
-      var n =
-        (x * 127 + y * 311 + x * y * 13) ^
-        ((x * 19 + 41) * (y * 23 + 17) + (x << 2) + (y << 4));
-      n = n & 255;
-      var speck = n > 248 ? 168 : n < 10 ? 28 : 68 + (n % 22);
-      var edge = Math.min(x, y, size - 1 - x, size - 1 - y);
-      var fade = edge < 12 ? edge / 12 : 1;
-      data.data[i++] = speck + 4;
-      data.data[i++] = speck;
-      data.data[i++] = speck - 8;
-      data.data[i++] = Math.round((n > 232 || n < 16 ? 54 : 16) * fade);
-    }
-  }
-  g.putImageData(data, 0, 0);
-  asphaltGrainCanvas = c;
-  return c;
-}
-function drawSharpStreetMarks(curbL, curbR) {
-  var stains = [
-    [-220, world.minY + 980, 90, 36, "#2a241c66"],
-    [260, world.minY + 1560, 80, 30, "#1c181466"],
-    [-90, world.minY + 2200, 70, 28, "#2e261c58"],
-    [140, world.minY + 3100, 86, 32, "#241e1860"],
-    [-300, world.minY + 4020, 74, 26, "#1a161258"],
-    [40, world.minY + 4880, 64, 24, "#2c241c55"],
-    [-160, world.minY + 1180, 54, 22, "#3a2e2260"],
-    [210, world.minY + 2480, 62, 20, "#1e1a1462"],
-    [-40, world.minY + 3680, 78, 28, "#2a221c58"],
-  ];
-  for (var i = 0; i < stains.length; i++) {
-    var s = stains[i];
-    if (!onScreen(s[0], s[1], 220)) continue;
-    worldPoly(
-      [
-        [s[0] - s[2] / 2, s[1] - s[3] / 2],
-        [s[0] + s[2] / 2, s[1] - s[3] / 3],
-        [s[0] + s[2] / 3, s[1] + s[3] / 2],
-        [s[0] - s[2] / 3, s[1] + s[3] / 3],
-      ],
-      s[4],
-    );
-  }
-  var cracks = [
-    [-40, world.minY + 760, 8, 110],
-    [180, world.minY + 1680, 6, 90],
-    [-160, world.minY + 2680, 7, 100],
-    [70, world.minY + 3600, 6, 86],
-    [-250, world.minY + 4500, 7, 94],
-    [110, world.minY + 1120, 5, 78],
-    [-280, world.minY + 2040, 7, 88],
-    [240, world.minY + 3180, 6, 72],
-    [-90, world.minY + 4120, 8, 104],
-    [160, world.minY + 5340, 6, 80],
-  ];
-  for (var c = 0; c < cracks.length; c++) {
-    var k = cracks[c];
-    if (!onScreen(k[0], k[1], 180)) continue;
-    worldPoly(
-      [
-        [k[0], k[1]],
-        [k[0] + k[2], k[1] + 10],
-        [k[0] + 2, k[1] + k[3]],
-        [k[0] - 2, k[1] + k[3] - 8],
-      ],
-      "#1a1612cc",
-    );
-  }
 }
 function drawMapDecor() {
-  // Wide urban street: solid slabs, sharp grain, no stretched photo tile.
-  var ROAD = 980;
-  var curbL = -ROAD,
-    curbR = ROAD;
+  // Continuous street corridor: soft asphalt + sidewalks, no tiled plates.
+  var ROAD = 980,
+    WALK = 260,
+    curbL = -ROAD,
+    curbR = ROAD,
+    walkL = curbL - WALK,
+    walkR = curbR + WALK,
+    y,
+    ly,
+    blend;
   worldPoly(
     [
       [world.minX, world.minY],
@@ -1219,7 +1149,25 @@ function drawMapDecor() {
       [world.maxX, world.maxY],
       [world.minX, world.maxY],
     ],
-    "#2a2722",
+    "#2c2924",
+  );
+  worldPoly(
+    [
+      [walkL, world.minY],
+      [curbL, world.minY],
+      [curbL, world.maxY],
+      [walkL, world.maxY],
+    ],
+    "#4a4640",
+  );
+  worldPoly(
+    [
+      [curbR, world.minY],
+      [walkR, world.minY],
+      [walkR, world.maxY],
+      [curbR, world.maxY],
+    ],
+    "#4a4640",
   );
   worldPoly(
     [
@@ -1228,96 +1176,44 @@ function drawMapDecor() {
       [curbR, world.maxY],
       [curbL, world.maxY],
     ],
-    "#3d3830",
+    "#3b3731",
   );
-  worldPoly(
-    [
-      [-80, world.minY],
-      [80, world.minY],
-      [80, world.maxY],
-      [-80, world.maxY],
-    ],
-    "#4a453c",
-  );
-  worldPoly(
-    [
-      [curbL, world.minY],
-      [curbL + 120, world.minY],
-      [curbL + 120, world.maxY],
-      [curbL, world.maxY],
-    ],
-    "#35312c",
-  );
-  worldPoly(
-    [
-      [curbR - 120, world.minY],
-      [curbR, world.minY],
-      [curbR, world.maxY],
-      [curbR - 120, world.maxY],
-    ],
-    "#35312c",
-  );
-  worldPoly(
-    [
-      [curbL - 40, world.minY],
-      [curbL, world.minY],
-      [curbL, world.maxY],
-      [curbL - 40, world.maxY],
-    ],
-    "#1f1c18",
-  );
-  worldPoly(
-    [
-      [curbR, world.minY],
-      [curbR + 40, world.minY],
-      [curbR + 40, world.maxY],
-      [curbR, world.maxY],
-    ],
-    "#1f1c18",
-  );
-  var grain = getAsphaltGrain();
-  if (grain) {
-    var corners = [
-      iso(curbL, world.minY),
-      iso(curbR, world.minY),
-      iso(curbR, world.maxY),
-      iso(curbL, world.maxY),
-    ];
-    var origin = iso(0, 0);
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(corners[0][0], corners[0][1]);
-    for (var ci = 1; ci < corners.length; ci++)
-      ctx.lineTo(corners[ci][0], corners[ci][1]);
-    ctx.closePath();
-    ctx.clip();
-    ctx.imageSmoothingEnabled = false;
-    ctx.globalAlpha = 0.22;
-    var pattern = ctx.createPattern(grain, "repeat");
-    if (pattern) {
-      ctx.translate(origin[0] % 192, origin[1] % 192);
-      ctx.fillStyle = pattern;
-      ctx.fillRect(-W - 96, -H - 96, W * 2 + 192, H * 2 + 192);
-    }
-    ctx.restore();
-  }
-  for (var y = world.minY + 120; y <= world.maxY - 80; y += 160)
+  for (blend = 0; blend < 5; blend++) {
     worldPoly(
       [
-        [-9, y],
-        [9, y],
-        [9, y + 48],
-        [-9, y + 48],
+        [curbL - 28 + blend * 10, world.minY],
+        [curbL + 36 + blend * 12, world.minY],
+        [curbL + 36 + blend * 12, world.maxY],
+        [curbL - 28 + blend * 10, world.maxY],
       ],
-      "#8a7a52aa",
+      blend % 2 ? "#403c3655" : "#38342e66",
     );
-  drawWartornStreetSurface(ctx, iso, world);
-  for (var crossY = world.minY + 420; crossY < world.maxY; crossY += 900)
+    worldPoly(
+      [
+        [curbR - 36 - blend * 12, world.minY],
+        [curbR + 28 - blend * 10, world.minY],
+        [curbR + 28 - blend * 10, world.maxY],
+        [curbR - 36 - blend * 12, world.maxY],
+      ],
+      blend % 2 ? "#403c3655" : "#38342e66",
+    );
+  }
+  drawWartornStreetSurface(ctx, iso, world, onScreen);
+  for (y = world.minY + 140; y <= world.maxY - 80; y += 210)
+    worldPoly(
+      [
+        [-7 + ((y / 210) | 0) % 3, y],
+        [7, y + 4],
+        [6, y + 36],
+        [-6, y + 32],
+      ],
+      "#8a7a5244",
+    );
+  for (var crossY = world.minY + 420; crossY < world.maxY; crossY += 1100)
     drawCrosswalk(crossY);
-  drawSharpStreetMarks(curbL, curbR);
-  for (var ly = world.minY + 160; ly <= world.maxY; ly += 420) {
-    drawStreetLamp(curbL + 50, ly);
-    drawStreetLamp(curbR - 50, ly);
+  for (ly = world.minY + 280; ly <= world.maxY; ly += 820) {
+    drawStreetLamp(walkL + 90, ly);
+    drawStreetLamp(walkR - 90, ly + 410);
   }
 }
 function drawStreetObjective() {
@@ -1354,7 +1250,7 @@ function drawStreetObjective() {
   ctx.restore();
 }
 function drawWorld() {
-  drawWartornAtmosphere(ctx, W, H);
+  drawWartornAtmosphere(ctx, W, H, iso, world);
   drawMapDecor();
   drawWartornDressing(ctx, iso, world, W, H, onScreen);
   drawStreetTask(ctx, iso, streetTasks);

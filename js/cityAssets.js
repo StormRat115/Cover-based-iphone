@@ -1,6 +1,6 @@
-import { loadImage } from "./assets.js?v=20260906-89";
-import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-89";
-import { preloadWartornAssets } from "./wartornCity.js?v=20260906-89";
+import { loadImage } from "./assets.js?v=20260906-90";
+import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-90";
+import { preloadWartornAssets } from "./wartornCity.js?v=20260906-90";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
