@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-69";
+import { loadImage } from "./assets.js?v=20260906-70";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
@@ -6,6 +6,12 @@ cityAtlas.src =
 export const generatedCoverAtlas = new Image();
 generatedCoverAtlas.src =
   "./assets/generated/cover-runtime-atlas.webp?v=20260905-62";
+export const groundTile = new Image();
+groundTile.src = "./assets/generated/tile-asphalt.png?v=20260906-70";
+export const buildingRuinA = new Image();
+buildingRuinA.src = "./assets/generated/building-ruin-a.png?v=20260906-70";
+export const buildingRuinB = new Image();
+buildingRuinB.src = "./assets/generated/building-ruin-b.png?v=20260906-70";
 
 export function preloadCityAssets(onProgress) {
   onProgress = onProgress || function () {};
@@ -13,11 +19,20 @@ export function preloadCityAssets(onProgress) {
   return Promise.all([
     loadImage(cityAtlas),
     loadImage(generatedCoverAtlas),
+    loadImage(groundTile),
+    loadImage(buildingRuinA),
+    loadImage(buildingRuinB),
   ]).then(function (images) {
-    if (!images[0] || !images[1])
+    if (images.some(function (img) { return !img; }))
       throw new Error("City environment images are not ready");
     onProgress(1, "CITY ASSETS READY");
-    return images;
+    return {
+      cityAtlas: images[0],
+      generatedCoverAtlas: images[1],
+      groundTile: images[2],
+      buildingRuinA: images[3],
+      buildingRuinB: images[4],
+    };
   });
 }
 

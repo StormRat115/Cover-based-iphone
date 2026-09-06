@@ -1,57 +1,62 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-69";
+import { createGameLoop } from "./gameLoop.js?v=20260906-70";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-69";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-69";
+} from "./geometry.js?v=20260906-70";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-70";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-69";
-import { updateSquadHud } from "./squadHud.js?v=20260906-69";
-import { updateCombatHud } from "./combatHud.js?v=20260906-69";
-import { updatePlayerHud } from "./player.js?v=20260906-69";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-69";
-import "./squadDrawer.js?v=20260906-69";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-69";
+} from "./bloodEffects.js?v=20260906-70";
+import { updateSquadHud } from "./squadHud.js?v=20260906-70";
+import { updateCombatHud } from "./combatHud.js?v=20260906-70";
+import { updatePlayerHud } from "./player.js?v=20260906-70";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-70";
+import "./squadDrawer.js?v=20260906-70";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-70";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-69";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-69";
+} from "./enemy.js?v=20260906-70";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-70";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-69";
+} from "./marines.js?v=20260906-70";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-69";
+} from "./streetMission.js?v=20260906-70";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-69";
+} from "./supportVehicle.js?v=20260906-70";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260906-69";
+} from "./cover.js?v=20260906-70";
+import {
+  groundTile,
+  buildingRuinA,
+  buildingRuinB,
+} from "./cityAssets.js?v=20260906-70";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-69";
-import { initTactical } from "./tactical.js?v=20260906-69";
+} from "./input.js?v=20260906-70";
+import { initTactical } from "./tactical.js?v=20260906-70";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -840,15 +845,30 @@ function worldPoly(points, fill, stroke) {
     ctx.stroke();
   }
 }
-function drawBuilding(x, y, w, h, roof) {
+function drawBuilding(x, y, w, h, roof, variant) {
   if (!onScreen(x, y, ((w + h) * world.scaleX) / 2 + 48)) return;
+  var q = iso(x, y);
+  var img = variant === "b" ? buildingRuinB : buildingRuinA;
+  if (img && img.complete && img.naturalWidth > 0) {
+    var scale = Math.max(w, h) / 220;
+    var dw = img.naturalWidth * scale * 0.92;
+    var dh = img.naturalHeight * scale * 0.92;
+    ctx.save();
+    ctx.shadowColor = "#0008";
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 6;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(img, q[0] - dw * 0.5, q[1] - dh * 0.88, dw, dh);
+    ctx.restore();
+    return;
+  }
   var pts = [
       [x - w / 2, y - h / 2],
       [x + w / 2, y - h / 2],
       [x + w / 2, y + h / 2],
       [x - w / 2, y + h / 2],
     ],
-    q = pts.map(function (p) {
+    qs = pts.map(function (p) {
       return iso(p[0], p[1]);
     });
   ctx.save();
@@ -857,8 +877,8 @@ function drawBuilding(x, y, w, h, roof) {
   ctx.shadowOffsetY = 6;
   ctx.fillStyle = "#716b60";
   ctx.beginPath();
-  ctx.moveTo(q[0][0], q[0][1] - 24);
-  q.slice(1).forEach(function (v) {
+  ctx.moveTo(qs[0][0], qs[0][1] - 24);
+  qs.slice(1).forEach(function (v) {
     ctx.lineTo(v[0], v[1] - 24);
   });
   ctx.closePath();
@@ -866,8 +886,8 @@ function drawBuilding(x, y, w, h, roof) {
   ctx.shadowColor = "transparent";
   ctx.fillStyle = roof || "#454b49";
   ctx.beginPath();
-  ctx.moveTo(q[0][0], q[0][1] - 32);
-  q.slice(1).forEach(function (v) {
+  ctx.moveTo(qs[0][0], qs[0][1] - 32);
+  qs.slice(1).forEach(function (v) {
     ctx.lineTo(v[0], v[1] - 32);
   });
   ctx.closePath();
@@ -908,6 +928,7 @@ function drawCrosswalk(y) {
     );
 }
 function drawMapDecor() {
+  // Fallback flat ground under the tiles.
   worldPoly(
     [
       [world.minX, world.minY],
@@ -917,6 +938,21 @@ function drawMapDecor() {
     ],
     "#4b514c",
   );
+  if (groundTile && groundTile.complete && groundTile.naturalWidth > 0) {
+    var stepX = 140,
+      stepY = 78;
+    for (var gy = world.minY; gy <= world.maxY; gy += stepY) {
+      for (var gx = world.minX; gx <= world.maxX; gx += stepX) {
+        if (!onScreen(gx, gy, 160)) continue;
+        var p = iso(gx, gy);
+        ctx.save();
+        ctx.globalAlpha = 0.92;
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(groundTile, p[0] - 70, p[1] - 40, 140, 80);
+        ctx.restore();
+      }
+    }
+  }
   worldPoly(
     [
       [-310, world.minY],
@@ -924,25 +960,7 @@ function drawMapDecor() {
       [310, world.maxY],
       [-310, world.maxY],
     ],
-    "#414542",
-  );
-  worldPoly(
-    [
-      [world.minX, world.minY],
-      [-310, world.minY],
-      [-310, world.maxY],
-      [world.minX, world.maxY],
-    ],
-    "#343a3a",
-  );
-  worldPoly(
-    [
-      [310, world.minY],
-      [world.maxX, world.minY],
-      [world.maxX, world.maxY],
-      [310, world.maxY],
-    ],
-    "#343a3a",
+    "#41454266",
   );
   for (var y = world.minY + 80; y <= world.maxY - 50; y += 118)
     worldPoly(
@@ -956,15 +974,14 @@ function drawMapDecor() {
     );
   for (var crossY = world.minY + 300; crossY < world.maxY; crossY += 620)
     drawCrosswalk(crossY);
+  var bi = 0;
   for (var outerY = world.minY + 260; outerY < world.maxY; outerY += 540) {
-    var y = outerY;
-    drawBuilding(-1650, y, 470, 330, "#404644");
-    drawBuilding(1650, y, 470, 330, "#454947");
+    drawBuilding(-1650, outerY, 470, 330, "#404644", bi++ % 2 ? "b" : "a");
+    drawBuilding(1650, outerY, 470, 330, "#454947", bi++ % 2 ? "b" : "a");
   }
   for (var innerY = world.minY + 120; innerY < world.maxY; innerY += 560) {
-    var y = innerY;
-    drawBuilding(-980, y, 320, 250, "#3e4442");
-    drawBuilding(980, y, 320, 250, "#424744");
+    drawBuilding(-980, innerY, 320, 250, "#3e4442", bi++ % 2 ? "b" : "a");
+    drawBuilding(980, innerY, 320, 250, "#424744", bi++ % 2 ? "b" : "a");
   }
   for (var ly = world.minY + 120; ly <= world.maxY; ly += 360) {
     drawStreetLamp(-430, ly);

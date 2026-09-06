@@ -1,6 +1,6 @@
-import { isLineBlocked } from "./cover.js?v=20260906-69";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-69";
-import { mitigateDamage } from "./combatStats.js?v=20260906-69";
+import { isLineBlocked } from "./cover.js?v=20260906-70";
+import { drawSoldier } from "./soldierAssets.js?v=20260906-70";
+import { mitigateDamage } from "./combatStats.js?v=20260906-70";
 
 export function createSupportVehicle(objective) {
   const vehicle = {
