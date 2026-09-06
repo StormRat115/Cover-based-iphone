@@ -1,6 +1,6 @@
-import { loadImage } from "./assets.js?v=20260906-104";
-import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-104";
-import { preloadWartornAssets } from "./wartornCity.js?v=20260906-104";
+import { loadImage } from "./assets.js?v=20260906-105";
+import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-105";
+import { preloadWartornAssets } from "./wartornCity.js?v=20260906-105";
 import {
   COVER_BLOCK_SIZE,
   E,
@@ -9,8 +9,8 @@ import {
   blockMap,
   livingBlocks,
   neighborMask,
-  pickCoverBlockSkin,
-} from "./coverBlocks.js?v=20260906-104";
+  pickCoverBlockFaceSkin,
+} from "./coverBlocks.js?v=20260906-105";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
@@ -24,7 +24,7 @@ coverShapeAtlas.src =
 export const coverBlockSkins = {};
 allCoverSkinFiles().forEach(function (file) {
   var image = new Image();
-  image.src = "./assets/generated/cover/blocks/" + file + "?v=20260906-104";
+  image.src = "./assets/generated/cover/blocks/" + file + "?v=20260906-105";
   coverBlockSkins[file] = image;
 });
 export const coverBlockAtlas = coverBlockSkins["concrete-center.webp"];
@@ -122,8 +122,10 @@ function fillPoly(ctx, pts, fill, stroke, width) {
   ctx.moveTo(pts[0][0], pts[0][1]);
   for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
   ctx.closePath();
-  ctx.fillStyle = fill;
-  ctx.fill();
+  if (fill) {
+    ctx.fillStyle = fill;
+    ctx.fill();
+  }
   if (stroke) {
     ctx.strokeStyle = stroke;
     ctx.lineWidth = width == null ? 1 : width;
@@ -181,37 +183,76 @@ function drawPrism(ctx, iso, x, y, w, h, z, palette, mask) {
   return { a: a, b: b, c: c, d: d, A: A, B: B, C: C, D: D, z: z };
 }
 
-function stampBlockSkin(ctx, prism, theme, mask, shape) {
-  var file = pickCoverBlockSkin(theme, mask, shape);
+function skinTile(theme, mask, shape, face) {
+  var file = pickCoverBlockFaceSkin(theme, mask, shape, face);
   var tile = coverBlockSkins[file];
-  if (!tile || !tile.complete || !tile.naturalWidth || !prism) return false;
-  var minX = Math.min(prism.A[0], prism.B[0], prism.C[0], prism.D[0]);
-  var maxX = Math.max(prism.A[0], prism.B[0], prism.C[0], prism.D[0]);
-  var minY = Math.min(prism.A[1], prism.B[1], prism.C[1], prism.D[1]);
-  var maxY = Math.max(prism.A[1], prism.B[1], prism.C[1], prism.D[1]);
+  if (!tile || !tile.complete || !tile.naturalWidth) return null;
+  return tile;
+}
+
+function stampTexturedQuad(ctx, tile, p00, p10, p01, shade) {
+  if (!tile || !ctx || !p00 || !p10 || !p01) return false;
+  var w = tile.naturalWidth,
+    h = tile.naturalHeight,
+    p11 = [p10[0] + (p01[0] - p00[0]), p10[1] + (p01[1] - p00[1])];
+  if (w < 2 || h < 2) return false;
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(prism.A[0], prism.A[1]);
-  ctx.lineTo(prism.B[0], prism.B[1]);
-  ctx.lineTo(prism.C[0], prism.C[1]);
-  ctx.lineTo(prism.D[0], prism.D[1]);
+  ctx.moveTo(p00[0], p00[1]);
+  ctx.lineTo(p10[0], p10[1]);
+  ctx.lineTo(p11[0], p11[1]);
+  ctx.lineTo(p01[0], p01[1]);
   ctx.closePath();
   ctx.clip();
-  ctx.imageSmoothingEnabled = true;
-  ctx.globalAlpha = 0.96;
-  ctx.drawImage(
-    tile,
-    0,
-    0,
-    tile.naturalWidth,
-    tile.naturalHeight,
-    minX,
-    minY,
-    Math.max(4, maxX - minX),
-    Math.max(4, maxY - minY),
+  ctx.imageSmoothingEnabled = false;
+  ctx.transform(
+    (p10[0] - p00[0]) / w,
+    (p10[1] - p00[1]) / w,
+    (p01[0] - p00[0]) / h,
+    (p01[1] - p00[1]) / h,
+    p00[0],
+    p00[1],
   );
+  ctx.drawImage(tile, 0, 0);
   ctx.restore();
+  if (shade) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(p00[0], p00[1]);
+    ctx.lineTo(p10[0], p10[1]);
+    ctx.lineTo(p11[0], p11[1]);
+    ctx.lineTo(p01[0], p01[1]);
+    ctx.closePath();
+    ctx.fillStyle = shade;
+    ctx.fill();
+    ctx.restore();
+  }
   return true;
+}
+
+function stampBlockFaces(ctx, prism, theme, mask, shape) {
+  if (!prism) return false;
+  var hideSouth = (mask & S) !== 0,
+    hideEast = (mask & E) !== 0,
+    top = skinTile(theme, mask, shape, "top"),
+    south = hideSouth ? null : skinTile(theme, mask, shape, "south"),
+    east = hideEast ? null : skinTile(theme, mask, shape, "east"),
+    painted = 0;
+  if (!hideSouth && south)
+    painted += stampTexturedQuad(ctx, south, prism.D, prism.C, prism.d, "rgba(20,14,8,0.28)")
+      ? 1
+      : 0;
+  if (!hideEast && east)
+    painted += stampTexturedQuad(ctx, east, prism.C, prism.B, prism.c, "rgba(8,10,12,0.4)")
+      ? 1
+      : 0;
+  if (top)
+    painted += stampTexturedQuad(ctx, top, prism.A, prism.B, prism.D, "rgba(255,255,240,0.06)")
+      ? 1
+      : 0;
+  if (painted)
+    fillPoly(ctx, [prism.A, prism.B, prism.C, prism.D], null, "#1a1612", 1.05);
+  return painted > 0;
 }
 
 function drawBlockCover(ctx, cover, iso) {
@@ -238,7 +279,7 @@ function drawBlockCover(ctx, cover, iso) {
     var y = cover.y + block.dy;
     var z = prismHeight(cover, { w: size, h: size });
     var prism = drawPrism(ctx, iso, x, y, size, size, z, palette, mask);
-    if (!stampBlockSkin(ctx, prism, theme, mask, cover.shape) && (mask & 15) !== 15)
+    if (!stampBlockFaces(ctx, prism, theme, mask, cover.shape) && (mask & 15) !== 15)
       decorateSegment(ctx, prism, cover, { w: size, h: size });
   }
   return true;

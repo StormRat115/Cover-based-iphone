@@ -2,7 +2,7 @@ import {
   describeOuterSlots,
   livingBlocks,
   slotCountFromBlocks,
-} from "./coverBlocks.js?v=20260906-104";
+} from "./coverBlocks.js?v=20260906-105";
 
 function segmentsOf(cover) {
   if (cover && cover.blocks && cover.blocks.length) {
@@ -244,4 +244,75 @@ export function occupancyPenalty(cover, actors, ignore) {
     n = claimedCount(cover, actors, ignore);
   if (n >= count) return 3200;
   return n * 520 + (n / count) * 260;
+}
+
+export function coverSlotGrade(cover) {
+  if (!cover || cover.destroyed) return null;
+  var type = cover.type || cover.coverType;
+  if (type === "low") return "half";
+  return "full";
+}
+
+export function occupiesCoverSlot(unit, slack) {
+  slack = slack == null ? 36 : slack;
+  if (!unit || unit.dead || unit.downed || !unit.cover || unit.cover.destroyed)
+    return false;
+  if (Number.isFinite(unit.coverAnchorX) && Number.isFinite(unit.coverAnchorY))
+    return Math.hypot(unit.x - unit.coverAnchorX, unit.y - unit.coverAnchorY) <= slack;
+  if (unit.coverBlend >= 0.55) return true;
+  if (unit.coverTarget && unit.cover === unit.coverTarget && unit.state === "idle")
+    return true;
+  var reach =
+    Math.max(unit.cover.w || 40, unit.cover.h || 40) * 0.55 + 28;
+  return Math.hypot(unit.x - unit.cover.x, unit.y - unit.cover.y) <= reach;
+}
+
+export function coverShieldKind(unit) {
+  var slack = unit && unit.combatState === "seeking" ? 20 : 58;
+  if (!occupiesCoverSlot(unit, slack)) return null;
+  return coverSlotGrade(unit.cover);
+}
+
+function shieldPath(ctx) {
+  ctx.beginPath();
+  ctx.moveTo(0, -7);
+  ctx.lineTo(6.2, -3.6);
+  ctx.lineTo(5.2, 2.2);
+  ctx.lineTo(0, 7.4);
+  ctx.lineTo(-5.2, 2.2);
+  ctx.lineTo(-6.2, -3.6);
+  ctx.closePath();
+}
+
+export function drawCoverShield(ctx, unit, y) {
+  var kind = coverShieldKind(unit);
+  if (!kind || !ctx) return false;
+  ctx.save();
+  ctx.translate(0, y == null ? -58 : y);
+  ctx.shadowColor = "#052e16";
+  ctx.shadowBlur = 4;
+  shieldPath(ctx);
+  ctx.fillStyle = "#14532d";
+  ctx.fill();
+  if (kind === "half") {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(-8, 0, 16, 10);
+    ctx.clip();
+    shieldPath(ctx);
+    ctx.fillStyle = "#22c55e";
+    ctx.fill();
+    ctx.restore();
+  } else {
+    shieldPath(ctx);
+    ctx.fillStyle = "#22c55e";
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+  shieldPath(ctx);
+  ctx.strokeStyle = "#bbf7d0";
+  ctx.lineWidth = 1.25;
+  ctx.stroke();
+  ctx.restore();
+  return true;
 }

@@ -2,7 +2,17 @@
 
 export const COVER_BLOCK_SIZE = 40;
 export const COVER_THEMES = ["jersey", "sandbags", "crates", "rubble", "wreck"];
-export const COVER_SHAPES = ["square", "rect", "T", "U", "L", "line", "cluster"];
+export const COVER_SHAPES = [
+  "square",
+  "rect",
+  "T",
+  "U",
+  "L",
+  "line",
+  "cluster",
+  "wall",
+  "halfwall",
+];
 
 export const COVER_SKIN_FILES = {
   concrete: {
@@ -47,6 +57,23 @@ export function allCoverSkinFiles() {
     for (role in COVER_SKIN_FILES[mat]) files.push(COVER_SKIN_FILES[mat][role]);
   }
   return files;
+}
+
+export function pickCoverBlockFaceSkin(theme, mask, shape, face) {
+  var mat = skinMaterialForTheme(theme);
+  var files = COVER_SKIN_FILES[mat] || COVER_SKIN_FILES.concrete;
+  if (face === "top") {
+    if (mat === "crates" && files.top) return pickCoverBlockSkin(theme, mask, shape);
+    return pickCoverBlockSkin(theme, mask, shape);
+  }
+  if (files.side) return files.side;
+  if (mat === "crates" && files.face) return files.face;
+  if (mat === "concrete")
+    return face === "east" ? files.edgeRight : files.edgeVert;
+  if (mat === "sandbags") return files.center;
+  if (mat === "rubble")
+    return face === "east" ? files.edgeRight : files.edgeLeft;
+  return pickCoverBlockSkin(theme, mask, shape);
 }
 
 export function pickCoverBlockSkin(theme, mask, shape) {
@@ -127,10 +154,12 @@ const SHAPE_CELLS = {
     [0, 0],
     [1, 0],
     [2, 0],
+    [3, 0],
+    [4, 0],
     [0, 1],
     [0, 2],
-    [2, 1],
-    [2, 2],
+    [4, 1],
+    [4, 2],
   ],
   L: [
     [0, 0],
@@ -167,12 +196,13 @@ const SET_PIECE_CELLS = {
     [2, 0],
     [3, 0],
     [4, 0],
+    [5, 0],
     [0, 1],
     [0, 2],
     [0, 3],
-    [4, 1],
-    [4, 2],
-    [4, 3],
+    [5, 1],
+    [5, 2],
+    [5, 3],
   ],
   checkpointT: [
     [0, 0],
@@ -307,8 +337,18 @@ export function growCluster(random, minCount, maxCount, maxSpan) {
   return normalizeCells(cells);
 }
 
+export function wallCells(length) {
+  length = Math.max(5, Math.min(8, length == null ? 6 : length));
+  var cells = [],
+    i;
+  for (i = 0; i < length; i++) cells.push([i, 0]);
+  return cells;
+}
+
 export function shapeCells(shape, extra) {
-  var kit = SET_PIECE_CELLS[shape] || SHAPE_CELLS[shape];
+  var kit;
+  if (shape === "wall" || shape === "halfwall") kit = wallCells(6);
+  else kit = SET_PIECE_CELLS[shape] || SHAPE_CELLS[shape];
   if (!kit) kit = SHAPE_CELLS.rect;
   var cells = kit.map(function (c) {
     return [c[0], c[1]];
@@ -349,9 +389,66 @@ export function randomShapeCells(random, spec) {
   var cycle = COVER_SHAPES;
   if (!shape) shape = cycle[Math.floor(random() * cycle.length)];
   if (shape === "cluster") return growCluster(random, 4, 7, 4);
+  if (shape === "wall" || shape === "halfwall")
+    return normalizeCells(wallCells(5 + Math.floor(random() * 4)));
   var cells = shapeCells(shape);
-  if (!spec.kit && random() < 0.28) cells = tryAddBud(cells, random, 5);
+  if (
+    !spec.kit &&
+    shape !== "U" &&
+    shape !== "wall" &&
+    shape !== "halfwall" &&
+    random() < 0.28
+  )
+    cells = tryAddBud(cells, random, 5);
   return normalizeCells(cells);
+}
+
+function looksLikeU(cells, box) {
+  if (!box || box.w < 3 || box.h < 2) return false;
+  var keys = {},
+    x,
+    y;
+  cells.forEach(function (c) {
+    keys[cellKey(c[0], c[1])] = true;
+  });
+  function has(gx, gy) {
+    return !!keys[cellKey(gx, gy)];
+  }
+  function rowFull(gy) {
+    for (x = 0; x < box.w; x++) if (!has(x, gy)) return false;
+    return true;
+  }
+  function rowArms(gy) {
+    if (!has(0, gy) || !has(box.w - 1, gy)) return false;
+    for (x = 1; x < box.w - 1; x++) if (has(x, gy)) return false;
+    return true;
+  }
+  function colFull(gx) {
+    for (y = 0; y < box.h; y++) if (!has(gx, y)) return false;
+    return true;
+  }
+  function colArms(gx) {
+    if (!has(gx, 0) || !has(gx, box.h - 1)) return false;
+    for (y = 1; y < box.h - 1; y++) if (has(gx, y)) return false;
+    return true;
+  }
+  if (rowFull(0)) {
+    for (y = 1; y < box.h; y++) if (!rowArms(y)) break;
+    if (y === box.h) return true;
+  }
+  if (rowFull(box.h - 1)) {
+    for (y = 0; y < box.h - 1; y++) if (!rowArms(y)) break;
+    if (y === box.h - 1) return true;
+  }
+  if (colFull(0)) {
+    for (x = 1; x < box.w; x++) if (!colArms(x)) break;
+    if (x === box.w) return true;
+  }
+  if (colFull(box.w - 1)) {
+    for (x = 0; x < box.w - 1; x++) if (!colArms(x)) break;
+    if (x === box.w - 1) return true;
+  }
+  return false;
 }
 
 export function inferShapeName(cells) {
@@ -359,8 +456,11 @@ export function inferShapeName(cells) {
   var n = cells.length;
   if (n === 1) return "square";
   if (box.w === box.h && n === box.w * box.h) return "square";
-  if ((box.h === 1 || box.w === 1) && n === Math.max(box.w, box.h))
+  if ((box.h === 1 || box.w === 1) && n === Math.max(box.w, box.h)) {
+    if (n >= 5) return "wall";
     return n <= 3 ? "line" : "rect";
+  }
+  if (looksLikeU(cells, box)) return "U";
   if (n >= 4 && n <= 8) {
     var keys = {};
     cells.forEach(function (c) {
@@ -371,11 +471,9 @@ export function inferShapeName(cells) {
     }
     if (box.w === 3 && box.h === 3 && n === 5 && has(1, 0) && has(1, 1) && has(1, 2))
       return "T";
-    if (box.w === 3 && box.h === 3 && n === 7 && has(0, 0) && has(2, 0) && !has(1, 1))
-      return "U";
     if (n === 4 && (box.w === 2 || box.h === 2)) return "L";
   }
-  if (n >= 4 && (box.h === 1 || box.w === 1)) return "rect";
+  if (n >= 4 && (box.h === 1 || box.w === 1)) return n >= 5 ? "wall" : "rect";
   return n <= 3 ? "line" : "cluster";
 }
 
@@ -606,7 +704,13 @@ export function makeBlockCover(spec) {
   var cells;
   if (spec.cells && spec.cells.length) cells = spec.cells;
   else if (spec.kit && SET_PIECE_CELLS[spec.kit]) cells = shapeCells(spec.kit);
-  else if (spec.randomize || spec.shape === "cluster" || spec.shape === "line")
+  else if (
+    spec.randomize ||
+    spec.shape === "cluster" ||
+    spec.shape === "line" ||
+    spec.shape === "wall" ||
+    spec.shape === "halfwall"
+  )
     cells = randomShapeCells(random, spec);
   else if (spec.shape) cells = shapeCells(spec.kit || spec.shape);
   else cells = randomShapeCells(random, spec);
@@ -614,6 +718,9 @@ export function makeBlockCover(spec) {
   if (!cellsConnected(cells)) cells = shapeCells(spec.shape || "rect");
   var blocks = cellsToBlocks(cells, theme, size);
   var inferred = spec.shape && spec.shape !== "cluster" ? spec.shape : inferShapeName(cells);
+  var type = spec.coverType || coverTypeForTheme(theme);
+  if (inferred === "halfwall" || spec.shape === "halfwall") type = "low";
+  else if (inferred === "wall" || spec.shape === "wall") type = spec.coverType || "wide";
   var cover = {
     id: spec.id,
     x: spec.x || 0,
@@ -622,8 +729,8 @@ export function makeBlockCover(spec) {
     theme: theme,
     facing: facing,
     asset: theme + "_" + inferred,
-    coverType: spec.coverType || coverTypeForTheme(theme),
-    type: spec.coverType || coverTypeForTheme(theme),
+    coverType: type,
+    type: type,
     scale: spec.scale || 0.26,
     blockSize: size,
     blocks: blocks,
