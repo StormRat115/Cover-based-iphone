@@ -1,87 +1,137 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-81";
+import { createGameLoop } from "./gameLoop.js?v=20260906-89";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-81";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-81";
+} from "./geometry.js?v=20260906-89";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-89";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-81";
-import { updateSquadHud } from "./squadHud.js?v=20260906-81";
-import { updateCombatHud } from "./combatHud.js?v=20260906-81";
-import { updatePlayerHud } from "./player.js?v=20260906-81";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-81";
-import "./squadDrawer.js?v=20260906-81";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-81";
+} from "./bloodEffects.js?v=20260906-89";
+import { updateSquadHud } from "./squadHud.js?v=20260906-89";
+import { updateCombatHud } from "./combatHud.js?v=20260906-89";
+import { updatePlayerHud } from "./player.js?v=20260906-89";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-89";
+import "./squadDrawer.js?v=20260906-89";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-89";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-81";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-81";
+} from "./enemy.js?v=20260906-89";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-89";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-81";
+} from "./marines.js?v=20260906-89";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-81";
+} from "./streetMission.js?v=20260906-89";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-81";
+} from "./supportVehicle.js?v=20260906-89";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260906-81";
+  firstCoverOnSegment,
+  registerCover,
+} from "./cover.js?v=20260906-89";
+import {
+  isCoverFull,
+  nearestFreeSlot,
+  occupancyPenalty,
+  reserveCoverSlot,
+} from "./coverSlots.js?v=20260906-89";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-81";
-import { initTactical } from "./tactical.js?v=20260906-81";
-import { AudioBus } from "./audio.js?v=20260906-81";
+} from "./input.js?v=20260906-89";
+import { initTactical } from "./tactical.js?v=20260906-89";
+import { AudioBus } from "./audio.js?v=20260906-89";
 import {
   segmentWave,
   updateWaveSegments,
   waveFullyCleared,
   pendingHostiles,
-} from "./waveSegments.js?v=20260906-81";
+} from "./waveSegments.js?v=20260906-89";
 import {
   grantKillXp,
   grantWaveXp,
   getTeamProgress,
-} from "./teamProgress.js?v=20260906-81";
+} from "./teamProgress.js?v=20260906-89";
 import {
   updateGrenades,
   drawGrenades,
   trySquadGrenades,
   resetGrenades,
-} from "./grenades.js?v=20260906-81";
+} from "./grenades.js?v=20260906-89";
 import {
   applyRunModifiers,
   updateMarineReinforcements,
   resetMarineTimer,
-} from "./runModifiers.js?v=20260906-81";
+} from "./runModifiers.js?v=20260906-89";
+import {
+  drawWartornAtmosphere,
+  drawWartornDressing,
+  drawWartornStreetSurface,
+} from "./wartornCity.js?v=20260906-89";
+import {
+  updateSquadDialog,
+  drawDialogBubbles,
+  resetSquadDialog,
+} from "./squadDialog.js?v=20260906-89";
+import {
+  unstickOverlappingUnits,
+  resetUnitUnstick,
+} from "./unitCollision.js?v=20260906-89";
+import {
+  camModeLabel,
+  cameraLookAt,
+  easeCameraToward,
+} from "./frontLineCam.js?v=20260906-89";
+import {
+  spraySuppression,
+} from "./suppression.js?v=20260906-89";
+import {
+  updateAmmoDrops,
+  drawAmmoDrops,
+  spawnKillAmmo,
+  spawnWaveAmmo,
+} from "./ammoEconomy.js?v=20260906-89";
+import {
+  damageCover,
+  tickCoverVisuals,
+} from "./destructibleCover.js?v=20260906-89";
+import {
+  createStreetObjectives,
+  resetStreetObjectives,
+  updateStreetObjectives,
+  currentPushGoal,
+  objectiveStatusLine,
+  drawStreetTask,
+} from "./streetObjectives.js?v=20260906-89";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
   hint = document.querySelector("#hint"),
   fireButton = document.querySelector("#fire"),
   reloadButton = document.querySelector("#reload"),
+  swapButton = document.querySelector("#swapWeapon"),
   autoPlayButton = document.querySelector("#autoPlay"),
+  camModeButton = document.querySelector("#camMode"),
   pauseButton = document.querySelector("#pause"),
   pauseMenu = document.querySelector("#pauseMenu"),
   resumeButton = document.querySelector("#resumeButton"),
@@ -106,6 +156,7 @@ var W = 0,
   fireHeld = false,
   playerHitFlash = 0,
   autoPlay = false,
+  frontLineCam = false,
   autoMoveTimer = 0,
   autoTargetTimer = 0,
   wave = 1,
@@ -131,6 +182,8 @@ var mission = createStreetMission(),
   allies = createAllies(),
   marines = createMarines(),
   projectiles = [];
+var ammoDrops = [];
+var streetTasks = createStreetObjectives();
 initTactical();
 window.__battlePlayer = player;
 window.__battleEnemies = enemies;
@@ -141,6 +194,10 @@ window.__streetMission = mission;
 window.__supportVehicle = supportVehicle;
 window.__waveDefense = true;
 window.__wave = wave;
+window.__frontLineCam = false;
+window.__ammoDrops = ammoDrops;
+window.__streetObjectives = streetTasks;
+window.__activeStreetGoal = currentPushGoal(mission, streetTasks);
 function resize() {
   dpr = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth;
@@ -161,13 +218,32 @@ function distance(a, b) {
 function rand(a, b) {
   return a + Math.random() * (b - a);
 }
+function syncCamModeHud() {
+  if (!camModeButton) return;
+  camModeButton.classList.toggle("hidden", !autoPlay);
+  camModeButton.classList.toggle("active", !!(autoPlay && frontLineCam));
+  camModeButton.textContent = camModeLabel(frontLineCam);
+  camModeButton.setAttribute(
+    "aria-pressed",
+    autoPlay && frontLineCam ? "true" : "false",
+  );
+  window.__frontLineCam = !!(autoPlay && frontLineCam);
+}
+function setFrontLineCam(on) {
+  frontLineCam = !!on && autoPlay;
+  hudDirty = true;
+  syncCamModeHud();
+}
 function updateCamera() {
-  world.cameraX +=
-    (clamp(player.x, world.minX + 430, world.maxX - 430) - world.cameraX) *
-    0.09;
-  world.cameraY +=
-    (clamp(player.y, world.minY + 330, world.maxY - 330) - world.cameraY) *
-    0.09;
+  var look = cameraLookAt(
+    world,
+    player,
+    allies,
+    marines,
+    enemies,
+    autoPlay && frontLineCam,
+  );
+  easeCameraToward(world, look.x, look.y);
 }
 export function iso(x, y) {
   return worldToScreen(x, y, world, W, H);
@@ -275,13 +351,21 @@ function updateProjectiles(dt) {
       step = p.speed * dt,
       nx = d <= step ? p.tx : p.x + (dx / d) * step,
       ny = d <= step ? p.ty : p.y + (dy / d) * step;
-    if (
-      (p.owner === "enemy" || p.owner === "ally") &&
-      p.life > p.coverGrace &&
-      isLineBlocked({ x: p.x, y: p.y }, { x: nx, y: ny }, covers)
-    ) {
-      projectiles.splice(i, 1);
-      continue;
+    if (p.life > p.coverGrace) {
+      var coverHit = firstCoverOnSegment(
+        { x: p.x, y: p.y },
+        { x: nx, y: ny },
+        covers,
+      );
+      if (coverHit && coverHit.cover) {
+        damageCover(
+          coverHit.cover,
+          p.owner === "player" ? 18 : p.owner === "ally" ? 14 : 10,
+          [player].concat(allies).concat(marines).concat(enemies),
+        );
+        projectiles.splice(i, 1);
+        continue;
+      }
     }
     p.px = p.x;
     p.py = p.y;
@@ -424,13 +508,17 @@ function attemptFire() {
   var e = target && !target.dead ? target : nearestEnemy();
   if (!e) return;
   if (!canPlayerEngage(e)) return;
+  player.maybeAutoSidearm && player.maybeAutoSidearm();
   if (player.weapon.ammo <= 0) {
     AudioBus.playEmpty();
-    reload();
+    if (player.weaponSlot === "sidearm") reload();
+    else if (player.swapWeapon) player.swapWeapon("sidearm");
+    else reload();
     return;
   }
   var before = player.weapon.ammo,
     hit = player.fireAt(e);
+  spraySuppression(player, e, enemies, true);
   if (player.weapon.ammo < before) {
     spawnProjectile(player, e, "player", hit ? 1 : 0);
     if (hit) {
@@ -457,13 +545,16 @@ function chooseAutoPosition(e, strategicGoal) {
       ? distance(player, strategicGoal)
       : Infinity;
   covers.forEach(function (c) {
+    if (!c || c.destroyed) return;
     var cd = distance(player, c),
       ed = e ? distance(e, c) : desired,
       goalDistance = strategicGoal ? distance(strategicGoal, c) : 0;
     if (cd > 1250) return;
     if (e && ed < 240) return;
     if (strategicGoal && goalDistance > currentGoalDistance - 90) return;
-    var slot = getCoverSlot(c, player, e),
+    var occupants = [player].concat(allies || []).concat(marines || []);
+    if (isCoverFull(c, occupants, player)) return;
+    var slot = reserveCoverSlot(c, player, e, occupants) || getCoverSlot(c, player, e),
       protectedSpot = e
         ? isLineBlocked({ x: slot.x, y: slot.y }, e, [c])
         : true,
@@ -474,7 +565,8 @@ function chooseAutoPosition(e, strategicGoal) {
         Math.abs(ed - desired) * (strategicGoal ? 0.25 : 0.55) +
         goalDistance * (strategicGoal ? 0.48 : 0) +
         (protectedSpot ? -190 : 180) +
-        (c.type === "wide" || c.type === "car" ? -65 : 0);
+        (c.type === "wide" || c.type === "car" ? -65 : 0) +
+        occupancyPenalty(c, occupants, player);
     if (e) {
       var midpoint = {
         x: (player.x + slot.x) * 0.5,
@@ -493,6 +585,7 @@ function chooseAutoPosition(e, strategicGoal) {
     }
   });
   if (best) {
+    if (Number.isFinite(best.index)) player.coverSlotIndex = best.index;
     player.setDestination(
       clamp(best.x, world.minX, world.maxX),
       clamp(best.y, world.minY, world.maxY),
@@ -565,6 +658,7 @@ function updateAutoPlayer(dt) {
     return;
   }
   if (player.weapon.ammo <= 0) {
+    if (player.maybeAutoSidearm && player.maybeAutoSidearm()) return;
     reload();
     return;
   }
@@ -605,8 +699,19 @@ autoPlayButton.addEventListener("pointerdown", function (e) {
     autoMoveTimer = 0;
     autoTargetTimer = 0;
     player.keyboardMove = null;
-  } else player.keyboardMove = null;
+  } else {
+    player.keyboardMove = null;
+    frontLineCam = false;
+  }
+  syncCamModeHud();
 });
+if (camModeButton) {
+  camModeButton.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    if (!started || paused || gameOver || !autoPlay) return;
+    setFrontLineCam(!frontLineCam);
+  });
+}
 fireButton.addEventListener("pointerdown", function (e) {
   e.preventDefault();
   if (!started || autoPlay || paused || gameOver) return;
@@ -626,6 +731,20 @@ reloadButton.addEventListener("pointerdown", function (e) {
   e.preventDefault();
   reload();
 });
+function syncSwapButton() {
+  if (!swapButton) return;
+  var onSide = player.weaponSlot === "sidearm";
+  swapButton.textContent = onSide ? "PRIMARY" : "SIDEARM";
+  swapButton.classList.toggle("sidearm", onSide);
+}
+if (swapButton)
+  swapButton.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    if (!started || paused || gameOver || player.dead || player.downed) return;
+    if (player.swapWeapon) player.swapWeapon();
+    syncSwapButton();
+    hudDirty = true;
+  });
 function togglePause() {
   if (!started || gameOver) return;
   paused = !paused;
@@ -680,7 +799,13 @@ canvas.addEventListener("pointerdown", function (e) {
       player,
       target && !target.dead ? target : null,
     );
-    player.setDestination(slot.x, slot.y, cover);
+    var occupants = [player].concat(allies || []).concat(marines || []);
+    var reserved =
+      nearestFreeSlot(cover, p, target && !target.dead ? target : null, occupants, player) ||
+      slot;
+    if (reserved && Number.isFinite(reserved.index))
+      player.coverSlotIndex = reserved.index;
+    player.setDestination(reserved.x, reserved.y, cover);
   } else player.setDestination(p.x, p.y, null);
 });
 initKeyboard({
@@ -688,12 +813,20 @@ initKeyboard({
     if (!autoPlay && !paused) attemptFire();
   },
   onReload: reload,
+  onSwap: function () {
+    if (!started || paused || gameOver || player.dead || player.downed) return;
+    if (player.swapWeapon) player.swapWeapon();
+    syncSwapButton();
+    hudDirty = true;
+  },
 });
 function noteTeamKill(enemy) {
   if (!enemy || enemy._xpGranted) return;
   enemy._xpGranted = true;
   kills++;
   grantKillXp(enemy, wave);
+  var drop = spawnKillAmmo(enemy);
+  if (drop) ammoDrops.push(drop);
 }
 
 function collectTeamKills() {
@@ -735,6 +868,9 @@ function updateWaveDefense(dt) {
     grantWaveXp(wave);
     waveState = "cleared";
     waveTimer = 2.8;
+    spawnWaveAmmo(player, 3).forEach(function (d) {
+      ammoDrops.push(d);
+    });
     target = null;
     player.aimTarget = null;
   }
@@ -755,6 +891,13 @@ function reset() {
   resetBlood();
   resetGrenades();
   resetMarineTimer();
+  resetSquadDialog();
+  resetUnitUnstick();
+  ammoDrops.length = 0;
+  streetTasks = resetStreetObjectives(streetTasks);
+  window.__streetObjectives = streetTasks;
+  window.__activeStreetGoal = currentPushGoal(mission, streetTasks);
+  window.__ammoDrops = ammoDrops;
   clearKeyboard();
   hudDirty = true;
   runtime.resetClock();
@@ -776,11 +919,13 @@ function reset() {
   fireHeld = false;
   autoPlay = false;
   window.__autoPlay = false;
+  frontLineCam = false;
   autoMoveTimer = 0;
   autoTargetTimer = 0;
   paused = false;
   autoPlayButton.classList.remove("active");
   autoPlayButton.textContent = "AUTO PLAY";
+  syncCamModeHud();
   gameOver = false;
   pauseMenu.classList.add("hidden");
   pauseButton.textContent = "Ⅱ";
@@ -830,6 +975,27 @@ function update(dt) {
     marine.y = clamp(marine.y, world.minY, world.maxY);
   });
   updateStreetMission(mission, dt, player, allies);
+  var beforeCovers = covers.length;
+  var streetResult = updateStreetObjectives(streetTasks, dt, {
+    player: player,
+    squad: allies,
+    marines: marines,
+    covers: covers,
+  });
+  window.__streetObjectives = streetTasks;
+  window.__activeStreetGoal = currentPushGoal(mission, streetTasks);
+  if (covers.length !== beforeCovers) {
+    covers.forEach(registerCover);
+    rebuildLayers();
+  }
+  if (streetResult && streetResult.justCompleted) {
+    spawnWaveAmmo(streetResult.justCompleted, 2).forEach(function (d) {
+      ammoDrops.push(d);
+    });
+    hudDirty = true;
+  }
+  updateAmmoDrops(ammoDrops, player, dt);
+  tickCoverVisuals(covers, dt);
   if (mission.justCaptured && !supportVehicle) {
     supportVehicle = createSupportVehicle(mission.objective);
     window.__supportVehicle = supportVehicle;
@@ -868,6 +1034,8 @@ function update(dt) {
   updateFeedback(dt);
   updateBlood(dt);
   updateWaveDefense(dt);
+  unstickOverlappingUnits(null, dt);
+  updateSquadDialog(dt, player, allies, marines, enemies);
   updateCamera();
   if (window.__tacticalTick) window.__tacticalTick(dt, player, enemies);
   if (target && target.dead) setTarget(null);
@@ -954,7 +1122,7 @@ function drawCrosswalk(y) {
         [x + 32, y + 13],
         [x, y + 13],
       ],
-      "#d1d0c5aa",
+      "#8a8274aa",
     );
 }
 var asphaltGrainCanvas = null;
@@ -975,12 +1143,12 @@ function getAsphaltGrain() {
         (x * 127 + y * 311 + x * y * 13) ^
         ((x * 19 + 41) * (y * 23 + 17) + (x << 2) + (y << 4));
       n = n & 255;
-      var speck = n > 248 ? 220 : n < 10 ? 22 : 82 + (n % 28);
+      var speck = n > 248 ? 168 : n < 10 ? 28 : 68 + (n % 22);
       var edge = Math.min(x, y, size - 1 - x, size - 1 - y);
       var fade = edge < 12 ? edge / 12 : 1;
+      data.data[i++] = speck + 4;
       data.data[i++] = speck;
-      data.data[i++] = speck + 2;
-      data.data[i++] = speck - 1;
+      data.data[i++] = speck - 8;
       data.data[i++] = Math.round((n > 232 || n < 16 ? 54 : 16) * fade);
     }
   }
@@ -990,12 +1158,15 @@ function getAsphaltGrain() {
 }
 function drawSharpStreetMarks(curbL, curbR) {
   var stains = [
-    [-220, world.minY + 980, 90, 36, "#2a2f2d55"],
-    [260, world.minY + 1560, 80, 30, "#2c322f50"],
-    [-90, world.minY + 2200, 70, 28, "#262b2958"],
-    [140, world.minY + 3100, 86, 32, "#2a302e52"],
-    [-300, world.minY + 4020, 74, 26, "#2c322f4d"],
-    [40, world.minY + 4880, 64, 24, "#262b2955"],
+    [-220, world.minY + 980, 90, 36, "#2a241c66"],
+    [260, world.minY + 1560, 80, 30, "#1c181466"],
+    [-90, world.minY + 2200, 70, 28, "#2e261c58"],
+    [140, world.minY + 3100, 86, 32, "#241e1860"],
+    [-300, world.minY + 4020, 74, 26, "#1a161258"],
+    [40, world.minY + 4880, 64, 24, "#2c241c55"],
+    [-160, world.minY + 1180, 54, 22, "#3a2e2260"],
+    [210, world.minY + 2480, 62, 20, "#1e1a1462"],
+    [-40, world.minY + 3680, 78, 28, "#2a221c58"],
   ];
   for (var i = 0; i < stains.length; i++) {
     var s = stains[i];
@@ -1016,6 +1187,11 @@ function drawSharpStreetMarks(curbL, curbR) {
     [-160, world.minY + 2680, 7, 100],
     [70, world.minY + 3600, 6, 86],
     [-250, world.minY + 4500, 7, 94],
+    [110, world.minY + 1120, 5, 78],
+    [-280, world.minY + 2040, 7, 88],
+    [240, world.minY + 3180, 6, 72],
+    [-90, world.minY + 4120, 8, 104],
+    [160, world.minY + 5340, 6, 80],
   ];
   for (var c = 0; c < cracks.length; c++) {
     var k = cracks[c];
@@ -1027,7 +1203,7 @@ function drawSharpStreetMarks(curbL, curbR) {
         [k[0] + 2, k[1] + k[3]],
         [k[0] - 2, k[1] + k[3] - 8],
       ],
-      "#1c201ecc",
+      "#1a1612cc",
     );
   }
 }
@@ -1043,7 +1219,7 @@ function drawMapDecor() {
       [world.maxX, world.maxY],
       [world.minX, world.maxY],
     ],
-    "#2b302e",
+    "#2a2722",
   );
   worldPoly(
     [
@@ -1052,7 +1228,7 @@ function drawMapDecor() {
       [curbR, world.maxY],
       [curbL, world.maxY],
     ],
-    "#3c4442",
+    "#3d3830",
   );
   worldPoly(
     [
@@ -1061,7 +1237,7 @@ function drawMapDecor() {
       [80, world.maxY],
       [-80, world.maxY],
     ],
-    "#4a524e",
+    "#4a453c",
   );
   worldPoly(
     [
@@ -1070,7 +1246,7 @@ function drawMapDecor() {
       [curbL + 120, world.maxY],
       [curbL, world.maxY],
     ],
-    "#363d3b",
+    "#35312c",
   );
   worldPoly(
     [
@@ -1079,7 +1255,7 @@ function drawMapDecor() {
       [curbR, world.maxY],
       [curbR - 120, world.maxY],
     ],
-    "#363d3b",
+    "#35312c",
   );
   worldPoly(
     [
@@ -1088,7 +1264,7 @@ function drawMapDecor() {
       [curbL, world.maxY],
       [curbL - 40, world.maxY],
     ],
-    "#262b29",
+    "#1f1c18",
   );
   worldPoly(
     [
@@ -1097,7 +1273,7 @@ function drawMapDecor() {
       [curbR + 40, world.maxY],
       [curbR, world.maxY],
     ],
-    "#262b29",
+    "#1f1c18",
   );
   var grain = getAsphaltGrain();
   if (grain) {
@@ -1116,7 +1292,7 @@ function drawMapDecor() {
     ctx.closePath();
     ctx.clip();
     ctx.imageSmoothingEnabled = false;
-    ctx.globalAlpha = 0.16;
+    ctx.globalAlpha = 0.22;
     var pattern = ctx.createPattern(grain, "repeat");
     if (pattern) {
       ctx.translate(origin[0] % 192, origin[1] % 192);
@@ -1133,8 +1309,9 @@ function drawMapDecor() {
         [9, y + 48],
         [-9, y + 48],
       ],
-      "#d4c078aa",
+      "#8a7a52aa",
     );
+  drawWartornStreetSurface(ctx, iso, world);
   for (var crossY = world.minY + 420; crossY < world.maxY; crossY += 900)
     drawCrosswalk(crossY);
   drawSharpStreetMarks(curbL, curbR);
@@ -1177,9 +1354,11 @@ function drawStreetObjective() {
   ctx.restore();
 }
 function drawWorld() {
-  ctx.fillStyle = "#4b514c";
-  ctx.fillRect(0, 0, W, H);
+  drawWartornAtmosphere(ctx, W, H);
   drawMapDecor();
+  drawWartornDressing(ctx, iso, world, W, H, onScreen);
+  drawStreetTask(ctx, iso, streetTasks);
+  drawAmmoDrops(ctx, iso, ammoDrops);
   drawStreetObjective();
   if (target && !target.dead) {
     var a = iso(player.x, player.y),
@@ -1240,7 +1419,11 @@ function drawMissionUI() {
   ctx.fillStyle = "#fff";
   ctx.font = "900 15px system-ui";
   ctx.fillText(
-    mission.captured ? "FORTIFICATION SECURED" : "CAPTURE THE FORT",
+    streetTasks && streetTasks.current
+      ? streetTasks.current.label
+      : mission.captured
+        ? "FORTIFICATION SECURED"
+        : "CAPTURE THE FORT",
     x + 14,
     y + 41,
   );
@@ -1252,13 +1435,16 @@ function drawMissionUI() {
     marineStrength = marines.filter(function (marine) {
       return !marine.dead;
     }).length,
-    objectiveLine = mission.captured
-      ? "OBJECTIVE SECURE  •  TURRET ACTIVE"
-      : mission.capturing
-        ? "CAPTURING  •  " + captureSecondsRemaining(mission).toFixed(1) + "s"
-        : "DISTANCE  •  " +
-          Math.max(0, Math.round(distance(player, mission.objective) / 10)) +
-          "m",
+    objectiveLine =
+      streetTasks && streetTasks.current
+        ? objectiveStatusLine(streetTasks)
+        : mission.captured
+          ? "OBJECTIVE SECURE  •  TURRET ACTIVE"
+          : mission.capturing
+            ? "CAPTURING  •  " + captureSecondsRemaining(mission).toFixed(1) + "s"
+            : "DISTANCE  •  " +
+              Math.max(0, Math.round(distance(player, mission.objective) / 10)) +
+              "m",
     line =
       waveState === "cleared"
         ? "WAVE " +
@@ -1333,6 +1519,7 @@ function draw(now) {
     else if (v.type === "vehicle") drawSupportVehicle(ctx, v.o, iso);
     else drawPlayer(ctx, v.o, iso);
   });
+  drawDialogBubbles(ctx, iso, [player].concat(allies).concat(marines));
   drawFeedback();
   drawMissionUI();
   var aliveAllies = allies.filter(function (a) {
@@ -1362,19 +1549,24 @@ function draw(now) {
     " MARINES • " +
     player.weapon.ammo +
     "/" +
-    player.weapon.magazine +
+    (player.weapon.infinite ? "∞" : Math.round(player.weapon.reserve || 0)) +
+    (player.weaponSlot === "sidearm" ? " SIDEARM" : "") +
     (player.downed ? " • DOWNED" : "") +
     (player.cover ? " • IN COVER" : "") +
     (target && !target.dead ? " • TARGET LOCKED" : "") +
     (autoPlay
-      ? " • AI PILOT" + (player.tacticalState ? " • " + player.tacticalState : "")
+      ? " • AI PILOT" +
+        (frontLineCam ? " • FRONT-LINE CAM" : " • PLAYER CAM") +
+        (player.tacticalState ? " • " + player.tacticalState : "")
       : "") +
     (mission.captured ? " • FORT SECURE" : mission.capturing ? " • CAPTURING" : "") +
     (paused ? " • PAUSED" : "");
   const nextHint = paused
     ? "GAME PAUSED"
     : player.downed
-      ? "WAIT FOR A REVIVE"
+      ? player.crawlSettled
+        ? "HOLDING COVER — WAIT FOR A REVIVE"
+        : "CRAWLING TO COVER"
       : player.dead
         ? "SOLDIER KIA"
         : mission.capturing
@@ -1394,6 +1586,7 @@ function draw(now) {
     updateSquadHud();
     updateCombatHud();
     updatePlayerHud(player);
+    if (typeof syncSwapButton === "function") syncSwapButton();
     lastHudUpdate = now;
     hudDirty = false;
   }
@@ -1427,6 +1620,10 @@ export function startGame() {
   clearKeyboard();
   covers = createCover();
   window.__battleCovers = covers;
+  ammoDrops.length = 0;
+  streetTasks = resetStreetObjectives(streetTasks);
+  window.__streetObjectives = streetTasks;
+  window.__activeStreetGoal = currentPushGoal(mission, streetTasks);
   applyRunModifiers(player, allies, marines);
   window.__battleMarines = marines;
   resetGrenades();

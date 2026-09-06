@@ -1,9 +1,10 @@
-import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-81";
+import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-89";
 
 export const ACTOR_RADIUS = 11;
 export const VAULT_DURATION = 0.46;
 
 export function coverPiecesOf(c) {
+  if (c && c.destroyed) return [];
   if (c && c.segments && c.segments.length)
     return c.segments.map(function (s) {
       return {
@@ -47,7 +48,7 @@ export function overlapsSolid(x, y, covers, opts) {
   var ignore = opts.ignore || null;
   for (var i = 0; i < (covers || []).length; i++) {
     var c = covers[i];
-    if (sameCover(c, ignore)) continue;
+    if (sameCover(c, ignore) || (c && c.destroyed)) continue;
     var ps = coverPiecesOf(c);
     for (var j = 0; j < ps.length; j++) {
       if (pieceContains(ps[j], x, y, pad)) return { cover: c, piece: ps[j] };
@@ -61,7 +62,7 @@ export function firstCoverOnSegment(from, to, covers, ignore) {
     best = Infinity;
   for (var i = 0; i < (covers || []).length; i++) {
     var c = covers[i];
-    if (sameCover(c, ignore)) continue;
+    if (sameCover(c, ignore) || (c && c.destroyed)) continue;
     var ps = coverPiecesOf(c);
     for (var j = 0; j < ps.length; j++) {
       var p = ps[j];

@@ -3,8 +3,13 @@ import {
   getCoverSlot,
   getHitChance,
   chooseCoverPeek,
-} from "./cover.js?v=20260906-81";
-import { weaponCopy } from "./weapons.js?v=20260906-81";
+} from "./cover.js?v=20260906-89";
+import { weaponCopy } from "./weapons.js?v=20260906-89";
+import {
+  isCoverFull,
+  occupancyPenalty,
+  reserveCoverSlot,
+} from "./coverSlots.js?v=20260906-89";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -121,8 +126,10 @@ function scoreCover(e, c, player, covers, enemies) {
     pd = Math.hypot(c.x - player.x, c.y - player.y),
     desired = roleDesired(e),
     users = occupancy(c, enemies, e);
-  if (travel > 900 || users >= 3) return 1e9;
-  var temp = { x: e.x, y: e.y, coverSlotIndex: users % 3 };
+  if (travel > 900 || isCoverFull(c, enemies, e)) return 1e9;
+  var reserved = reserveCoverSlot(c, e, player, enemies);
+  if (!reserved) return 1e9;
+  var temp = { x: e.x, y: e.y, coverSlotIndex: reserved.index };
   var anchor = getCoverSlot(c, temp, player),
     peek = chooseCoverPeek(c, temp, player, covers);
   var protectedAtAnchor = isLineBlocked(anchor, player, covers),
@@ -130,7 +137,7 @@ function scoreCover(e, c, player, covers, enemies) {
   var score =
     travel * 0.66 +
     Math.abs(pd - desired) * 0.72 +
-    users * 250 +
+    occupancyPenalty(c, enemies, e) +
     (protectedAtAnchor ? -140 : 250) +
     (clearAtPeek ? -210 : 420);
   if (c.id === e.lastCoverId) score += 190;
@@ -163,8 +170,8 @@ function choosePosition(e, player, covers, enemies) {
   var c = ranked[Math.floor(Math.random() * Math.min(3, ranked.length))].c;
   e.lastCoverId = e.cover ? e.cover.id : e.lastCoverId;
   e.cover = c;
-  var users = occupancy(c, enemies, e);
-  e.coverSlotIndex = users % 3;
+  var reserved = reserveCoverSlot(c, e, player, enemies);
+  e.coverSlotIndex = reserved ? reserved.index : 0;
   var slot = getCoverSlot(c, e, player),
     peek = chooseCoverPeek(c, e, player, covers);
   e.coverAnchorX = slot.x;

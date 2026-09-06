@@ -1,0 +1,30 @@
+{
+  "theme": "wartorn-city",
+  "loop": "human soldiers vs monster hordes",
+  "assets": {
+    "streetPlate": "assets/generated/world/wartorn-street-plate.png",
+    "ruinBuildingA": "assets/generated/world/wartorn-ruin-building-a.png",
+    "rubblePile": "assets/generated/world/wartorn-rubble-pile.png",
+    "skylineBackdrop": "assets/generated/world/wartorn-skyline-backdrop.png"
+  },
+  "phoneArt": {
+    "pack": "assets/generated/world/manifest.json",
+    "preview": "assets/generated/world/world-preview.png",
+    "backdrop": "assets/generated/world/skyline-smoke-backdrop.webp",
+    "facades": [
+      "assets/generated/world/facade-ruin-apartment.webp",
+      "assets/generated/world/facade-ruin-storefront.webp"
+    ],
+    "rubble": [
+      "assets/generated/world/rubble-concrete-rebar.webp",
+      "assets/generated/world/rubble-brick.webp",
+      "assets/generated/world/rubble-sandbags-crates.webp",
+      "assets/generated/world/rubble-scrap-metal.webp"
+    ],
+    "wrecks": [
+      "assets/generated/world/wreck-burnt-sedan.webp",
+      "assets/generated/world/wreck-burnt-pickup.webp",
+      "assets/generated/world/wreck-burnt-armored.webp"
+    ]
+  }
+}

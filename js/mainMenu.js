@@ -1,39 +1,40 @@
 import {
   WEAPONS,
+  SIDEARMS,
   weaponCopy,
   weaponWithAttachments,
-} from "./weapons.js?v=20260906-81";
-import { soldierSource } from "./soldierAssets.js?v=20260906-81";
+} from "./weapons.js?v=20260906-89";
+import { soldierSource } from "./soldierAssets.js?v=20260906-89";
 import {
   CHARACTER_STATS,
   damageReductionPercent,
   GENERAL_ACCURACY_PENALTY,
-} from "./combatStats.js?v=20260906-81";
+} from "./combatStats.js?v=20260906-89";
 import {
   ATTACHMENT_SLOTS,
   ATTACHMENT_SLOT_LABELS,
   attachmentsForSlot,
   emptyAttachmentIds,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260906-81";
+} from "./attachments.js?v=20260906-89";
 import {
   getTeamProgress,
   xpIntoLevel,
   xpForLevel,
-} from "./teamProgress.js?v=20260906-81";
+} from "./teamProgress.js?v=20260906-89";
 import {
   SKILL_BRANCHES,
   canBuySkill,
   buySkill,
   getSkillMods,
-} from "./skillTree.js?v=20260906-81";
+} from "./skillTree.js?v=20260906-89";
 import {
   ARMOR_OPTIONS,
   describeArmorStats,
   selectArmor,
   selectedArmorId,
   signed,
-} from "./armor.js?v=20260906-81";
+} from "./armor.js?v=20260906-89";
 
 var DEFAULT_WEAPONS = { player: "rifle", Rook: "rifle", Viper: "smg", Doc: "dmr" },
   STORAGE = "coverShooterLoadout",
@@ -45,10 +46,11 @@ var DEFAULT_WEAPONS = { player: "rifle", Rook: "rifle", Viper: "smg", Doc: "dmr"
   ],
   previewImage = soldierSource;
 
-function defaultEntry(weaponId) {
+function defaultEntry(weaponId, sidearmId) {
   return {
     weapon: weaponId || "rifle",
     attachments: emptyAttachmentIds(),
+    sidearm: sidearmId || "pistol",
   };
 }
 
@@ -58,6 +60,7 @@ function normalizeEntry(raw, fallbackWeapon) {
     return {
       weapon: raw.weapon || fallbackWeapon || "rifle",
       attachments: normalizeAttachmentIds(raw.attachments),
+      sidearm: SIDEARMS[raw.sidearm] ? raw.sidearm : "pistol",
     };
   }
   return defaultEntry(fallbackWeapon);
@@ -110,6 +113,23 @@ function weaponOptions(selected) {
   return Object.keys(WEAPONS)
     .map(function (id) {
       var w = WEAPONS[id];
+      return (
+        '<option value="' +
+        id +
+        '"' +
+        (id === selected ? " selected" : "") +
+        ">" +
+        w.name +
+        "</option>"
+      );
+    })
+    .join("");
+}
+
+function sidearmOptions(selected) {
+  return Object.keys(SIDEARMS)
+    .map(function (id) {
+      var w = SIDEARMS[id];
       return (
         '<option value="' +
         id +
@@ -289,6 +309,7 @@ function renderSquad(key, selection) {
     stats = CHARACTER_STATS[key] || CHARACTER_STATS.player,
     entry = normalizeEntry(selection[key], DEFAULT_WEAPONS[key]),
     w = weaponWithAttachments(entry.weapon, entry.attachments),
+    side = SIDEARMS[entry.sidearm] || SIDEARMS.pistol,
     mods = getSkillMods(),
     totalDamage = w.damage + stats.damage + (key === "player" ? mods.playerDamage : mods.allyDamage),
     fireRate = (1 / w.cooldown).toFixed(1);
@@ -347,7 +368,22 @@ function renderSquad(key, selection) {
     statCell("FIRE RATE", fireRate + " / sec") +
     statCell("RELOAD SPEED", w.reload.toFixed(2) + " sec") +
     statCell("MAGAZINE", w.magazine) +
-    '</div><div class="accuracyNote">Character Accuracy is added after the general ' +
+    '</div>' +
+    (key === "player"
+      ? '<div class="weaponBlock"><div class="weaponBlockTitle">SIDEARM · INFINITE AMMO</div><select class="weaponSelect" data-sidearm="player">' +
+        sidearmOptions(entry.sidearm) +
+        '</select><div class="weaponStatsGrid">' +
+        statCell("NAME", side.name) +
+        statCell("DAMAGE", side.damage) +
+        statCell("ACCURACY", (side.accuracy >= 0 ? "+" : "") + side.accuracy) +
+        statCell("RANGE", side.range) +
+        statCell("FIRE RATE", (1 / side.cooldown).toFixed(1) + " / sec") +
+        statCell("MAGAZINE", side.magazine + " ∞") +
+        '</div><div class="accuracyNote">' +
+        side.blurb +
+        " Auto-swaps when the primary is dry or you are pinned hard.</div></div>"
+      : "") +
+    '<div class="accuracyNote">Character Accuracy is added after the general ' +
     Math.abs(GENERAL_ACCURACY_PENALTY) +
     " point accuracy reduction. Attachments modify the weapon stats above. Armor and skill tree bonuses apply on PLAY.</div></div></div>"
   );
@@ -386,7 +422,10 @@ function equipFromSelection(s) {
   var p = window.__battlePlayer;
   if (p) {
     var pe = normalizeEntry(s.player, DEFAULT_WEAPONS.player);
-    p.weapon = weaponCopy(pe.weapon, pe.attachments);
+    p.primary = weaponCopy(pe.weapon, pe.attachments);
+    p.sidearm = weaponCopy(pe.sidearm || "pistol");
+    p.weaponSlot = "primary";
+    p.weapon = p.primary;
   }
   (window.__battleAllies || []).forEach(function (a) {
     var ae = normalizeEntry(
@@ -459,6 +498,13 @@ export function initMainMenu(onPlay) {
         selection[key] = normalizeEntry(selection[key], DEFAULT_WEAPONS[key]);
         selection[key].weapon = t.value;
         selection[key].attachments = emptyAttachmentIds();
+        saveSelection(selection);
+        renderPanel(rows, active, selection, page);
+        return;
+      }
+      if (t.dataset.sidearm) {
+        selection.player = normalizeEntry(selection.player, DEFAULT_WEAPONS.player);
+        selection.player.sidearm = t.value;
         saveSelection(selection);
         renderPanel(rows, active, selection, page);
         return;

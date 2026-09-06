@@ -46,6 +46,13 @@ export function finalAccuracy(baseChance, weaponAccuracy, characterAccuracy) {
   );
 }
 
+export function combatAccuracy(baseChance, weaponAccuracy, characterAccuracy, extras) {
+  return Math.max(
+    5,
+    Math.min(98, finalAccuracy(baseChance, weaponAccuracy, characterAccuracy) + (Number(extras) || 0)),
+  );
+}
+
 export function attackDamage(weaponDamage, characterDamage) {
   return Math.max(
     0,

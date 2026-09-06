@@ -1,6 +1,7 @@
-import { mitigateDamage } from "./combatStats.js?v=20260906-81";
-import { AudioBus } from "./audio.js?v=20260906-81";
-import { getSkillMods } from "./skillTree.js?v=20260906-81";
+import { mitigateDamage } from "./combatStats.js?v=20260906-89";
+import { AudioBus } from "./audio.js?v=20260906-89";
+import { getSkillMods } from "./skillTree.js?v=20260906-89";
+import { damageCover, isSoftCover } from "./destructibleCover.js?v=20260906-89";
 
 var grenades = [];
 
@@ -135,6 +136,18 @@ export function updateGrenades(dt, enemies) {
           });
         }
         applyBlast(g, enemies);
+        var covers =
+          typeof window !== "undefined" ? window.__battleCovers : [];
+        var occupants = []
+          .concat(typeof window !== "undefined" && window.__battlePlayer ? [window.__battlePlayer] : [])
+          .concat((typeof window !== "undefined" && window.__battleAllies) || [])
+          .concat((typeof window !== "undefined" && window.__battleMarines) || [])
+          .concat(enemies || []);
+        (covers || []).forEach(function (c) {
+          if (!c || !isSoftCover(c)) return;
+          if (Math.hypot(c.x - g.tx, c.y - g.ty) <= g.radius + 40)
+            damageCover(c, g.damage * 0.85, occupants);
+        });
       }
     } else {
       g.boomT += dt;

@@ -3,8 +3,13 @@ import {
   applyCoverChoice,
   coverProtects,
   peekPoint,
-} from "./combatAI.js?v=20260906-81";
-import { getCoverSlot } from "./cover.js?v=20260906-81";
+} from "./combatAI.js?v=20260906-89";
+import { seeksCover } from "./enemyStance.js?v=20260906-89";
+import {
+  isCoverFull,
+  occupancyPenalty,
+  reserveCoverSlot,
+} from "./coverSlots.js?v=20260906-89";
 
 function living(list) {
   return (list || []).filter(function (a) {
@@ -13,7 +18,7 @@ function living(list) {
 }
 
 export function isCoverUser(enemy) {
-  return !!(enemy && enemy.type !== "charger" && !enemy.meleeCharge);
+  return seeksCover(enemy);
 }
 
 export function coverOptionsFor(enemy) {
@@ -33,22 +38,22 @@ function fallbackProtectedCover(enemy, threat, covers, friendlies) {
     bestScore = Infinity;
   for (var i = 0; i < (covers || []).length; i++) {
     var c = covers[i];
-    var proxy = { x: enemy.x, y: enemy.y, coverSlotIndex: enemy.coverSlotIndex || 0 };
-    var slot = getCoverSlot(c, proxy, threat);
+    if (!c || c.destroyed) continue;
+    if (isCoverFull(c, friendlies || [], enemy)) continue;
+    var slot = reserveCoverSlot(c, enemy, threat, friendlies || []);
     if (!slot) continue;
     var travel = Math.hypot(slot.x - enemy.x, slot.y - enemy.y);
     if (travel > 1850) continue;
     var protectedSlot = coverProtects(c, slot, threat);
-    var users = 0;
-    (friendlies || []).forEach(function (f) {
-      if (f && f !== enemy && !f.dead && f.cover === c) users++;
-    });
-    var score = travel * 0.7 + users * 180 + (protectedSlot ? -380 : 520);
+    var score =
+      travel * 0.7 +
+      occupancyPenalty(c, friendlies || [], enemy) +
+      (protectedSlot ? -380 : 520);
     if (score < bestScore) {
       bestScore = score;
       best = {
         cover: c,
-        slot: { x: slot.x, y: slot.y, index: enemy.coverSlotIndex || 0, side: slot.side },
+        slot: { x: slot.x, y: slot.y, index: slot.index, side: slot.side },
         protected: protectedSlot,
         score: score,
       };

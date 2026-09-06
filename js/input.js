@@ -10,6 +10,8 @@ const movementKeys = new Set([
   "arrowright",
   " ",
   "r",
+  "q",
+  "2",
 ]);
 let initialized = false;
 
@@ -17,7 +19,7 @@ export function clearKeyboard() {
   keys.clear();
 }
 
-export function initKeyboard({ onFire, onReload } = {}) {
+export function initKeyboard({ onFire, onReload, onSwap } = {}) {
   if (initialized) return;
   initialized = true;
   addEventListener("keydown", (e) => {
@@ -34,6 +36,7 @@ export function initKeyboard({ onFire, onReload } = {}) {
     keys.add(key);
     if (!e.repeat && key === " ") onFire?.();
     if (!e.repeat && key === "r") onReload?.();
+    if (!e.repeat && (key === "q" || key === "2")) onSwap?.();
   });
   addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
   addEventListener("blur", clearKeyboard);

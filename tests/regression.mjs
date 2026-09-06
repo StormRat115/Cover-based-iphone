@@ -8,10 +8,17 @@ const BUILD = readFileSync("js/boot.js", "utf8").match(
   /const BUILD = ["']([^"']+)/,
 )[1];
 const entry = `js/game.js?v=${BUILD}`;
-const gameplayState = (actor) =>
-  JSON.stringify(actor, (key, value) =>
-    key.startsWith("__") ? undefined : value,
-  );
+const gameplayState = (actor) => {
+  const seen = new WeakSet();
+  return JSON.stringify(actor, (key, value) => {
+    if (key.startsWith("__")) return undefined;
+    if (value && typeof value === "object") {
+      if (seen.has(value)) return undefined;
+      seen.add(value);
+    }
+    return value;
+  });
+};
 
 test("local module/HTML references exist and use a single cache version", () => {
   for (const file of readdirSync("js").filter((name) => name.endsWith(".js"))) {
@@ -367,6 +374,7 @@ test("street asphalt is solid slabs plus sharp grain, not a stretched tile", () 
   assert.equal(source.includes("roadSegments"), false);
   assert.match(source, /getAsphaltGrain/);
   assert.match(source, /imageSmoothingEnabled = false/);
+  assert.match(source, /drawWartornStreetSurface/);
 });
 
 test("mission cover layouts are unique, reproducible, and keep spawn lanes clear", async () => {
@@ -574,7 +582,7 @@ test("actual game handles combat, pause, restart, tab hiding and waves", async (
   assert.ok(Number.isFinite(player.x) && Number.isFinite(player.y));
   h.nodes.get("pause").emit("pointerdown");
   h.frame();
-  const paused = JSON.stringify([
+  const paused = gameplayState([
     player,
     h.window.__battleEnemies,
     h.window.__battleAllies,
@@ -582,7 +590,7 @@ test("actual game handles combat, pause, restart, tab hiding and waves", async (
   const drawing = h.metrics.draws;
   h.advance(180);
   assert.equal(
-    JSON.stringify([player, h.window.__battleEnemies, h.window.__battleAllies]),
+    gameplayState([player, h.window.__battleEnemies, h.window.__battleAllies]),
     paused,
   );
   assert.equal(h.metrics.draws, drawing, "paused frames avoid redrawing");
@@ -1041,8 +1049,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    13,
-    "soldier/vault/monster sources plus charger sheet and environment atlases",
+    29,
+    "soldier/vault/monster/charger sources plus cover atlases and wartorn plates",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
@@ -1323,4 +1331,484 @@ test("sustained simulated play stays finite at mobile and desktop sizes", async 
     }
     assert.equal(h.frames.length, 1);
   }
+});
+
+test("wartorn city plates load and dress the street sides", async () => {
+  const h = createHarness();
+  const city = await h.importModule(`js/wartornCity.js?v=${BUILD}`);
+  assert.ok(city.playableStreetHalfWidth() >= 900);
+  assert.match(city.wartornSkyline.src, /wartorn-skyline-backdrop\.png/);
+  assert.match(city.wartornStreet.src, /wartorn-street-plate\.png/);
+  assert.match(city.wartornRuin.src, /wartorn-ruin-building-a\.png/);
+  assert.match(city.wartornRubblePile.src, /wartorn-rubble-pile\.png/);
+  assert.match(city.facadeApartment.src, /facade-ruin-apartment\.webp/);
+  assert.match(city.facadeStorefront.src, /facade-ruin-storefront\.webp/);
+  assert.match(city.rubbleBrick.src, /rubble-brick\.webp/);
+  assert.match(city.rubbleConcrete.src, /rubble-concrete-rebar\.webp/);
+  assert.match(city.rubbleSandbags.src, /rubble-sandbags-crates\.webp/);
+  assert.match(city.rubbleScrap.src, /rubble-scrap-metal\.webp/);
+  assert.match(city.wreckSedan.src, /wreck-burnt-sedan\.webp/);
+  assert.match(city.wreckPickup.src, /wreck-burnt-pickup\.webp/);
+  assert.match(city.wreckArmored.src, /wreck-burnt-armored\.webp/);
+  assert.match(city.skylineSmoke.src, /skyline-smoke-backdrop\.webp/);
+  [
+    "manifest.json",
+    "world-preview.png",
+    "world-manifest.json",
+    "facade-ruin-apartment.webp",
+    "facade-ruin-storefront.webp",
+    "rubble-brick.webp",
+    "rubble-concrete-rebar.webp",
+    "rubble-sandbags-crates.webp",
+    "rubble-scrap-metal.webp",
+    "wreck-burnt-sedan.webp",
+    "wreck-burnt-pickup.webp",
+    "wreck-burnt-armored.webp",
+    "skyline-smoke-backdrop.webp",
+  ].forEach((file) => {
+    assert.ok(
+      existsSync("assets/generated/world/" + file),
+      "Phone Art pack file missing: " + file,
+    );
+  });
+  const dressing = city.createWartornDressing();
+  assert.ok(dressing.buildings.length >= 12);
+  assert.ok(dressing.rubble.length >= 12);
+  assert.ok(dressing.streetScenes.length >= 8);
+  assert.ok(dressing.wrecks.length >= 8);
+  assert.ok(dressing.buildings.some((item) => item.kind === "apartment"));
+  assert.ok(dressing.buildings.some((item) => item.kind === "storefront"));
+  assert.ok(
+    ["brick", "concrete", "sandbags", "scrap"].every((kind) =>
+      dressing.rubble.some((item) => item.kind === kind),
+    ),
+  );
+  assert.ok(
+    ["sedan", "pickup", "armored"].every((kind) =>
+      dressing.wrecks.some((item) => item.kind === kind),
+    ),
+  );
+  assert.ok(
+    dressing.buildings.every((item) => Math.abs(item.x) > dressing.road),
+    "ruins stay off the playable street",
+  );
+  assert.ok(
+    dressing.streetScenes.every((item) => Math.abs(item.x) > dressing.road),
+    "sidewalk street tiles stay off the playable asphalt",
+  );
+  assert.ok(
+    dressing.wrecks.some((item) => Math.abs(item.x) < dressing.road),
+    "burnt wrecks sit on the street corridor",
+  );
+  assert.ok(
+    dressing.rubble.some((item) => Math.abs(item.x) < dressing.road),
+    "debris piles sit on the street corridor",
+  );
+  const ctx = h.document.createElement("canvas").getContext("2d");
+  city.drawWartornAtmosphere(ctx, 390, 844);
+  city.drawWartornDressing(
+    ctx,
+    (x, y) => [x * 0.25, y * 0.125],
+    { minX: -2300, maxX: 2300, minY: -6600, maxY: 1900 },
+    390,
+    844,
+    () => true,
+  );
+  await city.preloadWartornAssets();
+});
+
+test("cover pieces expose exclusive slots by shape", async () => {
+  const h = createHarness();
+  const slots = await h.importModule(`js/coverSlots.js?v=${BUILD}`);
+  const map = await h.importModule(`js/cityMap.js?v=${BUILD}`);
+  const ai = await h.importModule(`js/combatAI.js?v=${BUILD}`);
+  const withType = (cover, type) => Object.assign(cover, { type: type });
+  const square = withType(
+    map.makeShapedCover({
+      id: "sq",
+      x: 0,
+      y: 0,
+      shape: "square",
+      theme: "sandbags",
+    }),
+    "low",
+  );
+  const rect = withType(
+    map.makeShapedCover({
+      id: "rect",
+      x: 220,
+      y: 0,
+      shape: "rect",
+      theme: "jersey",
+    }),
+    "wide",
+  );
+  const tee = withType(
+    map.makeShapedCover({ id: "t", x: 440, y: 0, shape: "T", theme: "jersey" }),
+    "wide",
+  );
+  const you = withType(
+    map.makeShapedCover({
+      id: "u",
+      x: 680,
+      y: 0,
+      shape: "U",
+      theme: "sandbags",
+    }),
+    "low",
+  );
+  const ell = withType(
+    map.makeShapedCover({ id: "l", x: 900, y: 0, shape: "L", theme: "jersey" }),
+    "wide",
+  );
+  assert.ok(slots.coverSlotCount(square) >= 1 && slots.coverSlotCount(square) <= 2);
+  assert.ok(slots.coverSlotCount(rect) >= 2);
+  assert.ok(slots.coverSlotCount(tee) >= 2);
+  assert.ok(slots.coverSlotCount(you) >= 3);
+  assert.ok(slots.coverSlotCount(ell) >= 2);
+  const threat = { x: 220, y: 420 };
+  const a = { x: 200, y: 80, hp: 40, dead: false, cover: null };
+  const first = slots.reserveCoverSlot(rect, a, threat, []);
+  assert.ok(first);
+  a.cover = rect;
+  a.coverSlotIndex = first.index;
+  const b = { x: 240, y: 80, hp: 40, dead: false, cover: null };
+  const second = slots.reserveCoverSlot(rect, b, threat, [a]);
+  assert.ok(second);
+  assert.notEqual(first.index, second.index);
+  assert.ok(
+    Math.hypot(first.x - second.x, first.y - second.y) >= 12,
+    "adjacent slots stand beside each other",
+  );
+  b.cover = rect;
+  b.coverSlotIndex = second.index;
+  const occupants = [a, b];
+  let extra = slots.reserveCoverSlot(rect, { x: 220, y: 90, hp: 40 }, threat, occupants);
+  while (extra) {
+    occupants.push({
+      cover: rect,
+      coverSlotIndex: extra.index,
+      hp: 40,
+      dead: false,
+    });
+    extra = slots.reserveCoverSlot(
+      rect,
+      { x: 220, y: 90, hp: 40 },
+      threat,
+      occupants,
+    );
+  }
+  assert.equal(slots.isCoverFull(rect, occupants), true);
+  const seeker = {
+    x: 200,
+    y: 70,
+    hp: 40,
+    dead: false,
+    cover: null,
+    speed: 200,
+  };
+  const pick = ai.pickTacticalCover(seeker, threat, [rect, square], occupants, {
+    minThreat: 10,
+    maxThreat: 2000,
+    maxTravel: 2000,
+    desiredRange: 400,
+  });
+  assert.ok(pick, "a full piece should send seekers to the next free cover");
+  assert.notEqual(pick.cover, rect);
+});
+
+test("unit collision blocks overlap and unsticks jammed pairs", async () => {
+  const h = createHarness();
+  const col = await h.importModule(`js/unitCollision.js?v=${BUILD}`);
+  const cover = await h.importModule(`js/coverCollision.js?v=${BUILD}`);
+  const a = { x: 0, y: 0, hp: 40, speed: 200, scale: 1 };
+  const b = { x: 40, y: 0, hp: 40, speed: 180, scale: 1 };
+  const blocked = col.resolveUnitMove(a, 20, 0, [a, b]);
+  assert.ok(blocked.blocked, "units cannot walk through each other");
+  assert.ok(blocked.x < 20);
+  const beside = col.resolveUnitMove(a, 0, 30, [a, b]);
+  assert.equal(beside.blocked, false, "units can stand beside each other");
+  a.x = 0;
+  a.y = 0;
+  b.x = 1;
+  b.y = 0;
+  for (let i = 0; i < 12; i++) {
+    if (!a.passThrough && !b.passThrough) {
+      a.x = 0;
+      b.x = 1;
+    }
+    col.unstickOverlappingUnits([a, b], 0.05);
+  }
+  assert.ok(
+    Math.hypot(a.x - b.x, a.y - b.y) >= col.UNIT_RADIUS,
+    "stuck pairs must separate",
+  );
+  assert.ok(
+    a.passThrough > 0 || b.passThrough > 0,
+    "one unit should briefly pass through after a jam",
+  );
+  const jumper = { x: 0, y: 0, hp: 40, vaulting: true };
+  const hop = col.composeSolidAndUnitMove(
+    { x: 12, y: 0, blocked: true, vaulted: true },
+    jumper,
+    [jumper, b],
+  );
+  assert.equal(hop.vaulted, true);
+  assert.equal(cover.isCoverJumpable({ type: "low", theme: "sandbags" }), true);
+});
+
+test("wave enemies mix cover-users and exposed shooters", async () => {
+  const h = createHarness();
+  const stance = await h.importModule(`js/enemyStance.js?v=${BUILD}`);
+  const enemies = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
+  const wave = enemies.createBandits(2, {
+    random: () => 0.4,
+    extraCount: 8,
+    spawnView: { width: 390, height: 844, world: {} },
+  });
+  const coverUsers = wave.filter((e) => stance.seeksCover(e));
+  const exposed = wave.filter((e) => e.coverBehavior === "exposed");
+  assert.ok(coverUsers.length >= 2, "some hostiles should seek cover");
+  assert.ok(exposed.length >= 1, "some hostiles should stand in the open");
+  assert.ok(wave.every((e) => e.coverBehavior));
+  const open = {
+    x: 0,
+    y: 0,
+    coverBehavior: "exposed",
+    weapon: { role: "assault" },
+  };
+  stance.applyExposedHold(open, { x: 400, y: 0 });
+  assert.equal(open.cover, null);
+  assert.equal(open.exposed, true);
+  assert.ok(open.targetX < 400);
+});
+
+test("squad dialog is rate-limited and draws near speakers", async () => {
+  const h = createHarness();
+  const dialog = await h.importModule(`js/squadDialog.js?v=${BUILD}`);
+  dialog.resetSquadDialog();
+  const marine = {
+    x: 10,
+    y: 20,
+    hp: 90,
+    isMarine: true,
+    dead: false,
+    downed: false,
+    calloutTimer: 0,
+    dialogLock: 0,
+  };
+  const ally = {
+    x: 40,
+    y: 20,
+    hp: 80,
+    dead: false,
+    downed: false,
+    calloutTimer: 0,
+    dialogLock: 0,
+  };
+  assert.equal(dialog.speak(marine, "Hold the curb."), true);
+  assert.equal(dialog.speak(ally, "Covering."), false);
+  dialog.resetSquadDialog();
+  marine.calloutTimer = 0;
+  marine.dialogLock = 0;
+  const ctx = h.document.createElement("canvas").getContext("2d");
+  dialog.speak(marine, "Contact front.");
+  dialog.drawDialogBubbles(ctx, (x, y) => [x, y], [marine, ally]);
+  assert.match(readFileSync("css/game.css", "utf8"), /#pause \{[\s\S]*right:/);
+});
+
+test("auto play front-line camera tracks furthest-forward friendlies", async () => {
+  const h = createHarness();
+  const cam = await h.importModule(`js/frontLineCam.js?v=${BUILD}`);
+  const world = {
+    cameraX: 0,
+    cameraY: 0,
+    minX: -2300,
+    maxX: 2300,
+    minY: -6600,
+    maxY: 1900,
+  };
+  const player = { x: 20, y: 180, hp: 100, dead: false, downed: false };
+  const ally = { x: -40, y: -2400, hp: 80, dead: false, downed: false };
+  const marine = { x: 80, y: -2280, hp: 90, dead: false, downed: false };
+  const downed = { x: 10, y: -5000, hp: 10, dead: false, downed: true };
+  const hostiles = [{ x: -20, y: -2500, hp: 40, dead: false }];
+  const look = cam.frontLineFocus(player, [ally, downed], [marine], hostiles);
+  assert.ok(look.y < -2000, "front-line look stays with the lead cluster");
+  assert.ok(look.y < player.y - 1500, "sniper hanging back does not pin the cam");
+  const playerCam = cam.cameraLookAt(world, player, [ally], [marine], hostiles, false);
+  assert.equal(playerCam.x, player.x);
+  assert.equal(playerCam.y, player.y);
+  const front = cam.cameraLookAt(world, player, [ally], [marine], hostiles, true);
+  assert.ok(front.y < -1800);
+  cam.easeCameraToward(world, front.x, front.y, 0.09);
+  assert.ok(world.cameraY < 0);
+  assert.ok(world.cameraY > front.y, "camera eases instead of snapping");
+  assert.equal(cam.camModeLabel(false), "PLAYER CAM");
+  assert.equal(cam.camModeLabel(true), "FRONT-LINE");
+  const html = readFileSync("index.html", "utf8");
+  const css = readFileSync("css/game.css", "utf8");
+  assert.match(html, /id="camMode"/);
+  assert.match(css, /#camMode \{/);
+  assert.match(css, /#pause \{[\s\S]*right:/);
+});
+
+test("light suppression pins enemies harder than the player", async () => {
+  const h = createHarness();
+  const sup = await h.importModule(`js/suppression.js?v=${BUILD}`);
+  const enemy = { x: 0, y: 0, hp: 40, dead: false, downed: false };
+  const player = { x: 0, y: 0, hp: 100, dead: false, downed: false, isPlayer: true };
+  assert.equal(sup.spraySuppression({ x: -40, y: 0 }, { x: 0, y: 0 }, [enemy], true), 1);
+  assert.ok(enemy.suppressStacks >= 1);
+  assert.ok(sup.suppressionPeekScale(enemy) < 1);
+  assert.ok(sup.suppressionAccuracyDelta(enemy) < 0);
+  const firstEnemyAcc = sup.suppressionAccuracyDelta(enemy);
+  sup.spraySuppression({ x: 40, y: 0 }, { x: 0, y: 0 }, [player], false);
+  assert.ok((player.suppressStacks || 0) <= 1);
+  assert.ok(Math.abs(sup.suppressionAccuracyDelta(player)) < Math.abs(firstEnemyAcc));
+  assert.equal(sup.isHardSuppressed(player), false);
+  sup.applySuppression(enemy, 3, 0.8, 3);
+  assert.equal(enemy.suppressStacks, 3);
+  sup.tickSuppression(enemy, 1);
+  assert.equal(enemy.suppressStacks, 0);
+});
+
+test("primary reserve ammo, street drops, and infinite sidearm swap", async () => {
+  const h = createHarness();
+  const ammo = await h.importModule(`js/ammoEconomy.js?v=${BUILD}`);
+  const weapons = await h.importModule(`js/weapons.js?v=${BUILD}`);
+  const rifle = weapons.weaponCopy("rifle");
+  assert.ok(rifle.reserve >= rifle.magazine * 6);
+  rifle.ammo = 0;
+  ammo.finishReload(rifle);
+  assert.equal(rifle.ammo, rifle.magazine);
+  assert.ok(rifle.reserve < rifle.magazine * 7);
+  rifle.ammo = 0;
+  rifle.reserve = 0;
+  assert.equal(ammo.isPrimaryDry(rifle), true);
+  const pistol = weapons.weaponCopy("pistol");
+  assert.equal(pistol.infinite, true);
+  pistol.ammo = 0;
+  ammo.finishReload(pistol);
+  assert.equal(pistol.ammo, pistol.magazine);
+  const player = {
+    x: 0,
+    y: 0,
+    dead: false,
+    downed: false,
+    weaponSlot: "primary",
+    primary: rifle,
+    weapon: rifle,
+  };
+  const drops = [ammo.createAmmoDrop(0, 0, 30)];
+  assert.ok(ammo.updateAmmoDrops(drops, player, 0.05) >= 30);
+  assert.equal(drops.length, 0);
+  assert.ok(rifle.reserve >= 30);
+  player.hardPinSwap = true;
+  assert.equal(ammo.shouldSwapToSidearm(player), true);
+  assert.ok(ammo.SIDEARMS.magnum.damage > ammo.SIDEARMS.pistol.damage);
+  assert.ok(ammo.SIDEARMS.machinePistol.cooldown < ammo.SIDEARMS.pistol.cooldown);
+});
+
+test("squad orders buff allies but marine lines stay flavor", async () => {
+  const h = createHarness();
+  const dialog = await h.importModule(`js/squadDialog.js?v=${BUILD}`);
+  dialog.resetSquadDialog();
+  const ally = { x: 0, y: 0, hp: 80, name: "Rook", dead: false, downed: false, cover: { id: "c" } };
+  const marine = { x: 10, y: 0, hp: 90, isMarine: true, dead: false, downed: false };
+  const player = { x: 4, y: 0, hp: 100, isPlayer: true, dead: false, downed: false };
+  assert.equal(dialog.applySquadOrder("focus", ally, [ally], player), true);
+  assert.ok(player.orderAcc >= 8);
+  assert.ok(ally.orderTimer > 0);
+  assert.equal(dialog.applySquadOrder("hold", marine, [ally], player), false);
+  dialog.tickOrderBuffs([player, ally], 10);
+  assert.equal(player.orderAcc, 0);
+});
+
+test("downed player and squad crawl toward safer cover", async () => {
+  const h = createHarness();
+  const crawl = await h.importModule(`js/downedCrawl.js?v=${BUILD}`);
+  const cover = { id: "bag", x: 180, y: 0, w: 120, h: 36, type: "low", theme: "sandbags", destroyed: false };
+  const actor = {
+    x: 0,
+    y: 0,
+    hp: 0,
+    downed: true,
+    dead: false,
+    speed: 200,
+    cover: null,
+    downTimer: 0,
+    vaulting: false,
+  };
+  const threat = { x: -200, y: 0, hp: 40, dead: false, downed: false, spawnTimer: 0 };
+  const choice = crawl.pickSaferCover(actor, [cover], [threat]);
+  assert.equal(choice.cover, cover);
+  crawl.updateDownedCrawl(actor, 0.2, [cover], [threat]);
+  assert.ok(actor.x > 0, "downed soldier should crawl toward cover");
+  actor.x = choice.x;
+  actor.y = choice.y;
+  crawl.updateDownedCrawl(actor, 0.05, [cover], [threat]);
+  assert.equal(actor.crawlSettled, true);
+});
+
+test("soft cover breaks and frees slots; jersey stays up", async () => {
+  const h = createHarness();
+  const soft = await h.importModule(`js/destructibleCover.js?v=${BUILD}`);
+  const bags = soft.prepareCoverHp({
+    id: "bags",
+    theme: "sandbags",
+    x: 0,
+    y: 0,
+    w: 100,
+    h: 30,
+  });
+  const wall = soft.prepareCoverHp({
+    id: "wall",
+    theme: "jersey",
+    x: 80,
+    y: 0,
+    w: 100,
+    h: 30,
+  });
+  assert.equal(soft.isSoftCover(bags), true);
+  assert.equal(soft.isHardCover(wall), true);
+  const occupant = { cover: bags, exposed: false };
+  let broke = false;
+  for (let i = 0; i < 12 && !broke; i++) broke = soft.damageCover(bags, 20, [occupant]);
+  assert.equal(broke, true);
+  assert.equal(bags.destroyed, true);
+  assert.equal(occupant.cover, null);
+  assert.equal(soft.damageCover(wall, 400, []), false);
+  assert.equal(wall.destroyed, false);
+});
+
+test("street objectives cycle and give marines a local goal", async () => {
+  const h = createHarness();
+  const obj = await h.importModule(`js/streetObjectives.js?v=${BUILD}`);
+  const state = obj.createStreetObjectives();
+  const covers = [];
+  const marine = { x: 0, y: 80, hp: 90, isMarine: true, dead: false, downed: false };
+  const spawned = obj.spawnStreetObjective(state, {
+    type: "hold_crosswalk",
+    actors: [marine],
+    covers,
+    random: () => 0.2,
+  });
+  assert.equal(spawned.type, "hold_crosswalk");
+  const goal = obj.currentPushGoal({ objective: { x: 0, y: -5700, radius: 265 } }, state);
+  assert.equal(goal.source, "street");
+  assert.ok(Math.abs(goal.y + 5700) > 100, "marines should follow the live street task, not the far fort");
+  marine.x = spawned.x;
+  marine.y = spawned.y;
+  for (let i = 0; i < 20; i++)
+    obj.updateStreetObjectives(state, 0.5, { marines: [marine], covers });
+  assert.ok(state.completed >= 1);
+  obj.spawnStreetObjective(state, {
+    type: "clear_blockade",
+    actors: [marine],
+    covers,
+    random: () => 0.4,
+  });
+  assert.ok(covers.length >= 3);
+  assert.ok(covers.every((c) => c.theme === "wreck"));
 });

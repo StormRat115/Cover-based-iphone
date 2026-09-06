@@ -1,10 +1,9 @@
 import {
   isLineBlocked,
   getHitChance,
-  getCoverSlot,
-} from "./cover.js?v=20260906-81";
-import { weaponCopy } from "./weapons.js?v=20260906-81";
-import { AudioBus } from "./audio.js?v=20260906-81";
+} from "./cover.js?v=20260906-89";
+import { weaponCopy } from "./weapons.js?v=20260906-89";
+import { AudioBus } from "./audio.js?v=20260906-89";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -12,14 +11,27 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-81";
+} from "./combatAI.js?v=20260906-89";
 import {
   CHARACTER_STATS,
   mitigateDamage,
-  finalAccuracy,
+  combatAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-81";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-81";
+} from "./combatStats.js?v=20260906-89";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-89";
+import {
+  isCoverFull,
+  occupancyPenalty,
+  reserveCoverSlot,
+} from "./coverSlots.js?v=20260906-89";
+import {
+  spraySuppression,
+  tickSuppression,
+  suppressionAccuracyDelta,
+} from "./suppression.js?v=20260906-89";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-89";
+import { currentPushGoal } from "./streetObjectives.js?v=20260906-89";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-89";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -210,10 +222,11 @@ function shoot(a, e, spawnProjectile, covers) {
     a.weapon.fireCooldown > 0
   )
     return;
-  var chance = finalAccuracy(
+  var chance = combatAccuracy(
       getHitChance(a, e, covers),
       a.weapon.accuracy,
       a.accuracy,
+      suppressionAccuracyDelta(a) + orderAccuracy(a),
     ),
     hit = Math.random() * 100 < chance;
   a.weapon.ammo--;
@@ -222,6 +235,7 @@ function shoot(a, e, spawnProjectile, covers) {
   a.muzzle = 0.12;
   a.shotsLeft = Math.max(0, (a.shotsLeft || 1) - 1);
   if (spawnProjectile) spawnProjectile(a, e, "ally", hit ? 1 : 0);
+  spraySuppression(a, e, (typeof window !== "undefined" && window.__battleEnemies) || [], true);
   if (hit) {
     var dealt = mitigateDamage(
       attackDamage(a.weapon.damage, a.damageBonus),
@@ -269,17 +283,16 @@ function updateRevive(a, allies, player, dt) {
   return true;
 }
 function claimed(choice, a, allies) {
-  return (
-    choice &&
-    allies.some(function (o) {
-      return o !== a && !o.dead && !o.downed && o.cover === choice.cover;
-    })
-  );
+  if (!choice || !choice.cover) return true;
+  if (isCoverFull(choice.cover, allies, a)) return true;
+  return false;
 }
 function advanceToMission(a, mission, covers, friendlies, dt) {
-  if (!mission || !mission.objective) return false;
-  var goal = mission.objective,
-    goalDistance = Math.hypot(goal.x - a.x, goal.y - a.y);
+  var street =
+    typeof window !== "undefined" ? window.__streetObjectives : null;
+  var goal = currentPushGoal(mission, street) || (mission && mission.objective);
+  if (!goal) return false;
+  var goalDistance = Math.hypot(goal.x - a.x, goal.y - a.y);
   if (goalDistance <= goal.radius * 0.72) {
     a.exposed = false;
     a.combatState = "covered";
@@ -303,20 +316,16 @@ function advanceToMission(a, mission, covers, friendlies, dt) {
   var best = null,
     bestScore = Infinity;
   covers.forEach(function (cover) {
+    if (!cover || cover.destroyed) return;
     var travel = Math.hypot(cover.x - a.x, cover.y - a.y),
       remaining = Math.hypot(cover.x - goal.x, cover.y - goal.y);
     if (travel < 90 || travel > 920 || remaining > goalDistance - 100) return;
-    var choice = {
-      cover: cover,
-      slot: Object.assign(getCoverSlot(cover, a, null), {
-        index: a.coverSlotIndex || 0,
-      }),
-    };
+    var slot = reserveCoverSlot(cover, a, null, friendlies);
+    if (!slot) return;
+    var choice = { cover: cover, slot: slot };
     if (claimed(choice, a, friendlies)) return;
-    var users = friendlies.filter(function (other) {
-      return other !== a && !other.dead && other.cover === cover;
-    }).length;
-    var score = remaining * 0.55 + travel * 0.3 + users * 260;
+    var score =
+      remaining * 0.55 + travel * 0.3 + occupancyPenalty(cover, friendlies, a);
     if (cover.type === "wide" || cover.type === "car") score -= 90;
     score += Math.random() * 35;
     if (score < bestScore) {
@@ -376,13 +385,16 @@ export function updateAllies(
       a.downTimer = 0;
     }
     if (a.downed) {
-      a.downTimer += dt;
-      if (a.downTimer >= a.downDuration) {
-        a.dead = true;
-        a.downed = false;
+      if (!a.permanentDeath) {
+        updateDownedCrawl(a, dt, covers, enemies);
+        if (a.downTimer >= a.downDuration) {
+          a.dead = true;
+          a.downed = false;
+        }
       }
       return;
     }
+    tickSuppression(a, dt);
     if (a.reloading) {
       a.reloadTimer -= dt;
       if (a.reloadTimer <= 0) {

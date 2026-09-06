@@ -1,6 +1,8 @@
 let elements = null;
-import { getHitChance } from "./cover.js?v=20260906-81";
-import { finalAccuracy } from "./combatStats.js?v=20260906-81";
+import { getHitChance } from "./cover.js?v=20260906-89";
+import { combatAccuracy } from "./combatStats.js?v=20260906-89";
+import { suppressionAccuracyDelta } from "./suppression.js?v=20260906-89";
+import { orderAccuracy } from "./squadDialog.js?v=20260906-89";
 
 function nearestEnemy(p, enemies) {
   var best = null,
@@ -70,14 +72,24 @@ export function updateCombatHud() {
   var chance = "--";
   if (target) {
     chance = Math.round(
-      finalAccuracy(
+      combatAccuracy(
         getHitChance(p, target, covers),
         p.weapon.accuracy,
         p.accuracy,
+        suppressionAccuracyDelta(p) + orderAccuracy(p),
       ),
     );
   }
   elements.hitChance.firstChild.nodeValue = chance + "%";
+  var reserveLabel = p.weapon.infinite ? "∞" : Math.round(p.weapon.reserve || 0);
+  var ammoLabel =
+    (p.weaponSlot === "sidearm" ? "SIDEARM · " : "") +
+    (p.weapon.short || p.weapon.name || "AMMO");
   elements.combatAmmo.firstChild.nodeValue =
-    p.weapon.ammo + " / " + p.weapon.magazine;
+    p.weapon.ammo + " / " + reserveLabel;
+  var ammoSmall =
+    elements.combatAmmoSmall ||
+    (elements.combatAmmo.querySelector &&
+      elements.combatAmmo.querySelector("small"));
+  if (ammoSmall) ammoSmall.textContent = ammoLabel;
 }

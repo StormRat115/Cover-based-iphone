@@ -1,20 +1,27 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260906-81";
-import { weaponCopy } from "./weapons.js?v=20260906-81";
+import { isLineBlocked, getHitChance } from "./cover.js?v=20260906-89";
+import { weaponCopy } from "./weapons.js?v=20260906-89";
 import {
   moveTowardTarget,
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-81";
+} from "./combatAI.js?v=20260906-89";
 import {
   ENEMY_STATS,
   mitigateDamage,
-  finalAccuracy,
+  combatAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-81";
-import { AudioBus } from "./audio.js?v=20260906-81";
-import { assignEnemyCover } from "./enemyCoverAI.js?v=20260906-81";
-import { chargerWeapon } from "./chargerEnemy.js?v=20260906-81";
+} from "./combatStats.js?v=20260906-89";
+import { AudioBus } from "./audio.js?v=20260906-89";
+import {
+  spraySuppression,
+  tickSuppression,
+  suppressionAccuracyDelta,
+} from "./suppression.js?v=20260906-89";
+import { orderDefense } from "./squadDialog.js?v=20260906-89";
+import { assignEnemyCover } from "./enemyCoverAI.js?v=20260906-89";
+import { chargerWeapon } from "./chargerEnemy.js?v=20260906-89";
+import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260906-89";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -126,7 +133,7 @@ export function createBandits(wave, options) {
     var s = TYPES[type] || TYPES.rifleman,
       w = type === "charger" ? chargerWeapon() : weaponCopy(s.weapon),
       stats = ENEMY_STATS[type] || ENEMY_STATS.rifleman;
-    return {
+    return tagEnemyStance({
       x: x,
       y: y,
       type: type,
@@ -173,7 +180,7 @@ export function createBandits(wave, options) {
       meleeCharge: type === "charger",
       charging: false,
       meleeTimer: 0,
-    };
+    }, i);
   });
 }
 function desiredRange(e) {
@@ -260,7 +267,10 @@ function enterTucking(e) {
   e.targetY = e.coverAnchorY;
 }
 function chooseCover(e, target, covers, enemies, forceNew) {
-  if (e.type === "charger") return false;
+  if (!seeksCover(e)) {
+    applyExposedHold(e, target);
+    return false;
+  }
   var friendlies = playerRoster().concat(enemies || []);
   return assignEnemyCover(e, target, covers, friendlies, forceNew);
 }
@@ -301,7 +311,10 @@ function shouldReposition(e, target, covers) {
 }
 function applySquadHit(target, amount) {
   if (!validTarget(target)) return;
-  var reduced = mitigateDamage(Math.max(2, amount * 0.21), target.defense);
+  var reduced = mitigateDamage(
+    Math.max(2, amount * 0.21),
+    target.defense + orderDefense(target),
+  );
   target.hp = Math.max(0, target.hp - reduced);
   target.lastDamageTaken = reduced;
   target.hit = 0.22;
@@ -336,6 +349,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
     e.fire -= dt;
     e.muzzle = Math.max(0, e.muzzle - dt);
     e.hit = Math.max(0, e.hit - dt);
+    tickSuppression(e, dt);
     e.repositionCooldown = Math.max(0, (e.repositionCooldown || 0) - dt);
     e.targetTimer = Math.max(0, (e.targetTimer || 0) - dt);
     if (e.spawnTimer > 0) {
@@ -460,10 +474,11 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       e.exposed &&
       (!lineBlocked || peekOffset > 28);
     if (e.fire <= 0 && canFire) {
-      var chance = finalAccuracy(
+      var chance = combatAccuracy(
         getHitChance(e, threat, covers),
         e.weapon.accuracy,
         e.accuracy,
+        suppressionAccuracyDelta(e),
       );
       if (threat !== player) {
         chance = Math.max(6, Math.min(62, chance * 0.58));
@@ -476,6 +491,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       faceThreat(e, threat);
       e.muzzle = 0.13;
       if (e.cover && e.combatState === "exposed") e.shotsLeft--;
+      spraySuppression(e, threat, playerRoster(), false);
       if (spawnProjectile) {
         var hitShot = Math.random() * 100 < chance,
           raw = attackDamage(e.weapon.damage, e.damageBonus);

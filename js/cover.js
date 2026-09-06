@@ -1,7 +1,15 @@
-import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-81";
+import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-89";
 const collisionPieces = new WeakMap();
-import { drawShapedCover, drawCityAsset } from "./cityAssets.js?v=20260906-81";
-import { createCityCoverLayout } from "./cityMap.js?v=20260906-81";
+import { drawShapedCover, drawCityAsset } from "./cityAssets.js?v=20260906-89";
+import { createCityCoverLayout } from "./cityMap.js?v=20260906-89";
+import {
+  coverSlotCount,
+  slotWorldPoint,
+} from "./coverSlots.js?v=20260906-89";
+import {
+  prepareCoverHp,
+  drawCoverWear,
+} from "./destructibleCover.js?v=20260906-89";
 export {
   resolveSolidMove,
   updateVault,
@@ -12,12 +20,12 @@ export {
   overlapsSolid,
   firstCoverOnSegment,
   VAULT_DURATION,
-} from "./coverCollision.js?v=20260906-81";
+} from "./coverCollision.js?v=20260906-89";
 
 /* Tactical cover: explicit square / rect / T / U / L segments. */
 export function createCover(random) {
   const layout = createCityCoverLayout(random).map(function (item) {
-    return {
+    var cover = {
       id: item.id,
       x: item.x,
       y: item.y,
@@ -31,8 +39,13 @@ export function createCover(random) {
       scale: item.scale || 0.24,
       segments: item.segments || null,
     };
+    cover.slotCount = coverSlotCount(cover);
+    return cover;
   });
-  for (const cover of layout) collisionPieces.set(cover, pieces(cover));
+  for (const cover of layout) {
+    prepareCoverHp(cover);
+    collisionPieces.set(cover, pieces(cover));
+  }
   if (typeof window !== "undefined") window.__battleCovers = layout;
   return layout;
 }
@@ -41,7 +54,18 @@ export function coverPieces(c) {
   return pieces(c);
 }
 
+export function registerCover(cover) {
+  prepareCoverHp(cover);
+  collisionPieces.delete(cover);
+  if (!cover.destroyed) collisionPieces.set(cover, pieces(cover));
+  return cover;
+}
+
 function pieces(c) {
+  if (c && c.destroyed) {
+    collisionPieces.delete(c);
+    return [];
+  }
   const cached = collisionPieces.get(c);
   if (cached) return cached;
   return c.segments && c.segments.length
@@ -65,97 +89,22 @@ function inside(p, x, y, padX, padY) {
 
 export function findCoverForPoint(x, y, covers) {
   for (const c of covers) {
+    if (c && c.destroyed) continue;
     const ps = pieces(c);
     for (const p of ps) if (inside(p, x, y, 24, 18)) return c;
   }
   return null;
 }
 
-function coverStandoff(c) {
-  return c.type === "low" ? 16 : 18;
-}
-
-function facingSegment(c, side) {
-  const ps = pieces(c);
-  if (ps.length === 1) return ps[0];
-  return ps.reduce(function (best, p) {
-    if (side === "top")
-      return p.y - p.h / 2 < best.y - best.h / 2 ? p : best;
-    if (side === "bottom")
-      return p.y + p.h / 2 > best.y + best.h / 2 ? p : best;
-    if (side === "left")
-      return p.x - p.w / 2 < best.x - best.w / 2 ? p : best;
-    return p.x + p.w / 2 > best.x + best.w / 2 ? p : best;
-  }, ps[0]);
-}
-
-function secondarySegment(c, side, primary) {
-  const ps = pieces(c);
-  if (ps.length < 2) return null;
-  var best = null,
-    bestScore = -Infinity;
-  for (var i = 0; i < ps.length; i++) {
-    var p = ps[i];
-    if (p === primary) continue;
-    var score =
-      side === "top" || side === "bottom"
-        ? Math.abs(p.x - primary.x) + p.h
-        : Math.abs(p.y - primary.y) + p.w;
-    if (score > bestScore) {
-      bestScore = score;
-      best = p;
-    }
-  }
-  return best;
-}
-
 export function getCoverSlot(c, actor, threat) {
-  var side = "bottom";
-  if (threat) {
-    var dx = threat.x - c.x,
-      dy = threat.y - c.y;
-    if (Math.abs(dx) > Math.abs(dy) * 1.15) side = dx < 0 ? "right" : "left";
-    else side = dy < 0 ? "bottom" : "top";
-  } else if (actor) {
-    var adx = actor.x - c.x,
-      ady = actor.y - c.y;
-    if (Math.abs(adx) > Math.abs(ady) * 1.15) side = adx < 0 ? "left" : "right";
-    else side = ady < 0 ? "top" : "bottom";
-  }
-
-  var slot =
+  if (!c || c.destroyed)
+    return { x: (c && c.x) || 0, y: (c && c.y) || 0, side: "bottom" };
+  var count = coverSlotCount(c);
+  var index =
     actor && Number.isFinite(actor.coverSlotIndex)
-      ? Math.max(0, Math.min(2, actor.coverSlotIndex))
+      ? Math.max(0, Math.min(count - 1, actor.coverSlotIndex))
       : 0;
-  var primary = facingSegment(c, side);
-  var wall = slot === 2 ? secondarySegment(c, side, primary) || primary : primary;
-  var inset = c.type === "wide" ? 20 : 16;
-  var standoff = coverStandoff(c);
-  var offsets = [-1, 0, 1];
-  var x = wall.x,
-    y = wall.y;
-
-  if (side === "top" || side === "bottom") {
-    var usableX = Math.max(14, wall.w / 2 - inset);
-    var spreadX =
-      c.type === "wide"
-        ? Math.min(52, usableX * 0.78)
-        : Math.min(38, usableX * 0.78);
-    x = Math.max(
-      wall.x - wall.w / 2 + inset,
-      Math.min(wall.x + wall.w / 2 - inset, wall.x + offsets[slot] * spreadX),
-    );
-    y = side === "top" ? wall.y - wall.h / 2 - standoff : wall.y + wall.h / 2 + standoff;
-  } else {
-    var usableY = Math.max(12, wall.h / 2 - 8);
-    var spreadY = Math.min(34, usableY * 0.72);
-    y = Math.max(
-      wall.y - wall.h / 2 + 10,
-      Math.min(wall.y + wall.h / 2 - 10, wall.y + offsets[slot] * spreadY),
-    );
-    x = side === "left" ? wall.x - wall.w / 2 - standoff : wall.x + wall.w / 2 + standoff;
-  }
-  return { x: x, y: y, side: side, segment: wall };
+  return slotWorldPoint(c, index, threat, actor);
 }
 
 export function getCoverPeekOptions(c, actor, threat) {
@@ -231,6 +180,7 @@ export function chooseCoverPeek(c, actor, threat, covers) {
 
 export function isLineBlocked(a, b, covers) {
   for (const cover of covers) {
+    if (cover && cover.destroyed) continue;
     for (const rect of pieces(cover)) {
       if (sampledLineIntersectsRect(a, b, rect)) return true;
     }
@@ -258,8 +208,13 @@ export function getHitChance(shooter, target, covers) {
 }
 
 export function drawCover(ctx, c, iso) {
+  if (c.destroyed) {
+    drawCoverWear(ctx, c, iso);
+    return;
+  }
   if (c.shape || (c.segments && c.segments.length)) {
     drawShapedCover(ctx, c, iso);
+    drawCoverWear(ctx, c, iso);
     return;
   }
   if (c.asset && drawCityAsset(ctx, c.asset, iso(c.x, c.y)[0], iso(c.x, c.y)[1], {
