@@ -151,19 +151,25 @@ Wartorn street composition lock (TMNT arcade beat-em-up read, kept on the establ
 
 Phone Art street-edge pack (from `chore/street-edge-accents`) stamps lamps and sidewalk props on the curb band only: intact/bent/fallen posts, curb chunks, hydrant/manhole, wrecked bus shelter, tipped trash, dead planter. They are clipped off the playable asphalt so they cannot become mid-road plates.
 
-### Pages verify (BUILD 20260906-97)
+### Pages verify (BUILD 20260906-98)
 
 1. Open https://stormrat115.github.io/Cover-based-iphone/
-2. Confirm the stamp reads **BUILD 20260906-97**.
-3. Start a mission. Living player, allies, and Marines must look solid and fully opaque — not milky/ghost-translucent. You should not see the road through their bodies.
-4. Cover should sit on the asphalt corridor with visible gaps between pieces. Fort/set pieces at the far end may stay clustered; most street pieces should not pile on the same XY.
-5. Open the squad commands panel. Each squad member (and Marines) should show a KILLS value that ticks up when they get a kill.
-6. Sidewalks and occasional lamps should read along the edges. Buildings stay a far backdrop.
+2. Confirm the stamp reads **BUILD 20260906-98**.
+3. Start a mission. The player soldier (and allies) must look **solid and fully opaque** — a real figure, not a milky outline or ghost. You should not see the road through the body. Head and boots stay inside the sprite; they must not clip off.
+4. Watch the player idle, run, and shoot. The main soldier now has an 8-state sheet (idle / run / tall cover / low cover / stand shoot / crouch shoot / reload / death), at least 4 frames per state.
+5. Cover should sit on the asphalt corridor with visible gaps between pieces. Fort/set pieces at the far end may stay clustered.
+6. Open the squad commands panel. Each squad member (and Marines) should show a KILLS value that ticks up when they get a kill.
 7. Confirm exclusive cover slots, collision, vaulting, and soft-destructible cover still work.
+
+## Solid player atlas and 8-state soldier: 20260906-98
+
+- Rebuilt `assets/generated/soldier/player-ally-atlas` as an opaque PNG + mobile WebP. Atlas alpha is binary (0/255), interior holes are filled, and each cell keeps padding so the full body stays in frame.
+- Living friendlies blit **one** fully opaque frame. No team filter, no mid-alpha crossfade, and no ghost body-plate behind the sprite. Soft sheets still snap to binary alpha at load, without the pale color wash that read as milk.
+- Player (and allies/Marines) use the new 8-row sheet: idle, run, tallCover, lowCover, standShoot, crouchShoot, reload, death. Vault stays on its own hardened strip. Reload now has its own row.
 
 ## Opaque friendlies, spaced street cover, and squad kills: 20260906-97
 
-- Living player/ally/Marine frames blit once at `globalAlpha` 1 with no team filter or blend crossfade. Friendly and vault sheets snap soft pixels to binary alpha. A solid body plate fills the sparse cutout so the road cannot show through.
+- Living player/ally/Marine frames blit once at `globalAlpha` 1 with no team filter or blend crossfade.
 - Living friendlies draw in a second pass on top of cover so soft cover stamps cannot wash them into ghosts.
 - Street cover uses three staggered on-road lanes, fewer pieces, and larger gaps so exclusive slots and pathing breathe. The fort remains an intentional cluster.
 - The squad commands panel lists KILLS for the player, each squad mate, and each Marine.

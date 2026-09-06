@@ -1192,6 +1192,51 @@ test("living friendlies stay fully opaque every animation frame", async () => {
       assert.equal(drawn[0].filter, "none", "live " + team + " must not stack teamFilter");
     }
   }
+  const ellipsesBefore = h.metrics.ellipses.length;
+  sprites.drawSoldier(ctx, actor, { team: "player", alpha: 0.4 });
+  assert.equal(
+    h.metrics.ellipses.length - ellipsesBefore,
+    1,
+    "live player draws a ground shadow only — no ghost body plate",
+  );
+  assert.equal(
+    sprites.getSoldierState({
+      hp: 100,
+      dead: false,
+      downed: false,
+      reloading: true,
+      state: "reload",
+    }),
+    "reload",
+  );
+});
+
+test("player-ally atlas is an 8-state solid binary-alpha sheet", () => {
+  const meta = JSON.parse(
+    readFileSync("assets/generated/soldier/player-ally-atlas.json", "utf8"),
+  );
+  assert.equal(meta.cols, 6);
+  assert.equal(meta.rows, 8);
+  assert.equal(meta.cell, 160);
+  assert.ok(meta.padding >= 16);
+  assert.equal(meta.opaque, true);
+  assert.equal(meta.binaryAlpha, true);
+  assert.equal(meta.interiorHoles, 0);
+  assert.deepEqual(meta.states, [
+    "idle",
+    "run",
+    "tallCover",
+    "lowCover",
+    "standShoot",
+    "crouchShoot",
+    "reload",
+    "death",
+  ]);
+  const png = readFileSync("assets/generated/soldier/player-ally-atlas.png");
+  const webp = readFileSync("assets/generated/soldier/player-ally-atlas.webp");
+  assert.equal(png[25], 6, "player atlas must be an RGBA PNG");
+  assert.ok(webp.length > 1000);
+  assert.ok(webp.length < png.length, "webp should be the mobile-sized file");
 });
 
 test("squad HUD shows per-character kill counts", async () => {
