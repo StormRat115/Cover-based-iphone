@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-92";
+import { loadImage } from "./assets.js?v=20260906-93";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
   "./assets/generated/soldier/player-ally-atlas.png?v=20260906-88";
@@ -270,6 +270,10 @@ export function hardenSheetAlpha(source, cut) {
         d[i + 2] = 0;
         d[i + 3] = 0;
       } else {
+        // Lift dark body pixels so they read as solid figures on asphalt.
+        d[i] = Math.min(255, Math.round(d[i] * 1.28 + 16));
+        d[i + 1] = Math.min(255, Math.round(d[i + 1] * 1.28 + 16));
+        d[i + 2] = Math.min(255, Math.round(d[i + 2] * 1.28 + 16));
         d[i + 3] = 255;
       }
     }
@@ -945,6 +949,10 @@ export function drawSoldier(ctx, actor, options) {
       ctx.globalAlpha = 1;
       ctx.filter = "none";
       ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "#1c1f1d";
+      ctx.beginPath();
+      ctx.ellipse(0, -dh * 0.36, dw * 0.2, dh * 0.34, 0, 0, Math.PI * 2);
+      ctx.fill();
       ctx.drawImage(
         drawAtlas,
         r.col * cellW,

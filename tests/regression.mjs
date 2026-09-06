@@ -398,7 +398,7 @@ test("mission cover layouts are unique, reproducible, and keep spawn lanes clear
     different,
     "different missions need different layouts",
   );
-  assert.ok(first.length >= 52 && first.length <= 58);
+  assert.ok(first.length >= 34 && first.length <= 40);
   assert.ok(first.some((cover) => cover.y < -5000));
   assert.ok(first.some((cover) => cover.id === "fort-front"));
   for (const cover of first) {

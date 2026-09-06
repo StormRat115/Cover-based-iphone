@@ -235,12 +235,12 @@ function shuffled(items, random) {
 // sidewalks/buildings stay on the edges as backdrop.
 export const STREET_ROAD_HALF = 980;
 export const STREET_COVER_HALF = 720;
-export const STREET_COVER_LANES = [-600, -200, 200, 600];
+export const STREET_COVER_LANES = [-580, 0, 580];
 export const STREET_COVER_Y0 = -320;
 export const STREET_COVER_Y1 = -5180;
-export const STREET_COVER_GAP_X = 150;
-export const STREET_COVER_GAP_Y = 190;
-export const STREET_COVER_MIN_DIST = 230;
+export const STREET_COVER_GAP_X = 180;
+export const STREET_COVER_GAP_Y = 240;
+export const STREET_COVER_MIN_DIST = 320;
 
 export function isFortCover(cover) {
   return !!(cover && cover.id && String(cover.id).indexOf("fort-") === 0);
@@ -308,7 +308,7 @@ function cloneCover(template, id, x, y) {
 
 export function createCityCoverLayout(random = Math.random) {
   const templates = shuffled(createCityCoverTemplates(), random);
-  const targetCount = 48 + Math.floor(random() * 7);
+  const targetCount = 30 + Math.floor(random() * 5);
   const placed = [];
   const lanes = STREET_COVER_LANES;
   const rows = Math.max(1, Math.ceil(targetCount / lanes.length));
@@ -343,7 +343,7 @@ export function createCityCoverLayout(random = Math.random) {
     }
   }
 
-  // Fill any holes so mission count stays 52–58 including the fort cluster.
+  // Fill holes so street + fort stay in the 34–40 piece band.
   let extra = 0;
   while (placed.length < targetCount && extra < 220) {
     const template = templates[extra % templates.length];

@@ -1,9 +1,9 @@
 import {
   isLineBlocked,
   getHitChance,
-} from "./cover.js?v=20260906-92";
-import { weaponCopy } from "./weapons.js?v=20260906-92";
-import { AudioBus } from "./audio.js?v=20260906-92";
+} from "./cover.js?v=20260906-93";
+import { weaponCopy } from "./weapons.js?v=20260906-93";
+import { AudioBus } from "./audio.js?v=20260906-93";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -11,27 +11,27 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-92";
+} from "./combatAI.js?v=20260906-93";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-92";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-92";
+} from "./combatStats.js?v=20260906-93";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-93";
 import {
   isCoverFull,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260906-92";
+} from "./coverSlots.js?v=20260906-93";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260906-92";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-92";
-import { currentPushGoal } from "./streetObjectives.js?v=20260906-92";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-92";
+} from "./suppression.js?v=20260906-93";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-93";
+import { currentPushGoal } from "./streetObjectives.js?v=20260906-93";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-93";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [

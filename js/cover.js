@@ -1,15 +1,15 @@
-import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-92";
+import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-93";
 const collisionPieces = new WeakMap();
-import { drawShapedCover, drawCityAsset } from "./cityAssets.js?v=20260906-92";
-import { createCityCoverLayout } from "./cityMap.js?v=20260906-92";
+import { drawShapedCover, drawCityAsset } from "./cityAssets.js?v=20260906-93";
+import { createCityCoverLayout } from "./cityMap.js?v=20260906-93";
 import {
   coverSlotCount,
   slotWorldPoint,
-} from "./coverSlots.js?v=20260906-92";
+} from "./coverSlots.js?v=20260906-93";
 import {
   prepareCoverHp,
   drawCoverWear,
-} from "./destructibleCover.js?v=20260906-92";
+} from "./destructibleCover.js?v=20260906-93";
 export {
   resolveSolidMove,
   updateVault,
@@ -20,7 +20,7 @@ export {
   overlapsSolid,
   firstCoverOnSegment,
   VAULT_DURATION,
-} from "./coverCollision.js?v=20260906-92";
+} from "./coverCollision.js?v=20260906-93";
 
 /* Tactical cover: explicit square / rect / T / U / L segments. */
 export function createCover(random) {

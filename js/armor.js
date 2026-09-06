@@ -1,5 +1,5 @@
-import { getTeamProgress, setArmorId } from "./teamProgress.js?v=20260906-92";
-import { CHARACTER_STATS, damageReductionPercent } from "./combatStats.js?v=20260906-92";
+import { getTeamProgress, setArmorId } from "./teamProgress.js?v=20260906-93";
+import { CHARACTER_STATS, damageReductionPercent } from "./combatStats.js?v=20260906-93";
 
 export const PLAYER_BASE_SPEED = 250;
 
