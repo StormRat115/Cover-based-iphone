@@ -1,5 +1,5 @@
-import { loadImage } from "./assets.js?v=20260906-80";
-import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-80";
+import { loadImage } from "./assets.js?v=20260906-81";
+import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-81";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =

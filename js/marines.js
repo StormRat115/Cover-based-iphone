@@ -1,6 +1,6 @@
-import { updateAllies as updateFriendlyAI } from "./allyCore2.js?v=20260906-80";
-import { weaponCopy } from "./weapons.js?v=20260906-80";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-80";
+import { updateAllies as updateFriendlyAI } from "./allyCore2.js?v=20260906-81";
+import { weaponCopy } from "./weapons.js?v=20260906-81";
+import { drawSoldier } from "./soldierAssets.js?v=20260906-81";
 
 const MARINE_STARTS = [
   [-240, 255],
@@ -10,56 +10,60 @@ const MARINE_STARTS = [
   [240, 255],
 ];
 
+export function createMarineAt(x, y, index) {
+  const weaponId = index % 5 === 4 ? "lmg" : "rifle";
+  return {
+    name: "Marine " + (index + 1),
+    role: index % 5 === 4 ? "support" : "rifleman",
+    weapon: weaponCopy(weaponId),
+    x: x,
+    y: y,
+    hp: 90,
+    maxHp: 90,
+    defense: 20,
+    accuracy: 0,
+    damageBonus: 0,
+    dead: false,
+    downed: false,
+    permanentDeath: true,
+    canBeRevived: false,
+    canRevive: false,
+    canRecover: false,
+    deathTimer: 0,
+    deathDuration: 0.8,
+    muzzle: 0,
+    hit: 0,
+    targetX: x,
+    targetY: y,
+    cover: null,
+    coverSlotIndex: index % 3,
+    speed: index % 5 === 4 ? 205 : 220,
+    facingX: 1,
+    facingY: 0,
+    timeSinceDamage: 99,
+    regenDelay: Infinity,
+    regenRate: 0,
+    callout: "",
+    calloutTimer: 0,
+    reloadTimer: 0,
+    reloading: false,
+    flankSide: index % 2 ? -1 : 1,
+    combatState: "seeking",
+    combatTimer: 0,
+    shotsLeft: 0,
+    coverAnchorX: x,
+    coverAnchorY: y,
+    exposed: true,
+    repositionCooldown: index * 0.12,
+    recovering: false,
+    isMarine: true,
+    aggressiveAdvance: true,
+  };
+}
+
 export function createMarines() {
   const marines = MARINE_STARTS.map(function (position, index) {
-    const weaponId = index === 4 ? "lmg" : "rifle";
-    return {
-      name: "Marine " + (index + 1),
-      role: index === 4 ? "support" : "rifleman",
-      weapon: weaponCopy(weaponId),
-      x: position[0],
-      y: position[1],
-      hp: 90,
-      maxHp: 90,
-      defense: 20,
-      accuracy: 0,
-      damageBonus: 0,
-      dead: false,
-      downed: false,
-      permanentDeath: true,
-      canBeRevived: false,
-      canRevive: false,
-      canRecover: false,
-      deathTimer: 0,
-      deathDuration: 0.8,
-      muzzle: 0,
-      hit: 0,
-      targetX: position[0],
-      targetY: position[1],
-      cover: null,
-      coverSlotIndex: index % 3,
-      speed: index === 4 ? 205 : 220,
-      facingX: 1,
-      facingY: 0,
-      timeSinceDamage: 99,
-      regenDelay: Infinity,
-      regenRate: 0,
-      callout: "",
-      calloutTimer: 0,
-      reloadTimer: 0,
-      reloading: false,
-      flankSide: index % 2 ? -1 : 1,
-      combatState: "seeking",
-      combatTimer: 0,
-      shotsLeft: 0,
-      coverAnchorX: position[0],
-      coverAnchorY: position[1],
-      exposed: true,
-      repositionCooldown: index * 0.12,
-      recovering: false,
-      isMarine: true,
-      aggressiveAdvance: true,
-    };
+    return createMarineAt(position[0], position[1], index);
   });
   window.__battleMarines = marines;
   return marines;

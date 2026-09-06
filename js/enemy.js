@@ -2,11 +2,12 @@ import {
   createBandits,
   createSurroundSpawnPoints,
   updateBandits as updateBanditsCore,
-} from "./enemyCore.js?v=20260906-80";
+} from "./enemyCore.js?v=20260906-81";
 import {
   drawEnemyMonster,
   drawSoldier,
-} from "./soldierAssets.js?v=20260906-80";
+} from "./soldierAssets.js?v=20260906-81";
+import { updateChargers, drawCharger } from "./chargerEnemy.js?v=20260906-81";
 export { createBandits, createSurroundSpawnPoints };
 var ENEMY_LINES = {
   contact: ["CONTACT!", "THERE!", "I SEE THEM!", "MOVE! MOVE!"],
@@ -26,6 +27,7 @@ function enemySay(e, key, chance) {
 }
 export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
   updateBanditsCore(enemies, dt, player, covers, spawnProjectile);
+  updateChargers(enemies, dt, player, covers, spawnProjectile);
   enemies.forEach(function (e) {
     if (e.dead) return;
     e.calloutTimer = Math.max(0, (e.calloutTimer || 0) - dt);
@@ -127,19 +129,21 @@ export function drawBandit(ctx, e, iso, selected) {
     ctx.fillStyle = "#111";
     ctx.fillRect(-13 * s, -45 * s, 26 * s, 3);
     ctx.fillStyle =
-      e.type === "heavy"
-        ? "#d88c3f"
-        : e.type === "shotgunner"
-          ? "#b75bd1"
-          : e.type === "sniper"
-            ? "#79a8d8"
-            : e.type === "marksman"
-              ? "#d6b84f"
-              : e.type === "smg"
-                ? "#61a86b"
-                : e.type === "pistol"
-                  ? "#a9a9a9"
-                  : "#d84b4b";
+      e.type === "charger"
+        ? "#e07a32"
+        : e.type === "heavy"
+          ? "#d88c3f"
+          : e.type === "shotgunner"
+            ? "#b75bd1"
+            : e.type === "sniper"
+              ? "#79a8d8"
+              : e.type === "marksman"
+                ? "#d6b84f"
+                : e.type === "smg"
+                  ? "#61a86b"
+                  : e.type === "pistol"
+                    ? "#a9a9a9"
+                    : "#d84b4b";
     ctx.fillRect(-13 * s, -45 * s, 26 * s * Math.max(0, e.hp / e.maxHp), 3);
   }
   if (e.hit > 0 && !e.dead) {
@@ -157,7 +161,9 @@ export function drawBandit(ctx, e, iso, selected) {
     scale: 0.3,
     alpha: e.dead ? 0.94 : 1,
   };
-  if (!drawEnemyMonster(ctx, e, spriteOptions))
+  if (e.type === "charger") {
+    if (!drawCharger(ctx, e, spriteOptions)) drawSoldier(ctx, e, spriteOptions);
+  } else if (!drawEnemyMonster(ctx, e, spriteOptions))
     drawSoldier(ctx, e, spriteOptions);
   drawBubble(ctx, e);
   ctx.restore();
