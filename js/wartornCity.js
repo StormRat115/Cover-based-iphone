@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-105";
+import { loadImage } from "./assets.js?v=20260906-106";
 
 function plate(file) {
   var image = new Image();

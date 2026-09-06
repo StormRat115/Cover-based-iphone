@@ -1,27 +1,27 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260906-105";
-import { weaponCopy } from "./weapons.js?v=20260906-105";
+import { isLineBlocked, getHitChance } from "./cover.js?v=20260906-106";
+import { weaponCopy } from "./weapons.js?v=20260906-106";
 import {
   moveTowardTarget,
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-105";
+} from "./combatAI.js?v=20260906-106";
 import {
   ENEMY_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-105";
-import { AudioBus } from "./audio.js?v=20260906-105";
+} from "./combatStats.js?v=20260906-106";
+import { AudioBus } from "./audio.js?v=20260906-106";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260906-105";
-import { orderDefense } from "./squadDialog.js?v=20260906-105";
-import { assignEnemyCover } from "./enemyCoverAI.js?v=20260906-105";
-import { chargerWeapon } from "./chargerEnemy.js?v=20260906-105";
-import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260906-105";
+} from "./suppression.js?v=20260906-106";
+import { orderDefense } from "./squadDialog.js?v=20260906-106";
+import { assignEnemyCover } from "./enemyCoverAI.js?v=20260906-106";
+import { chargerWeapon } from "./chargerEnemy.js?v=20260906-106";
+import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260906-106";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },

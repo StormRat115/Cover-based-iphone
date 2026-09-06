@@ -366,15 +366,42 @@ test("cover pieces are uniform blocks assembled into random playable shapes", as
   );
   assert.ok(existsSync("assets/generated/cover/blocks/manifest.json"));
   assert.ok(existsSync("assets/generated/cover/blocks/atlas-preview.png"));
+  assert.ok(existsSync("assets/generated/cover/blocks/iso-preview.png"));
+  const manifest = JSON.parse(
+    readFileSync("assets/generated/cover/blocks/manifest.json", "utf8"),
+  );
+  assert.equal(manifest.tiles.length, 36);
+  assert.equal(
+    manifest.tiles.filter((tile) => tile.faces === "top+sides").length,
+    20,
+  );
   blocks.allCoverSkinFiles().forEach((file) => {
     assert.ok(
       existsSync("assets/generated/cover/blocks/" + file),
       "missing Phone Art skin " + file,
     );
   });
-  assert.equal(blocks.allCoverSkinFiles().length, 16);
+  assert.equal(blocks.allCoverSkinFiles().length, 36);
   assert.equal(typeof assets.coverBlockSkins, "object");
-  assert.equal(Object.keys(assets.coverBlockSkins).length, 16);
+  assert.equal(Object.keys(assets.coverBlockSkins).length, 36);
+  assert.equal(blocks.pickCoverIsoTile("jersey", 0, "square", "wide"), "iso-concrete-full.webp");
+  assert.equal(blocks.pickCoverIsoTile("crates", 0, "square", "low"), "iso-crate-block.webp");
+  assert.equal(
+    blocks.pickCoverIsoTile("jersey", blocks.E | blocks.W, "wall", "wide"),
+    "iso-concrete-mid.webp",
+  );
+  assert.equal(
+    blocks.pickCoverIsoTile("jersey", blocks.E | blocks.W, "halfwall", "low"),
+    "iso-concrete-block-long.webp",
+  );
+  assert.equal(
+    blocks.pickCoverIsoTile("sandbags", 0, "U", "low"),
+    "iso-sandbags-block.webp",
+  );
+  assert.equal(
+    blocks.pickCoverIsoTile("wreck", 0, "cluster", "car"),
+    "iso-rubble-block.webp",
+  );
   assert.equal(
     blocks.pickCoverBlockSkin("jersey", blocks.E | blocks.W),
     "concrete-center.webp",
@@ -466,14 +493,26 @@ test("cover pieces are uniform blocks assembled into random playable shapes", as
   });
   const beforeSkins = h.metrics.drawImages.length;
   assets.drawShapedCover(ctx, cube, iso);
+  const afterCube = h.metrics.drawImages.slice(beforeSkins);
   assert.ok(
-    h.metrics.drawImages.length - beforeSkins >= 3,
-    "an isolated block must stamp Phone Art skins on top and both visible side faces",
+    afterCube.length >= 1,
+    "an isolated block must blit a true isometric Phone Art cube",
+  );
+  assert.ok(
+    afterCube.some(
+      (args) => String(args[0] && args[0].src).includes("iso-crate-"),
+    ),
+    "isolated crate cover must draw an iso-crate-* tile, not a flat brown cube",
   );
   assets.drawShapedCover(ctx, wideU, iso);
+  const afterU = h.metrics.drawImages.slice(beforeSkins);
   assert.ok(
-    h.metrics.drawImages.length - beforeSkins > cube.blocks.length * 3,
-    "shaped pieces keep stamping skins on remaining visible faces",
+    afterU.length >= cube.blocks.length + wideU.blocks.length,
+    "each block in a shaped piece blits its own iso cube sprite",
+  );
+  assert.ok(
+    afterU.every((args) => String(args[0] && args[0].src).includes("/blocks/iso-")),
+    "shaped pieces draw Phone Art iso tiles (top+sides already in the sprite)",
   );
 
   const rect = city.makeShapedCover({
@@ -1243,8 +1282,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    53,
-    "soldier/vault/monster/charger sources plus cover atlases, 16 Phone Art block skins, and wartorn plates",
+    73,
+    "soldier/vault/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn plates",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");

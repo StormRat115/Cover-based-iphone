@@ -1,6 +1,6 @@
-import { loadImage } from "./assets.js?v=20260906-105";
-import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260906-105";
-import { faceThreat } from "./combatAI.js?v=20260906-105";
+import { loadImage } from "./assets.js?v=20260906-106";
+import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260906-106";
+import { faceThreat } from "./combatAI.js?v=20260906-106";
 
 export const CHARGER_SHEET = {
   file: "enemy-charger-melee-sheet.png",

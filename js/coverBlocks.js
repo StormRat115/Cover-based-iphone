@@ -41,6 +41,37 @@ export const COVER_SKIN_FILES = {
   },
 };
 
+export const COVER_ISO_FILES = {
+  concrete: {
+    block: "iso-concrete-block.webp",
+    blockLong: "iso-concrete-block-long.webp",
+    top: "iso-concrete-top.webp",
+    mid: "iso-concrete-mid.webp",
+    full: "iso-concrete-full.webp",
+  },
+  sandbags: {
+    block: "iso-sandbags-block.webp",
+    blockLong: "iso-sandbags-block-long.webp",
+    top: "iso-sandbags-top.webp",
+    mid: "iso-sandbags-mid.webp",
+    full: "iso-sandbags-full.webp",
+  },
+  crates: {
+    block: "iso-crate-block.webp",
+    blockLong: "iso-crate-block-long.webp",
+    top: "iso-crate-top.webp",
+    mid: "iso-crate-mid.webp",
+    full: "iso-crate-full.webp",
+  },
+  rubble: {
+    block: "iso-rubble-block.webp",
+    blockLong: "iso-rubble-block-long.webp",
+    top: "iso-rubble-top.webp",
+    mid: "iso-rubble-mid.webp",
+    full: "iso-rubble-full.webp",
+  },
+};
+
 export function skinMaterialForTheme(theme) {
   if (theme === "jersey") return "concrete";
   if (theme === "wreck") return "rubble";
@@ -56,7 +87,34 @@ export function allCoverSkinFiles() {
   for (mat in COVER_SKIN_FILES) {
     for (role in COVER_SKIN_FILES[mat]) files.push(COVER_SKIN_FILES[mat][role]);
   }
+  for (mat in COVER_ISO_FILES) {
+    for (role in COVER_ISO_FILES[mat]) files.push(COVER_ISO_FILES[mat][role]);
+  }
   return files;
+}
+
+export function pickCoverIsoTile(theme, mask, shape, type) {
+  var mat = skinMaterialForTheme(theme);
+  var files = COVER_ISO_FILES[mat] || COVER_ISO_FILES.concrete;
+  mask = mask || 0;
+  var n = (mask & N) !== 0,
+    e = (mask & E) !== 0,
+    s = (mask & S) !== 0,
+    w = (mask & W) !== 0;
+  var count = (n ? 1 : 0) + (e ? 1 : 0) + (s ? 1 : 0) + (w ? 1 : 0);
+  var low = type === "low" || type === "car" || shape === "halfwall";
+  var longRun =
+    shape === "wall" ||
+    shape === "halfwall" ||
+    shape === "rect" ||
+    shape === "line";
+  var straight = (e && w && !n && !s) || (n && s && !e && !w);
+  if (count === 0) return low ? files.block : files.full;
+  if (longRun && straight) return low ? files.blockLong : files.mid;
+  if (!n && count <= 2) return files.top;
+  if (straight) return low ? files.blockLong : files.mid;
+  if (count >= 3) return files.mid;
+  return low ? files.block : files.full;
 }
 
 export function pickCoverBlockFaceSkin(theme, mask, shape, face) {
