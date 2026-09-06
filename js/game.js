@@ -1,100 +1,100 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-86";
+import { createGameLoop } from "./gameLoop.js?v=20260906-87";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-86";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-86";
+} from "./geometry.js?v=20260906-87";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-87";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-86";
-import { updateSquadHud } from "./squadHud.js?v=20260906-86";
-import { updateCombatHud } from "./combatHud.js?v=20260906-86";
-import { updatePlayerHud } from "./player.js?v=20260906-86";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-86";
-import "./squadDrawer.js?v=20260906-86";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-86";
+} from "./bloodEffects.js?v=20260906-87";
+import { updateSquadHud } from "./squadHud.js?v=20260906-87";
+import { updateCombatHud } from "./combatHud.js?v=20260906-87";
+import { updatePlayerHud } from "./player.js?v=20260906-87";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-87";
+import "./squadDrawer.js?v=20260906-87";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-87";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-86";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-86";
+} from "./enemy.js?v=20260906-87";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-87";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-86";
+} from "./marines.js?v=20260906-87";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-86";
+} from "./streetMission.js?v=20260906-87";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-86";
+} from "./supportVehicle.js?v=20260906-87";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260906-86";
+} from "./cover.js?v=20260906-87";
 import {
   isCoverFull,
   nearestFreeSlot,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260906-86";
+} from "./coverSlots.js?v=20260906-87";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-86";
-import { initTactical } from "./tactical.js?v=20260906-86";
-import { AudioBus } from "./audio.js?v=20260906-86";
+} from "./input.js?v=20260906-87";
+import { initTactical } from "./tactical.js?v=20260906-87";
+import { AudioBus } from "./audio.js?v=20260906-87";
 import {
   segmentWave,
   updateWaveSegments,
   waveFullyCleared,
   pendingHostiles,
-} from "./waveSegments.js?v=20260906-86";
+} from "./waveSegments.js?v=20260906-87";
 import {
   grantKillXp,
   grantWaveXp,
   getTeamProgress,
-} from "./teamProgress.js?v=20260906-86";
+} from "./teamProgress.js?v=20260906-87";
 import {
   updateGrenades,
   drawGrenades,
   trySquadGrenades,
   resetGrenades,
-} from "./grenades.js?v=20260906-86";
+} from "./grenades.js?v=20260906-87";
 import {
   applyRunModifiers,
   updateMarineReinforcements,
   resetMarineTimer,
-} from "./runModifiers.js?v=20260906-86";
+} from "./runModifiers.js?v=20260906-87";
 import {
   drawWartornAtmosphere,
   drawWartornDressing,
   drawWartornStreetSurface,
-} from "./wartornCity.js?v=20260906-86";
+} from "./wartornCity.js?v=20260906-87";
 import {
   updateSquadDialog,
   drawDialogBubbles,
   resetSquadDialog,
-} from "./squadDialog.js?v=20260906-86";
+} from "./squadDialog.js?v=20260906-87";
 import {
   unstickOverlappingUnits,
   resetUnitUnstick,
-} from "./unitCollision.js?v=20260906-86";
+} from "./unitCollision.js?v=20260906-87";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),

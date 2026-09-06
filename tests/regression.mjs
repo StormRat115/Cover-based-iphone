@@ -1341,12 +1341,53 @@ test("wartorn city plates load and dress the street sides", async () => {
   assert.match(city.wartornStreet.src, /wartorn-street-plate\.png/);
   assert.match(city.wartornRuin.src, /wartorn-ruin-building-a\.png/);
   assert.match(city.wartornRubblePile.src, /wartorn-rubble-pile\.png/);
-  assert.ok(existsSync("assets/generated/world/world-manifest.json"));
+  assert.match(city.facadeApartment.src, /facade-ruin-apartment\.webp/);
+  assert.match(city.facadeStorefront.src, /facade-ruin-storefront\.webp/);
+  assert.match(city.rubbleBrick.src, /rubble-brick\.webp/);
+  assert.match(city.rubbleConcrete.src, /rubble-concrete-rebar\.webp/);
+  assert.match(city.rubbleSandbags.src, /rubble-sandbags-crates\.webp/);
+  assert.match(city.rubbleScrap.src, /rubble-scrap-metal\.webp/);
+  assert.match(city.wreckSedan.src, /wreck-burnt-sedan\.webp/);
+  assert.match(city.wreckPickup.src, /wreck-burnt-pickup\.webp/);
+  assert.match(city.wreckArmored.src, /wreck-burnt-armored\.webp/);
+  assert.match(city.skylineSmoke.src, /skyline-smoke-backdrop\.webp/);
+  [
+    "manifest.json",
+    "world-preview.png",
+    "world-manifest.json",
+    "facade-ruin-apartment.webp",
+    "facade-ruin-storefront.webp",
+    "rubble-brick.webp",
+    "rubble-concrete-rebar.webp",
+    "rubble-sandbags-crates.webp",
+    "rubble-scrap-metal.webp",
+    "wreck-burnt-sedan.webp",
+    "wreck-burnt-pickup.webp",
+    "wreck-burnt-armored.webp",
+    "skyline-smoke-backdrop.webp",
+  ].forEach((file) => {
+    assert.ok(
+      existsSync("assets/generated/world/" + file),
+      "Phone Art pack file missing: " + file,
+    );
+  });
   const dressing = city.createWartornDressing();
   assert.ok(dressing.buildings.length >= 12);
   assert.ok(dressing.rubble.length >= 12);
   assert.ok(dressing.streetScenes.length >= 8);
   assert.ok(dressing.wrecks.length >= 8);
+  assert.ok(dressing.buildings.some((item) => item.kind === "apartment"));
+  assert.ok(dressing.buildings.some((item) => item.kind === "storefront"));
+  assert.ok(
+    ["brick", "concrete", "sandbags", "scrap"].every((kind) =>
+      dressing.rubble.some((item) => item.kind === kind),
+    ),
+  );
+  assert.ok(
+    ["sedan", "pickup", "armored"].every((kind) =>
+      dressing.wrecks.some((item) => item.kind === kind),
+    ),
+  );
   assert.ok(
     dressing.buildings.every((item) => Math.abs(item.x) > dressing.road),
     "ruins stay off the playable street",
