@@ -1,8 +1,8 @@
-import { loadImage } from "./assets.js?v=20260906-84";
+import { loadImage } from "./assets.js?v=20260906-85";
 
 function plate(file) {
   var image = new Image();
-  image.src = "./assets/generated/world/" + file + "?v=20260906-84";
+  image.src = "./assets/generated/world/" + file + "?v=20260906-85";
   return image;
 }
 
@@ -73,39 +73,39 @@ var SIDE_DRESSING = [
 var RUBBLE = [
   { x: -1040, y: 640, kind: "pile", s: 0.52 },
   { x: 1060, y: 600, kind: "brick", s: 0.46 },
-  { x: -1100, y: 80, kind: "concrete", s: 0.44 },
-  { x: 1120, y: 40, kind: "sandbags", s: 0.48 },
-  { x: -1060, y: -520, kind: "scrap", s: 0.46 },
-  { x: 1080, y: -560, kind: "pile", s: 0.5 },
-  { x: -1120, y: -1180, kind: "brick", s: 0.42 },
-  { x: 1140, y: -1220, kind: "concrete", s: 0.46 },
-  { x: -1080, y: -1860, kind: "sandbags", s: 0.48 },
-  { x: 1100, y: -1900, kind: "scrap", s: 0.44 },
+  { x: -620, y: 80, kind: "concrete", s: 0.44 },
+  { x: 540, y: -40, kind: "sandbags", s: 0.48 },
+  { x: -380, y: -720, kind: "scrap", s: 0.46 },
+  { x: 420, y: -980, kind: "pile", s: 0.5 },
+  { x: -700, y: -1680, kind: "brick", s: 0.42 },
+  { x: 640, y: -1920, kind: "concrete", s: 0.46 },
+  { x: -460, y: -2460, kind: "sandbags", s: 0.48 },
+  { x: 320, y: -2880, kind: "scrap", s: 0.44 },
   { x: -1140, y: -2540, kind: "pile", s: 0.5 },
   { x: 1160, y: -2580, kind: "brick", s: 0.42 },
-  { x: -1060, y: -3220, kind: "concrete", s: 0.48 },
-  { x: 1080, y: -3260, kind: "sandbags", s: 0.44 },
-  { x: -1120, y: -3900, kind: "scrap", s: 0.46 },
+  { x: -580, y: -3420, kind: "concrete", s: 0.48 },
+  { x: 480, y: -3760, kind: "sandbags", s: 0.44 },
+  { x: -240, y: -4280, kind: "scrap", s: 0.46 },
   { x: 1140, y: -3940, kind: "pile", s: 0.5 },
-  { x: -1080, y: -4580, kind: "brick", s: 0.44 },
-  { x: 1100, y: -4620, kind: "concrete", s: 0.46 },
-  { x: -1140, y: -5260, kind: "sandbags", s: 0.42 },
+  { x: -680, y: -4880, kind: "brick", s: 0.44 },
+  { x: 560, y: -5220, kind: "concrete", s: 0.46 },
+  { x: -360, y: -5680, kind: "sandbags", s: 0.42 },
   { x: 1160, y: -5300, kind: "scrap", s: 0.48 },
   { x: -1060, y: -5900, kind: "pile", s: 0.46 },
-  { x: 1080, y: -5840, kind: "brick", s: 0.44 },
+  { x: 280, y: -6180, kind: "brick", s: 0.44 },
 ];
 
 var WRECKS = [
-  { x: -1180, y: 420, kind: "sedan", s: 0.58 },
-  { x: 1220, y: 360, kind: "pickup", s: 0.56 },
-  { x: -1240, y: -720, kind: "armored", s: 0.54 },
-  { x: 1260, y: -780, kind: "sedan", s: 0.56 },
-  { x: -1200, y: -1980, kind: "pickup", s: 0.52 },
-  { x: 1240, y: -2040, kind: "armored", s: 0.54 },
-  { x: -1260, y: -3240, kind: "sedan", s: 0.56 },
-  { x: 1280, y: -3300, kind: "pickup", s: 0.52 },
-  { x: -1220, y: -4500, kind: "armored", s: 0.54 },
-  { x: 1260, y: -4560, kind: "sedan", s: 0.56 },
+  { x: -520, y: 420, kind: "sedan", s: 0.58 },
+  { x: 460, y: 280, kind: "pickup", s: 0.56 },
+  { x: -340, y: -860, kind: "armored", s: 0.54 },
+  { x: 580, y: -1240, kind: "sedan", s: 0.56 },
+  { x: -620, y: -2180, kind: "pickup", s: 0.52 },
+  { x: 300, y: -2640, kind: "armored", s: 0.54 },
+  { x: -180, y: -3480, kind: "sedan", s: 0.56 },
+  { x: 640, y: -4020, kind: "pickup", s: 0.52 },
+  { x: -480, y: -4680, kind: "armored", s: 0.54 },
+  { x: 220, y: -5340, kind: "sedan", s: 0.56 },
   { x: -1180, y: -5720, kind: "pickup", s: 0.52 },
   { x: 1220, y: -5660, kind: "armored", s: 0.54 },
 ];
@@ -320,7 +320,7 @@ function drawStreetScenes(ctx, iso, world) {
     }
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    ctx.globalAlpha = 0.34;
+    ctx.globalAlpha = 0.4;
     pattern = ctx.createPattern && ctx.createPattern(wartornStreet, "repeat");
     origin = iso(sides[s] < 0 ? -1400 : 1400, 0);
     if (pattern) {
@@ -386,34 +386,78 @@ export function createWartornDressing() {
   };
 }
 
+function clipWorldPoly(ctx, iso, pts) {
+  if (!iso || !pts || !pts.length) return false;
+  ctx.beginPath();
+  var q = iso(pts[0][0], pts[0][1]);
+  ctx.moveTo(q[0], q[1]);
+  for (var i = 1; i < pts.length; i++) {
+    q = iso(pts[i][0], pts[i][1]);
+    ctx.lineTo(q[0], q[1]);
+  }
+  ctx.closePath();
+  ctx.clip();
+  return true;
+}
+
+export function drawWartornStreetSurface(ctx, iso, world) {
+  var minY, maxY, origin, pattern;
+  if (!ready(wartornStreet) || !world || !iso) return;
+  minY = world.minY == null ? -6600 : world.minY;
+  maxY = world.maxY == null ? 1900 : world.maxY;
+  ctx.save();
+  if (
+    !clipWorldPoly(ctx, iso, [
+      [-ROAD, minY],
+      [ROAD, minY],
+      [ROAD, maxY],
+      [-ROAD, maxY],
+    ])
+  ) {
+    ctx.restore();
+    return;
+  }
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.globalAlpha = 0.5;
+  pattern = ctx.createPattern && ctx.createPattern(wartornStreet, "repeat");
+  origin = iso(0, 0);
+  if (pattern) {
+    ctx.translate(origin[0] % 240, origin[1] % 135);
+    ctx.fillStyle = pattern;
+    ctx.fillRect(-5000, -5000, 10000, 10000);
+  }
+  ctx.restore();
+}
+
 export function drawWartornAtmosphere(ctx, W, H) {
   var sky =
-    ctx.createLinearGradient && ctx.createLinearGradient(0, 0, 0, H * 0.42);
+    ctx.createLinearGradient && ctx.createLinearGradient(0, 0, 0, H * 0.5);
   if (sky && sky.addColorStop) {
-    sky.addColorStop(0, "#2b2a28");
-    sky.addColorStop(0.55, "#3f403c");
-    sky.addColorStop(1, "#4b514c");
+    sky.addColorStop(0, "#2a2724");
+    sky.addColorStop(0.45, "#3c3832");
+    sky.addColorStop(1, "#4a453c");
     ctx.fillStyle = sky;
-  } else ctx.fillStyle = "#3f403c";
+  } else ctx.fillStyle = "#3c3832";
   ctx.fillRect(0, 0, W, H);
   if (ready(wartornSkyline)) {
     ctx.save();
-    ctx.globalAlpha = 0.62;
+    ctx.globalAlpha = 0.78;
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(wartornSkyline, -W * 0.06, -H * 0.02, W * 1.12, H * 0.44);
+    ctx.drawImage(wartornSkyline, -W * 0.04, -H * 0.06, W * 1.08, H * 0.56);
     ctx.restore();
   }
   if (ready(skylineSmoke)) {
     ctx.save();
-    ctx.globalAlpha = 0.28;
+    ctx.globalAlpha = 0.36;
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(skylineSmoke, -W * 0.04, H * 0.02, W * 1.08, H * 0.22);
+    ctx.drawImage(skylineSmoke, -W * 0.03, H * 0.04, W * 1.06, H * 0.28);
     ctx.restore();
   }
   ctx.save();
-  ctx.globalAlpha = 0.16;
+  ctx.globalAlpha = 0.2;
   ctx.fillStyle = "#1a1612";
-  ctx.fillRect(0, 0, W, H * 0.22);
+  ctx.fillRect(0, 0, W, H * 0.26);
   ctx.restore();
 }
 

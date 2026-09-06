@@ -2,9 +2,9 @@ import {
   isLineBlocked,
   getHitChance,
   getCoverSlot,
-} from "./cover.js?v=20260906-84";
-import { weaponCopy } from "./weapons.js?v=20260906-84";
-import { AudioBus } from "./audio.js?v=20260906-84";
+} from "./cover.js?v=20260906-85";
+import { weaponCopy } from "./weapons.js?v=20260906-85";
+import { AudioBus } from "./audio.js?v=20260906-85";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -12,14 +12,14 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-84";
+} from "./combatAI.js?v=20260906-85";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-84";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-84";
+} from "./combatStats.js?v=20260906-85";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-85";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [

@@ -1,93 +1,94 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-84";
+import { createGameLoop } from "./gameLoop.js?v=20260906-85";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-84";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-84";
+} from "./geometry.js?v=20260906-85";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-85";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-84";
-import { updateSquadHud } from "./squadHud.js?v=20260906-84";
-import { updateCombatHud } from "./combatHud.js?v=20260906-84";
-import { updatePlayerHud } from "./player.js?v=20260906-84";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-84";
-import "./squadDrawer.js?v=20260906-84";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-84";
+} from "./bloodEffects.js?v=20260906-85";
+import { updateSquadHud } from "./squadHud.js?v=20260906-85";
+import { updateCombatHud } from "./combatHud.js?v=20260906-85";
+import { updatePlayerHud } from "./player.js?v=20260906-85";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-85";
+import "./squadDrawer.js?v=20260906-85";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-85";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-84";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-84";
+} from "./enemy.js?v=20260906-85";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-85";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-84";
+} from "./marines.js?v=20260906-85";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-84";
+} from "./streetMission.js?v=20260906-85";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-84";
+} from "./supportVehicle.js?v=20260906-85";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260906-84";
+} from "./cover.js?v=20260906-85";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-84";
-import { initTactical } from "./tactical.js?v=20260906-84";
-import { AudioBus } from "./audio.js?v=20260906-84";
+} from "./input.js?v=20260906-85";
+import { initTactical } from "./tactical.js?v=20260906-85";
+import { AudioBus } from "./audio.js?v=20260906-85";
 import {
   segmentWave,
   updateWaveSegments,
   waveFullyCleared,
   pendingHostiles,
-} from "./waveSegments.js?v=20260906-84";
+} from "./waveSegments.js?v=20260906-85";
 import {
   grantKillXp,
   grantWaveXp,
   getTeamProgress,
-} from "./teamProgress.js?v=20260906-84";
+} from "./teamProgress.js?v=20260906-85";
 import {
   updateGrenades,
   drawGrenades,
   trySquadGrenades,
   resetGrenades,
-} from "./grenades.js?v=20260906-84";
+} from "./grenades.js?v=20260906-85";
 import {
   applyRunModifiers,
   updateMarineReinforcements,
   resetMarineTimer,
-} from "./runModifiers.js?v=20260906-84";
+} from "./runModifiers.js?v=20260906-85";
 import {
   drawWartornAtmosphere,
   drawWartornDressing,
-} from "./wartornCity.js?v=20260906-84";
+  drawWartornStreetSurface,
+} from "./wartornCity.js?v=20260906-85";
 import {
   updateSquadDialog,
   drawDialogBubbles,
   resetSquadDialog,
-} from "./squadDialog.js?v=20260906-84";
+} from "./squadDialog.js?v=20260906-85";
 import {
   unstickOverlappingUnits,
   resetUnitUnstick,
-} from "./unitCollision.js?v=20260906-84";
+} from "./unitCollision.js?v=20260906-85";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -971,7 +972,7 @@ function drawCrosswalk(y) {
         [x + 32, y + 13],
         [x, y + 13],
       ],
-      "#d1d0c5aa",
+      "#8a8274aa",
     );
 }
 var asphaltGrainCanvas = null;
@@ -992,12 +993,12 @@ function getAsphaltGrain() {
         (x * 127 + y * 311 + x * y * 13) ^
         ((x * 19 + 41) * (y * 23 + 17) + (x << 2) + (y << 4));
       n = n & 255;
-      var speck = n > 248 ? 220 : n < 10 ? 22 : 82 + (n % 28);
+      var speck = n > 248 ? 168 : n < 10 ? 28 : 68 + (n % 22);
       var edge = Math.min(x, y, size - 1 - x, size - 1 - y);
       var fade = edge < 12 ? edge / 12 : 1;
+      data.data[i++] = speck + 4;
       data.data[i++] = speck;
-      data.data[i++] = speck + 2;
-      data.data[i++] = speck - 1;
+      data.data[i++] = speck - 8;
       data.data[i++] = Math.round((n > 232 || n < 16 ? 54 : 16) * fade);
     }
   }
@@ -1007,12 +1008,15 @@ function getAsphaltGrain() {
 }
 function drawSharpStreetMarks(curbL, curbR) {
   var stains = [
-    [-220, world.minY + 980, 90, 36, "#2a2f2d55"],
-    [260, world.minY + 1560, 80, 30, "#2c322f50"],
-    [-90, world.minY + 2200, 70, 28, "#262b2958"],
-    [140, world.minY + 3100, 86, 32, "#2a302e52"],
-    [-300, world.minY + 4020, 74, 26, "#2c322f4d"],
-    [40, world.minY + 4880, 64, 24, "#262b2955"],
+    [-220, world.minY + 980, 90, 36, "#2a241c66"],
+    [260, world.minY + 1560, 80, 30, "#1c181466"],
+    [-90, world.minY + 2200, 70, 28, "#2e261c58"],
+    [140, world.minY + 3100, 86, 32, "#241e1860"],
+    [-300, world.minY + 4020, 74, 26, "#1a161258"],
+    [40, world.minY + 4880, 64, 24, "#2c241c55"],
+    [-160, world.minY + 1180, 54, 22, "#3a2e2260"],
+    [210, world.minY + 2480, 62, 20, "#1e1a1462"],
+    [-40, world.minY + 3680, 78, 28, "#2a221c58"],
   ];
   for (var i = 0; i < stains.length; i++) {
     var s = stains[i];
@@ -1033,6 +1037,11 @@ function drawSharpStreetMarks(curbL, curbR) {
     [-160, world.minY + 2680, 7, 100],
     [70, world.minY + 3600, 6, 86],
     [-250, world.minY + 4500, 7, 94],
+    [110, world.minY + 1120, 5, 78],
+    [-280, world.minY + 2040, 7, 88],
+    [240, world.minY + 3180, 6, 72],
+    [-90, world.minY + 4120, 8, 104],
+    [160, world.minY + 5340, 6, 80],
   ];
   for (var c = 0; c < cracks.length; c++) {
     var k = cracks[c];
@@ -1044,7 +1053,7 @@ function drawSharpStreetMarks(curbL, curbR) {
         [k[0] + 2, k[1] + k[3]],
         [k[0] - 2, k[1] + k[3] - 8],
       ],
-      "#1c201ecc",
+      "#1a1612cc",
     );
   }
 }
@@ -1060,7 +1069,7 @@ function drawMapDecor() {
       [world.maxX, world.maxY],
       [world.minX, world.maxY],
     ],
-    "#2b302e",
+    "#2a2722",
   );
   worldPoly(
     [
@@ -1069,7 +1078,7 @@ function drawMapDecor() {
       [curbR, world.maxY],
       [curbL, world.maxY],
     ],
-    "#3c4442",
+    "#3d3830",
   );
   worldPoly(
     [
@@ -1078,7 +1087,7 @@ function drawMapDecor() {
       [80, world.maxY],
       [-80, world.maxY],
     ],
-    "#4a524e",
+    "#4a453c",
   );
   worldPoly(
     [
@@ -1087,7 +1096,7 @@ function drawMapDecor() {
       [curbL + 120, world.maxY],
       [curbL, world.maxY],
     ],
-    "#363d3b",
+    "#35312c",
   );
   worldPoly(
     [
@@ -1096,7 +1105,7 @@ function drawMapDecor() {
       [curbR, world.maxY],
       [curbR - 120, world.maxY],
     ],
-    "#363d3b",
+    "#35312c",
   );
   worldPoly(
     [
@@ -1105,7 +1114,7 @@ function drawMapDecor() {
       [curbL, world.maxY],
       [curbL - 40, world.maxY],
     ],
-    "#262b29",
+    "#1f1c18",
   );
   worldPoly(
     [
@@ -1114,7 +1123,7 @@ function drawMapDecor() {
       [curbR + 40, world.maxY],
       [curbR, world.maxY],
     ],
-    "#262b29",
+    "#1f1c18",
   );
   var grain = getAsphaltGrain();
   if (grain) {
@@ -1133,7 +1142,7 @@ function drawMapDecor() {
     ctx.closePath();
     ctx.clip();
     ctx.imageSmoothingEnabled = false;
-    ctx.globalAlpha = 0.16;
+    ctx.globalAlpha = 0.22;
     var pattern = ctx.createPattern(grain, "repeat");
     if (pattern) {
       ctx.translate(origin[0] % 192, origin[1] % 192);
@@ -1150,8 +1159,9 @@ function drawMapDecor() {
         [9, y + 48],
         [-9, y + 48],
       ],
-      "#d4c078aa",
+      "#8a7a52aa",
     );
+  drawWartornStreetSurface(ctx, iso, world);
   for (var crossY = world.minY + 420; crossY < world.maxY; crossY += 900)
     drawCrosswalk(crossY);
   drawSharpStreetMarks(curbL, curbR);

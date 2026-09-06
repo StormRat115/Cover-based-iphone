@@ -2,38 +2,38 @@ import {
   WEAPONS,
   weaponCopy,
   weaponWithAttachments,
-} from "./weapons.js?v=20260906-84";
-import { soldierSource } from "./soldierAssets.js?v=20260906-84";
+} from "./weapons.js?v=20260906-85";
+import { soldierSource } from "./soldierAssets.js?v=20260906-85";
 import {
   CHARACTER_STATS,
   damageReductionPercent,
   GENERAL_ACCURACY_PENALTY,
-} from "./combatStats.js?v=20260906-84";
+} from "./combatStats.js?v=20260906-85";
 import {
   ATTACHMENT_SLOTS,
   ATTACHMENT_SLOT_LABELS,
   attachmentsForSlot,
   emptyAttachmentIds,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260906-84";
+} from "./attachments.js?v=20260906-85";
 import {
   getTeamProgress,
   xpIntoLevel,
   xpForLevel,
-} from "./teamProgress.js?v=20260906-84";
+} from "./teamProgress.js?v=20260906-85";
 import {
   SKILL_BRANCHES,
   canBuySkill,
   buySkill,
   getSkillMods,
-} from "./skillTree.js?v=20260906-84";
+} from "./skillTree.js?v=20260906-85";
 import {
   ARMOR_OPTIONS,
   describeArmorStats,
   selectArmor,
   selectedArmorId,
   signed,
-} from "./armor.js?v=20260906-84";
+} from "./armor.js?v=20260906-85";
 
 var DEFAULT_WEAPONS = { player: "rifle", Rook: "rifle", Viper: "smg", Doc: "dmr" },
   STORAGE = "coverShooterLoadout",

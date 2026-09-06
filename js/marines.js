@@ -1,6 +1,6 @@
-import { updateAllies as updateFriendlyAI } from "./allyCore2.js?v=20260906-84";
-import { weaponCopy } from "./weapons.js?v=20260906-84";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-84";
+import { updateAllies as updateFriendlyAI } from "./allyCore2.js?v=20260906-85";
+import { weaponCopy } from "./weapons.js?v=20260906-85";
+import { drawSoldier } from "./soldierAssets.js?v=20260906-85";
 
 const MARINE_STARTS = [
   [-240, 255],

@@ -374,6 +374,7 @@ test("street asphalt is solid slabs plus sharp grain, not a stretched tile", () 
   assert.equal(source.includes("roadSegments"), false);
   assert.match(source, /getAsphaltGrain/);
   assert.match(source, /imageSmoothingEnabled = false/);
+  assert.match(source, /drawWartornStreetSurface/);
 });
 
 test("mission cover layouts are unique, reproducible, and keep spawn lanes clear", async () => {
@@ -1352,11 +1353,15 @@ test("wartorn city plates load and dress the street sides", async () => {
   );
   assert.ok(
     dressing.streetScenes.every((item) => Math.abs(item.x) > dressing.road),
-    "street plates stay off the playable asphalt",
+    "sidewalk street tiles stay off the playable asphalt",
   );
   assert.ok(
-    dressing.rubble.every((item) => Math.abs(item.x) > dressing.road),
-    "rubble stays on the curbs",
+    dressing.wrecks.some((item) => Math.abs(item.x) < dressing.road),
+    "burnt wrecks sit on the street corridor",
+  );
+  assert.ok(
+    dressing.rubble.some((item) => Math.abs(item.x) < dressing.road),
+    "debris piles sit on the street corridor",
   );
   const ctx = h.document.createElement("canvas").getContext("2d");
   city.drawWartornAtmosphere(ctx, 390, 844);
