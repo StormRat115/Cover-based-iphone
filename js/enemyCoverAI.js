@@ -38,6 +38,7 @@ function fallbackProtectedCover(enemy, threat, covers, friendlies) {
     bestScore = Infinity;
   for (var i = 0; i < (covers || []).length; i++) {
     var c = covers[i];
+    if (!c || c.destroyed) continue;
     if (isCoverFull(c, friendlies || [], enemy)) continue;
     var slot = reserveCoverSlot(c, enemy, threat, friendlies || []);
     if (!slot) continue;

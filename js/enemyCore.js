@@ -9,10 +9,16 @@ import {
 import {
   ENEMY_STATS,
   mitigateDamage,
-  finalAccuracy,
+  combatAccuracy,
   attackDamage,
 } from "./combatStats.js?v=20260906-88";
 import { AudioBus } from "./audio.js?v=20260906-88";
+import {
+  spraySuppression,
+  tickSuppression,
+  suppressionAccuracyDelta,
+} from "./suppression.js?v=20260906-88";
+import { orderDefense } from "./squadDialog.js?v=20260906-88";
 import { assignEnemyCover } from "./enemyCoverAI.js?v=20260906-88";
 import { chargerWeapon } from "./chargerEnemy.js?v=20260906-88";
 import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260906-88";
@@ -305,7 +311,10 @@ function shouldReposition(e, target, covers) {
 }
 function applySquadHit(target, amount) {
   if (!validTarget(target)) return;
-  var reduced = mitigateDamage(Math.max(2, amount * 0.21), target.defense);
+  var reduced = mitigateDamage(
+    Math.max(2, amount * 0.21),
+    target.defense + orderDefense(target),
+  );
   target.hp = Math.max(0, target.hp - reduced);
   target.lastDamageTaken = reduced;
   target.hit = 0.22;
@@ -340,6 +349,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
     e.fire -= dt;
     e.muzzle = Math.max(0, e.muzzle - dt);
     e.hit = Math.max(0, e.hit - dt);
+    tickSuppression(e, dt);
     e.repositionCooldown = Math.max(0, (e.repositionCooldown || 0) - dt);
     e.targetTimer = Math.max(0, (e.targetTimer || 0) - dt);
     if (e.spawnTimer > 0) {
@@ -464,10 +474,11 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       e.exposed &&
       (!lineBlocked || peekOffset > 28);
     if (e.fire <= 0 && canFire) {
-      var chance = finalAccuracy(
+      var chance = combatAccuracy(
         getHitChance(e, threat, covers),
         e.weapon.accuracy,
         e.accuracy,
+        suppressionAccuracyDelta(e),
       );
       if (threat !== player) {
         chance = Math.max(6, Math.min(62, chance * 0.58));
@@ -480,6 +491,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       faceThreat(e, threat);
       e.muzzle = 0.13;
       if (e.cover && e.combatState === "exposed") e.shotsLeft--;
+      spraySuppression(e, threat, playerRoster(), false);
       if (spawnProjectile) {
         var hitShot = Math.random() * 100 < chance,
           raw = attackDamage(e.weapon.damage, e.damageBonus);

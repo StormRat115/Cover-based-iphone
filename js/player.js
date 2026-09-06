@@ -12,9 +12,23 @@ import { drawSoldier } from "./soldierAssets.js?v=20260906-88";
 import {
   CHARACTER_STATS,
   mitigateDamage,
-  finalAccuracy,
+  combatAccuracy,
   attackDamage,
 } from "./combatStats.js?v=20260906-88";
+import {
+  finishReload,
+  canReloadFromReserve,
+  isPrimaryDry,
+  getSidearm,
+  shouldSwapToSidearm,
+} from "./ammoEconomy.js?v=20260906-88";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-88";
+import {
+  tickSuppression,
+  suppressionAccuracyDelta,
+  isHardSuppressed,
+} from "./suppression.js?v=20260906-88";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-88";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,
@@ -52,7 +66,7 @@ export function updatePlayerHud(p) {
     '</div><div style="font-size:16px;margin-top:2px">' +
     p.weapon.ammo +
     " / " +
-    p.weapon.magazine +
+    (p.weapon.infinite ? "∞" : Math.round(p.weapon.reserve || 0)) +
     '</div><div style="font-size:9px;margin-top:2px;color:#a9b7bd">HP ' +
     Math.ceil(p.hp) +
     " / " +
@@ -72,15 +86,24 @@ export function updatePlayerHud(p) {
 }
 function loadoutWeaponParts(entry, fallback) {
   if (typeof entry === "string")
-    return { weapon: entry || fallback || "rifle", attachments: [null, null, null, null] };
+    return {
+      weapon: entry || fallback || "rifle",
+      attachments: [null, null, null, null],
+      sidearm: "pistol",
+    };
   if (entry && typeof entry === "object")
     return {
       weapon: entry.weapon || fallback || "rifle",
       attachments: Array.isArray(entry.attachments)
         ? entry.attachments.slice(0, 4)
         : [null, null, null, null],
+      sidearm: getSidearm(entry.sidearm).id,
     };
-  return { weapon: fallback || "rifle", attachments: [null, null, null, null] };
+  return {
+    weapon: fallback || "rifle",
+    attachments: [null, null, null, null],
+    sidearm: "pistol",
+  };
 }
 export function createPlayer() {
   var parts = loadoutWeaponParts(
@@ -91,6 +114,7 @@ export function createPlayer() {
     ),
     stats = CHARACTER_STATS.player;
   var p = {
+    isPlayer: true,
     x: 0,
     y: 120,
     tx: 0,
@@ -122,7 +146,10 @@ export function createPlayer() {
     regenDelay: 3,
     regenRate: stats.regen,
     timeSinceDamage: 99,
-    weapon: weaponCopy(parts.weapon, parts.attachments),
+    primary: weaponCopy(parts.weapon, parts.attachments),
+    sidearm: weaponCopy(parts.sidearm || "pistol"),
+    weaponSlot: "primary",
+    weapon: null,
     keyboardMove: null,
     facingX: 1,
     facingY: 0,
@@ -132,9 +159,37 @@ export function createPlayer() {
     lastShotHit: false,
     deathTimer: 0,
     deathDuration: 0.8,
+    hardPinSwap: false,
+    crawlSettled: false,
     setWeapon: function (id, attachmentIds) {
       if (this.dead || this.downed || this.reloading) return;
-      this.weapon = weaponCopy(id, attachmentIds);
+      this.primary = weaponCopy(id, attachmentIds);
+      if (this.weaponSlot !== "sidearm") this.weapon = this.primary;
+    },
+    equipSidearm: function (id) {
+      this.sidearm = weaponCopy(id || "pistol");
+      if (this.weaponSlot === "sidearm") this.weapon = this.sidearm;
+    },
+    swapWeapon: function (slot) {
+      if (this.dead || this.downed || this.reloading) return false;
+      var next = slot || (this.weaponSlot === "primary" ? "sidearm" : "primary");
+      if (next === "sidearm") {
+        this.weaponSlot = "sidearm";
+        this.weapon = this.sidearm;
+      } else {
+        this.weaponSlot = "primary";
+        this.weapon = this.primary;
+      }
+      this.hardPinSwap = false;
+      return true;
+    },
+    maybeAutoSidearm: function () {
+      if (this.weaponSlot === "sidearm") return false;
+      this.hardPinSwap = isHardSuppressed(this);
+      if (shouldSwapToSidearm(this) || isPrimaryDry(this.primary)) {
+        return this.swapWeapon("sidearm");
+      }
+      return false;
     },
     setDestination: function (x, y, cover) {
       if (this.dead || this.downed) return;
@@ -173,7 +228,7 @@ export function createPlayer() {
         this.dead ||
         this.downed ||
         this.reloading ||
-        this.weapon.ammo === this.weapon.magazine
+        !canReloadFromReserve(this.weapon)
       )
         return;
       this.reloading = true;
@@ -189,6 +244,7 @@ export function createPlayer() {
         this.weapon.fireCooldown > 0
       )
         return false;
+      this.maybeAutoSidearm();
       if (this.weapon.ammo <= 0) {
         AudioBus.playEmpty();
         return false;
@@ -198,10 +254,11 @@ export function createPlayer() {
         d = Math.hypot(dx, dy) || 1;
       this.facingX = dx / d;
       this.facingY = dy / d;
-      var chance = finalAccuracy(
+      var chance = combatAccuracy(
         getHitChance(this, enemy, window.__battleCovers || []),
         this.weapon.accuracy,
         this.accuracy,
+        suppressionAccuracyDelta(this) + orderAccuracy(this),
       );
       enemy.lastHitChance = chance;
       this.weapon.ammo--;
@@ -238,7 +295,7 @@ export function createPlayer() {
     },
     takeDamage: function (amount) {
       if (this.dead || this.downed) return;
-      var dealt = mitigateDamage(amount, this.defense);
+      var dealt = mitigateDamage(amount, this.defense + orderDefense(this));
       this.hp = Math.max(0, this.hp - dealt);
       this.lastDamageTaken = dealt;
       this.timeSinceDamage = 0;
@@ -255,8 +312,8 @@ export function createPlayer() {
       this.shootTimer = 0;
       this.peek = 0;
       this.keyboardMove = null;
-      this.cover = null;
-      this.coverTarget = null;
+      this.crawlSettled = false;
+      if (!this.cover) this.coverTarget = null;
     },
     revive: function () {
       if (this.dead) return false;
@@ -334,8 +391,13 @@ export function createPlayer() {
         __visualFacing: undefined,
         __faceLockUntil: 0,
         deathTimer: 0,
-        weapon: weaponCopy(parts.weapon, parts.attachments),
+        primary: weaponCopy(parts.weapon, parts.attachments),
+        sidearm: weaponCopy(parts.sidearm || "pistol"),
+        weaponSlot: "primary",
+        crawlSettled: false,
+        hardPinSwap: false,
       });
+      this.weapon = this.primary;
     },
     update: function (dt) {
       if (shotFeedbackTime > 0) {
@@ -351,17 +413,23 @@ export function createPlayer() {
         return;
       }
       if (this.downed) {
-        this.downTimer += dt;
+        updateDownedCrawl(
+          this,
+          dt,
+          (typeof window !== "undefined" && window.__battleCovers) || [],
+          (typeof window !== "undefined" && window.__battleEnemies) || [],
+        );
         if (this.downTimer >= this.downDuration) this.triggerDeath();
         return;
       }
+      tickSuppression(this, dt);
       if (this.hp < this.maxHp && this.timeSinceDamage > this.regenDelay)
         this.hp = Math.min(this.maxHp, this.hp + this.regenRate * dt);
       if (this.reloading) {
         this.reloadTimer -= dt;
         if (this.reloadTimer <= 0) {
           this.reloading = false;
-          this.weapon.ammo = this.weapon.magazine;
+          finishReload(this.weapon);
           this.state = "idle";
         }
       }
@@ -425,6 +493,7 @@ export function createPlayer() {
       }
     },
   };
+  p.weapon = p.primary;
   return p;
 }
 export function drawPlayer(ctx, p, iso) {

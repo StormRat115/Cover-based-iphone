@@ -126,6 +126,19 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - Pause sits in the top-right with a mobile-sized hit target.
 - Wave enemies mix cover-seekers and exposed shooters. Chargers still rush.
 
+## Street mechanics pack: 20260906-84
+
+Light suppression, generous ammo, impactful squad orders, crawl-to-cover revives, destructible soft cover, and periodic street tasks. Built on BUILD 83 wartorn plates / dialog / collision / pause.
+
+1. **Suppression (light)** — Nearby friendly fire briefly pins enemies (slower peek, small accuracy hit). Stacks cap at 3 and fade in under a second. Player and squad barely flinch from enemy fire (cap 1, ~0.26s).
+2. **Ammo (generous)** — Primary weapons spend reserve ammo. Street crates drop often from kills, waves, and objectives. Empty primary or a hard pin auto-swaps to an infinite sidearm. Loadout lets the player pick Pistol / Magnum / Machine Pistol with visible stats. Q or the SIDEARM button swaps.
+3. **Squad dialog** — Squad “push / hold / focus” lines apply short flank, defense, or accuracy buffs. Marine barks stay flavor-only.
+4. **Crawl-to-cover** — Downed player and squad crawl to safer cover, then wait for a proximity revive. Bleed-out timers remain; the run does not soft-fail instantly.
+5. **Soft cover** — Sandbags, crates, wrecks, and rubble take hits and break, freeing slots. Tall jersey pieces stay up. Cracks and rubble mark damage.
+6. **Street objectives** — Periodic hold-crosswalk, clear-wreck, and escort tasks. Marines follow the live task instead of charging the far fort.
+
+After merge, Pages should read **BUILD 20260906-84**.
+
 ## Team XP, skills, armor, and segmented waves: 20260906-81
 
 Shared team XP for the player, allies, and Marines:

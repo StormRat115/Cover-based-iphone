@@ -13,6 +13,10 @@ import {
   occupancyPenalty,
   reserveCoverSlot,
 } from "./coverSlots.js?v=20260906-88";
+import {
+  suppressionPeekScale,
+  suppressionMoveScale,
+} from "./suppression.js?v=20260906-88";
 function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
@@ -51,8 +55,9 @@ export function pickTacticalCover(actor, threat, covers, friendlies, options) {
     best = null,
     bestScore = Infinity;
   for (var i = 0; i < covers.length; i++) {
-    var c = covers[i],
-      travel = Math.hypot(c.x - actor.x, c.y - actor.y);
+    var c = covers[i];
+    if (!c || c.destroyed) continue;
+    var travel = Math.hypot(c.x - actor.x, c.y - actor.y);
     if (travel > maxTravel) continue;
     if (isCoverFull(c, friendlies || [], actor)) continue;
     var slot = candidateSlot(c, actor, threat, friendlies || []);
@@ -72,7 +77,9 @@ export function pickTacticalCover(actor, threat, covers, friendlies, options) {
     else if (c.type === "low") score += 20;
     if (c.segments && c.segments.length > 1) score -= 55;
     var lateral = flankValue(actor, threat, slot);
-    if (flankSide) score -= lateral * flankSide * flankWeight;
+    var orderFlank = actor.orderFlank || 0;
+    if (flankSide || orderFlank)
+      score -= lateral * (flankSide || orderFlank) * flankWeight;
     else score -= Math.abs(lateral) * 55;
     if (anchor)
       score += Math.hypot(slot.x - anchor.x, slot.y - anchor.y) * anchorWeight;
@@ -131,9 +138,10 @@ export function moveTowardTarget(actor, dt, speedScale, covers) {
     updateVault(actor, dt);
     return false;
   }
-  if (actor.hit > 0)
-    actor.suppressionTimer = Math.max(actor.suppressionTimer || 0, 1.45);
-  else actor.suppressionTimer = Math.max(0, (actor.suppressionTimer || 0) - dt);
+  if (actor.hit > 0) {
+    var pin = actor.isPlayer || actor.name || actor.isMarine ? 0.35 : 1.15;
+    actor.suppressionTimer = Math.max(actor.suppressionTimer || 0, pin);
+  } else actor.suppressionTimer = Math.max(0, (actor.suppressionTimer || 0) - dt);
   if (
     Number.isFinite(actor.detourX) &&
     Math.hypot(actor.x - actor.targetX, actor.y - actor.targetY) <= 8
@@ -173,7 +181,14 @@ export function moveTowardTarget(actor, dt, speedScale, covers) {
     return false;
   actor.facingX = dx / d;
   actor.facingY = dy / d;
-  var step = Math.min(d, actor.speed * (speedScale || 1) * dt);
+  var step = Math.min(
+    d,
+    actor.speed *
+      (speedScale || 1) *
+      (actor.orderSpeed || 1) *
+      suppressionMoveScale(actor) *
+      dt,
+  );
   var ox = actor.x,
     oy = actor.y,
     nx = actor.x + (dx / d) * step,
@@ -253,6 +268,8 @@ export function peekPoint(actor, threat, amount) {
     px = -ty / len,
     py = tx / len,
     side = (actor.coverSlotIndex || 0) === 0 ? -1 : 1,
-    step = amount || (actor.cover.type === "wide" ? 50 : 38);
+    step =
+      (amount || (actor.cover.type === "wide" ? 50 : 38)) *
+      suppressionPeekScale(actor);
   return { x: ax + px * step * side, y: ay + py * step * side };
 }

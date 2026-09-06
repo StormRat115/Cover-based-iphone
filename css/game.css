@@ -233,6 +233,25 @@ button {
   left: 150px;
   bottom: 43px;
 }
+#swapWeapon {
+  position: absolute;
+  left: max(150px, calc(env(safe-area-inset-left) + 132px));
+  bottom: max(150px, calc(env(safe-area-inset-bottom) + 132px));
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 21px;
+  border: 1px solid #ffffff66;
+  background: #1a2428dd;
+  color: #e8eee9;
+  font-weight: 900;
+  font-size: 10px;
+  letter-spacing: 0.6px;
+  z-index: 6;
+}
+#swapWeapon.sidearm {
+  background: #3d5344dd;
+  color: #fff;
+}
 .hidden {
   display: none !important;
 }

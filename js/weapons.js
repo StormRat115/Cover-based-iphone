@@ -2,6 +2,12 @@ import {
   getAttachment,
   normalizeAttachmentIds,
 } from "./attachments.js?v=20260906-88";
+import {
+  SIDEARMS,
+  startingReserve,
+  prepareWeaponAmmo,
+} from "./ammoEconomy.js?v=20260906-88";
+export { SIDEARMS };
 
 export const WEAPONS = {
   rifle: {
@@ -158,19 +164,24 @@ export function applyAttachmentMods(base, attachmentIds) {
 }
 
 export function weaponWithAttachments(weaponId, attachmentIds) {
-  const base = WEAPONS[weaponId] || WEAPONS.rifle;
+  const base = WEAPONS[weaponId] || SIDEARMS[weaponId] || WEAPONS.rifle;
   return applyAttachmentMods(Object.assign({}, base), attachmentIds);
 }
 
 export function weaponCopy(id, attachmentIds) {
   const w = weaponWithAttachments(id, attachmentIds);
-  return Object.assign({}, w, {
-    ammo: w.magazine,
-    recoil: 0,
-    fireCooldown: 0,
-  });
+  const infinite = !!(w.infinite || w.role === "backup");
+  return prepareWeaponAmmo(
+    Object.assign({}, w, {
+      ammo: w.magazine,
+      reserve: infinite ? Infinity : startingReserve(w),
+      infinite: infinite,
+      recoil: 0,
+      fireCooldown: 0,
+    }),
+  );
 }
 
 export function getWeapon(id) {
-  return WEAPONS[id] || WEAPONS.rifle;
+  return WEAPONS[id] || SIDEARMS[id] || WEAPONS.rifle;
 }

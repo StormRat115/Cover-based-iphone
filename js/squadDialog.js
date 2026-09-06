@@ -46,7 +46,85 @@ var LINES = {
     "Man's in the open — get him back.",
     "Rounds inbound. Tuck in.",
   ],
+  push: [
+    "Push left — I'll pin them.",
+    "Bound left. I have the street.",
+    "Flank left, I have you.",
+    "Sweep the left curb. Move.",
+  ],
+  hold: [
+    "Hold this piece.",
+    "Stay on the bags. Don't give it up.",
+    "Hold. I'll cover the lane.",
+    "Keep this cover. Nobody folds.",
+  ],
+  focus: [
+    "Focus fire, drop that one.",
+    "All guns on the heavy.",
+    "Focus. Put him down.",
+    "Same target. Break him.",
+  ],
 };
+
+export var SQUAD_ORDERS = {
+  push: { type: "push", duration: 5.2, speed: 1.14, flank: 1, acc: 3, defense: 0 },
+  hold: { type: "hold", duration: 6, speed: 1, flank: 0, acc: 0, defense: 16 },
+  focus: { type: "focus", duration: 4.8, speed: 1, flank: 0, acc: 8, defense: 0 },
+};
+
+function isSquadSpeaker(actor) {
+  return !!(actor && !actor.isMarine && (actor.isPlayer || actor.name));
+}
+
+export function applyOrderBuff(actor, spec) {
+  if (!actor || !spec) return;
+  actor.orderType = spec.type;
+  actor.orderTimer = spec.duration;
+  actor.orderAcc = spec.acc || 0;
+  actor.orderDefense = spec.defense || 0;
+  actor.orderSpeed = spec.speed || 1;
+  actor.orderFlank = spec.flank || 0;
+}
+
+export function applySquadOrder(type, speaker, squad, player) {
+  var spec = SQUAD_ORDERS[type];
+  if (!spec || !isSquadSpeaker(speaker)) return false;
+  var units = (squad || []).concat(player ? [player] : []);
+  units.forEach(function (a) {
+    if (!living(a) || a.isMarine) return;
+    applyOrderBuff(a, spec);
+  });
+  return true;
+}
+
+export function tickOrderBuffs(units, dt) {
+  (units || []).forEach(function (a) {
+    if (!a) return;
+    a.orderTimer = Math.max(0, (a.orderTimer || 0) - dt);
+    if (a.orderTimer <= 0) {
+      a.orderAcc = 0;
+      a.orderDefense = 0;
+      a.orderSpeed = 1;
+      a.orderFlank = 0;
+      a.orderType = "";
+    }
+  });
+}
+
+export function orderAccuracy(actor) {
+  return (actor && actor.orderTimer > 0 && actor.orderAcc) || 0;
+}
+
+export function orderDefense(actor) {
+  if (!actor || (actor.orderTimer || 0) <= 0) return 0;
+  if (actor.orderType === "hold" && !actor.cover) return 0;
+  return actor.orderDefense || 0;
+}
+
+export function orderSpeedScale(actor) {
+  if (!actor || (actor.orderTimer || 0) <= 0) return 1;
+  return actor.orderSpeed || 1;
+}
 
 function pick(list) {
   return list[Math.floor(Math.random() * list.length)];
@@ -139,6 +217,7 @@ export function updateSquadDialog(dt, player, allies, marines, enemies) {
     if (!e) return;
     e.calloutTimer = Math.max(0, (e.calloutTimer || 0) - dt);
   });
+  tickOrderBuffs(units, dt);
   if (!canSpeak(player, units)) return null;
   var hostiles = (enemies || []).filter(function (e) {
     return living(e) && (e.spawnTimer || 0) <= 0;
@@ -158,17 +237,25 @@ export function updateSquadDialog(dt, player, allies, marines, enemies) {
       event = {
         actor: scout,
         key:
-          roll < 0.28
+          roll < 0.2
             ? "contact"
-            : roll < 0.5
+            : roll < 0.38
               ? "callout"
-              : roll < 0.72
+              : roll < 0.52
                 ? "strategy"
-                : roll < 0.86
+                : roll < 0.64
                   ? scout.isMarine
                     ? "marine"
                     : "squad"
-                  : "taunt",
+                  : roll < 0.76
+                    ? "taunt"
+                    : scout.isMarine
+                      ? "marine"
+                      : roll < 0.85
+                        ? "push"
+                        : roll < 0.93
+                          ? "hold"
+                          : "focus",
       };
     }
   } else if (!event && !hostiles.length && Math.random() < 0.2) {
@@ -178,7 +265,15 @@ export function updateSquadDialog(dt, player, allies, marines, enemies) {
     };
   }
   if (!event) return null;
-  if (speakFrom(event.actor, event.key)) return event;
+  if (speakFrom(event.actor, event.key)) {
+    if (
+      !event.actor.isMarine &&
+      (event.key === "push" || event.key === "hold" || event.key === "focus")
+    ) {
+      applySquadOrder(event.key, event.actor, allies, player);
+    }
+    return event;
+  }
   return null;
 }
 

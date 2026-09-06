@@ -1652,3 +1652,163 @@ test("auto play front-line camera tracks furthest-forward friendlies", async () 
   assert.match(css, /#camMode \{/);
   assert.match(css, /#pause \{[\s\S]*right:/);
 });
+
+test("light suppression pins enemies harder than the player", async () => {
+  const h = createHarness();
+  const sup = await h.importModule(`js/suppression.js?v=${BUILD}`);
+  const enemy = { x: 0, y: 0, hp: 40, dead: false, downed: false };
+  const player = { x: 0, y: 0, hp: 100, dead: false, downed: false, isPlayer: true };
+  assert.equal(sup.spraySuppression({ x: -40, y: 0 }, { x: 0, y: 0 }, [enemy], true), 1);
+  assert.ok(enemy.suppressStacks >= 1);
+  assert.ok(sup.suppressionPeekScale(enemy) < 1);
+  assert.ok(sup.suppressionAccuracyDelta(enemy) < 0);
+  const firstEnemyAcc = sup.suppressionAccuracyDelta(enemy);
+  sup.spraySuppression({ x: 40, y: 0 }, { x: 0, y: 0 }, [player], false);
+  assert.ok((player.suppressStacks || 0) <= 1);
+  assert.ok(Math.abs(sup.suppressionAccuracyDelta(player)) < Math.abs(firstEnemyAcc));
+  assert.equal(sup.isHardSuppressed(player), false);
+  sup.applySuppression(enemy, 3, 0.8, 3);
+  assert.equal(enemy.suppressStacks, 3);
+  sup.tickSuppression(enemy, 1);
+  assert.equal(enemy.suppressStacks, 0);
+});
+
+test("primary reserve ammo, street drops, and infinite sidearm swap", async () => {
+  const h = createHarness();
+  const ammo = await h.importModule(`js/ammoEconomy.js?v=${BUILD}`);
+  const weapons = await h.importModule(`js/weapons.js?v=${BUILD}`);
+  const rifle = weapons.weaponCopy("rifle");
+  assert.ok(rifle.reserve >= rifle.magazine * 6);
+  rifle.ammo = 0;
+  ammo.finishReload(rifle);
+  assert.equal(rifle.ammo, rifle.magazine);
+  assert.ok(rifle.reserve < rifle.magazine * 7);
+  rifle.ammo = 0;
+  rifle.reserve = 0;
+  assert.equal(ammo.isPrimaryDry(rifle), true);
+  const pistol = weapons.weaponCopy("pistol");
+  assert.equal(pistol.infinite, true);
+  pistol.ammo = 0;
+  ammo.finishReload(pistol);
+  assert.equal(pistol.ammo, pistol.magazine);
+  const player = {
+    x: 0,
+    y: 0,
+    dead: false,
+    downed: false,
+    weaponSlot: "primary",
+    primary: rifle,
+    weapon: rifle,
+  };
+  const drops = [ammo.createAmmoDrop(0, 0, 30)];
+  assert.ok(ammo.updateAmmoDrops(drops, player, 0.05) >= 30);
+  assert.equal(drops.length, 0);
+  assert.ok(rifle.reserve >= 30);
+  player.hardPinSwap = true;
+  assert.equal(ammo.shouldSwapToSidearm(player), true);
+  assert.ok(ammo.SIDEARMS.magnum.damage > ammo.SIDEARMS.pistol.damage);
+  assert.ok(ammo.SIDEARMS.machinePistol.cooldown < ammo.SIDEARMS.pistol.cooldown);
+});
+
+test("squad orders buff allies but marine lines stay flavor", async () => {
+  const h = createHarness();
+  const dialog = await h.importModule(`js/squadDialog.js?v=${BUILD}`);
+  dialog.resetSquadDialog();
+  const ally = { x: 0, y: 0, hp: 80, name: "Rook", dead: false, downed: false, cover: { id: "c" } };
+  const marine = { x: 10, y: 0, hp: 90, isMarine: true, dead: false, downed: false };
+  const player = { x: 4, y: 0, hp: 100, isPlayer: true, dead: false, downed: false };
+  assert.equal(dialog.applySquadOrder("focus", ally, [ally], player), true);
+  assert.ok(player.orderAcc >= 8);
+  assert.ok(ally.orderTimer > 0);
+  assert.equal(dialog.applySquadOrder("hold", marine, [ally], player), false);
+  dialog.tickOrderBuffs([player, ally], 10);
+  assert.equal(player.orderAcc, 0);
+});
+
+test("downed player and squad crawl toward safer cover", async () => {
+  const h = createHarness();
+  const crawl = await h.importModule(`js/downedCrawl.js?v=${BUILD}`);
+  const cover = { id: "bag", x: 180, y: 0, w: 120, h: 36, type: "low", theme: "sandbags", destroyed: false };
+  const actor = {
+    x: 0,
+    y: 0,
+    hp: 0,
+    downed: true,
+    dead: false,
+    speed: 200,
+    cover: null,
+    downTimer: 0,
+    vaulting: false,
+  };
+  const threat = { x: -200, y: 0, hp: 40, dead: false, downed: false, spawnTimer: 0 };
+  const choice = crawl.pickSaferCover(actor, [cover], [threat]);
+  assert.equal(choice.cover, cover);
+  crawl.updateDownedCrawl(actor, 0.2, [cover], [threat]);
+  assert.ok(actor.x > 0, "downed soldier should crawl toward cover");
+  actor.x = choice.x;
+  actor.y = choice.y;
+  crawl.updateDownedCrawl(actor, 0.05, [cover], [threat]);
+  assert.equal(actor.crawlSettled, true);
+});
+
+test("soft cover breaks and frees slots; jersey stays up", async () => {
+  const h = createHarness();
+  const soft = await h.importModule(`js/destructibleCover.js?v=${BUILD}`);
+  const bags = soft.prepareCoverHp({
+    id: "bags",
+    theme: "sandbags",
+    x: 0,
+    y: 0,
+    w: 100,
+    h: 30,
+  });
+  const wall = soft.prepareCoverHp({
+    id: "wall",
+    theme: "jersey",
+    x: 80,
+    y: 0,
+    w: 100,
+    h: 30,
+  });
+  assert.equal(soft.isSoftCover(bags), true);
+  assert.equal(soft.isHardCover(wall), true);
+  const occupant = { cover: bags, exposed: false };
+  let broke = false;
+  for (let i = 0; i < 12 && !broke; i++) broke = soft.damageCover(bags, 20, [occupant]);
+  assert.equal(broke, true);
+  assert.equal(bags.destroyed, true);
+  assert.equal(occupant.cover, null);
+  assert.equal(soft.damageCover(wall, 400, []), false);
+  assert.equal(wall.destroyed, false);
+});
+
+test("street objectives cycle and give marines a local goal", async () => {
+  const h = createHarness();
+  const obj = await h.importModule(`js/streetObjectives.js?v=${BUILD}`);
+  const state = obj.createStreetObjectives();
+  const covers = [];
+  const marine = { x: 0, y: 80, hp: 90, isMarine: true, dead: false, downed: false };
+  const spawned = obj.spawnStreetObjective(state, {
+    type: "hold_crosswalk",
+    actors: [marine],
+    covers,
+    random: () => 0.2,
+  });
+  assert.equal(spawned.type, "hold_crosswalk");
+  const goal = obj.currentPushGoal({ objective: { x: 0, y: -5700, radius: 265 } }, state);
+  assert.equal(goal.source, "street");
+  assert.ok(Math.abs(goal.y + 5700) > 100, "marines should follow the live street task, not the far fort");
+  marine.x = spawned.x;
+  marine.y = spawned.y;
+  for (let i = 0; i < 20; i++)
+    obj.updateStreetObjectives(state, 0.5, { marines: [marine], covers });
+  assert.ok(state.completed >= 1);
+  obj.spawnStreetObjective(state, {
+    type: "clear_blockade",
+    actors: [marine],
+    covers,
+    random: () => 0.4,
+  });
+  assert.ok(covers.length >= 3);
+  assert.ok(covers.every((c) => c.theme === "wreck"));
+});

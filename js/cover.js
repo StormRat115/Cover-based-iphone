@@ -6,6 +6,10 @@ import {
   coverSlotCount,
   slotWorldPoint,
 } from "./coverSlots.js?v=20260906-88";
+import {
+  prepareCoverHp,
+  drawCoverWear,
+} from "./destructibleCover.js?v=20260906-88";
 export {
   resolveSolidMove,
   updateVault,
@@ -38,7 +42,10 @@ export function createCover(random) {
     cover.slotCount = coverSlotCount(cover);
     return cover;
   });
-  for (const cover of layout) collisionPieces.set(cover, pieces(cover));
+  for (const cover of layout) {
+    prepareCoverHp(cover);
+    collisionPieces.set(cover, pieces(cover));
+  }
   if (typeof window !== "undefined") window.__battleCovers = layout;
   return layout;
 }
@@ -47,7 +54,18 @@ export function coverPieces(c) {
   return pieces(c);
 }
 
+export function registerCover(cover) {
+  prepareCoverHp(cover);
+  collisionPieces.delete(cover);
+  if (!cover.destroyed) collisionPieces.set(cover, pieces(cover));
+  return cover;
+}
+
 function pieces(c) {
+  if (c && c.destroyed) {
+    collisionPieces.delete(c);
+    return [];
+  }
   const cached = collisionPieces.get(c);
   if (cached) return cached;
   return c.segments && c.segments.length
@@ -71,6 +89,7 @@ function inside(p, x, y, padX, padY) {
 
 export function findCoverForPoint(x, y, covers) {
   for (const c of covers) {
+    if (c && c.destroyed) continue;
     const ps = pieces(c);
     for (const p of ps) if (inside(p, x, y, 24, 18)) return c;
   }
@@ -78,6 +97,8 @@ export function findCoverForPoint(x, y, covers) {
 }
 
 export function getCoverSlot(c, actor, threat) {
+  if (!c || c.destroyed)
+    return { x: (c && c.x) || 0, y: (c && c.y) || 0, side: "bottom" };
   var count = coverSlotCount(c);
   var index =
     actor && Number.isFinite(actor.coverSlotIndex)
@@ -159,6 +180,7 @@ export function chooseCoverPeek(c, actor, threat, covers) {
 
 export function isLineBlocked(a, b, covers) {
   for (const cover of covers) {
+    if (cover && cover.destroyed) continue;
     for (const rect of pieces(cover)) {
       if (sampledLineIntersectsRect(a, b, rect)) return true;
     }
@@ -186,8 +208,13 @@ export function getHitChance(shooter, target, covers) {
 }
 
 export function drawCover(ctx, c, iso) {
+  if (c.destroyed) {
+    drawCoverWear(ctx, c, iso);
+    return;
+  }
   if (c.shape || (c.segments && c.segments.length)) {
     drawShapedCover(ctx, c, iso);
+    drawCoverWear(ctx, c, iso);
     return;
   }
   if (c.asset && drawCityAsset(ctx, c.asset, iso(c.x, c.y)[0], iso(c.x, c.y)[1], {

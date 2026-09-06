@@ -15,7 +15,7 @@ import {
 import {
   CHARACTER_STATS,
   mitigateDamage,
-  finalAccuracy,
+  combatAccuracy,
   attackDamage,
 } from "./combatStats.js?v=20260906-88";
 import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-88";
@@ -24,6 +24,14 @@ import {
   occupancyPenalty,
   reserveCoverSlot,
 } from "./coverSlots.js?v=20260906-88";
+import {
+  spraySuppression,
+  tickSuppression,
+  suppressionAccuracyDelta,
+} from "./suppression.js?v=20260906-88";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-88";
+import { currentPushGoal } from "./streetObjectives.js?v=20260906-88";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-88";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -214,10 +222,11 @@ function shoot(a, e, spawnProjectile, covers) {
     a.weapon.fireCooldown > 0
   )
     return;
-  var chance = finalAccuracy(
+  var chance = combatAccuracy(
       getHitChance(a, e, covers),
       a.weapon.accuracy,
       a.accuracy,
+      suppressionAccuracyDelta(a) + orderAccuracy(a),
     ),
     hit = Math.random() * 100 < chance;
   a.weapon.ammo--;
@@ -226,6 +235,7 @@ function shoot(a, e, spawnProjectile, covers) {
   a.muzzle = 0.12;
   a.shotsLeft = Math.max(0, (a.shotsLeft || 1) - 1);
   if (spawnProjectile) spawnProjectile(a, e, "ally", hit ? 1 : 0);
+  spraySuppression(a, e, (typeof window !== "undefined" && window.__battleEnemies) || [], true);
   if (hit) {
     var dealt = mitigateDamage(
       attackDamage(a.weapon.damage, a.damageBonus),
@@ -278,9 +288,11 @@ function claimed(choice, a, allies) {
   return false;
 }
 function advanceToMission(a, mission, covers, friendlies, dt) {
-  if (!mission || !mission.objective) return false;
-  var goal = mission.objective,
-    goalDistance = Math.hypot(goal.x - a.x, goal.y - a.y);
+  var street =
+    typeof window !== "undefined" ? window.__streetObjectives : null;
+  var goal = currentPushGoal(mission, street) || (mission && mission.objective);
+  if (!goal) return false;
+  var goalDistance = Math.hypot(goal.x - a.x, goal.y - a.y);
   if (goalDistance <= goal.radius * 0.72) {
     a.exposed = false;
     a.combatState = "covered";
@@ -304,6 +316,7 @@ function advanceToMission(a, mission, covers, friendlies, dt) {
   var best = null,
     bestScore = Infinity;
   covers.forEach(function (cover) {
+    if (!cover || cover.destroyed) return;
     var travel = Math.hypot(cover.x - a.x, cover.y - a.y),
       remaining = Math.hypot(cover.x - goal.x, cover.y - goal.y);
     if (travel < 90 || travel > 920 || remaining > goalDistance - 100) return;
@@ -372,13 +385,16 @@ export function updateAllies(
       a.downTimer = 0;
     }
     if (a.downed) {
-      a.downTimer += dt;
-      if (a.downTimer >= a.downDuration) {
-        a.dead = true;
-        a.downed = false;
+      if (!a.permanentDeath) {
+        updateDownedCrawl(a, dt, covers, enemies);
+        if (a.downTimer >= a.downDuration) {
+          a.dead = true;
+          a.downed = false;
+        }
       }
       return;
     }
+    tickSuppression(a, dt);
     if (a.reloading) {
       a.reloadTimer -= dt;
       if (a.reloadTimer <= 0) {
