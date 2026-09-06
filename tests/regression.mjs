@@ -377,7 +377,8 @@ test("street asphalt is a continuous corridor, not a tiled or stretched plate", 
   assert.match(source, /WALK/);
   assert.match(source, /drawStreetLamp/);
   assert.equal(city.includes('createPattern(wartornStreet'), false);
-  assert.match(city, /getSeamlessGrit/);
+  assert.equal(city.includes("createPattern(grain"), false);
+  assert.match(city, /drawOrganicPatches/);
   assert.match(city, /drawFarBackdrop/);
 });
 

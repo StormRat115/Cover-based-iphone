@@ -1180,24 +1180,24 @@ function drawMapDecor() {
     ],
     "#3b3731",
   );
-  for (step = 0; step < 8; step++) {
+  for (step = 0; step < 3; step++) {
     worldPoly(
       [
-        [curbL - 70 + step * 28, world.minY],
-        [curbL + 20 + step * 28, world.minY],
-        [curbL + 20 + step * 28, world.maxY],
-        [curbL - 70 + step * 28, world.maxY],
+        [curbL - 40 + step * 50, world.minY],
+        [curbL + 90 + step * 40, world.minY],
+        [curbL + 90 + step * 40, world.maxY],
+        [curbL - 40 + step * 50, world.maxY],
       ],
-      "rgba(58,54,48," + (0.1 + step * 0.04).toFixed(2) + ")",
+      "rgba(56,52,46," + (0.16 + step * 0.08).toFixed(2) + ")",
     );
     worldPoly(
       [
-        [curbR - 20 - step * 28, world.minY],
-        [curbR + 70 - step * 28, world.minY],
-        [curbR + 70 - step * 28, world.maxY],
-        [curbR - 20 - step * 28, world.maxY],
+        [curbR - 90 - step * 40, world.minY],
+        [curbR + 40 - step * 50, world.minY],
+        [curbR + 40 - step * 50, world.maxY],
+        [curbR - 90 - step * 40, world.maxY],
       ],
-      "rgba(58,54,48," + (0.1 + step * 0.04).toFixed(2) + ")",
+      "rgba(56,52,46," + (0.16 + step * 0.08).toFixed(2) + ")",
     );
   }
   drawWartornStreetSurface(ctx, iso, world, onScreen);

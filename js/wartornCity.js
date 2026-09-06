@@ -26,7 +26,6 @@ export const skylineSmoke = plate("skyline-smoke-backdrop.webp");
 var ROAD = 980;
 var WALK = 260;
 var OPAQUE_PLATES = [wartornRuin, wartornRubblePile];
-var gritCanvas = null;
 
 // Sidewalk grit anchors — off the playable asphalt, never tiled plates.
 var STREET_SCENES = [
@@ -345,47 +344,6 @@ function fillIsoPoly(ctx, iso, pts, fill) {
   ctx.fill();
 }
 
-function getSeamlessGrit() {
-  if (gritCanvas) return gritCanvas;
-  var size = 256;
-  var c = document.createElement("canvas");
-  c.width = size;
-  c.height = size;
-  var g = c.getContext && c.getContext("2d");
-  if (!g || typeof g.createImageData !== "function") return null;
-  var data = g.createImageData(size, size);
-  if (!data || !data.data) return null;
-  var i = 0,
-    x,
-    y,
-    u,
-    v,
-    n,
-    speck,
-    a;
-  for (y = 0; y < size; y++) {
-    for (x = 0; x < size; x++) {
-      u = (x / size) * Math.PI * 2;
-      v = (y / size) * Math.PI * 2;
-      n =
-        Math.sin(u * 3 + v * 2) * 22 +
-        Math.sin(u * 7 - v * 5) * 18 +
-        Math.sin(u * 13 + v * 11) * 14 +
-        Math.sin(u * 23 - v * 17) * 10 +
-        Math.sin(u * 31 + v * 29) * 7;
-      speck = 64 + n;
-      a = 28 + (n > 18 ? 22 : n < -16 ? 16 : 8);
-      data.data[i++] = speck + 6;
-      data.data[i++] = speck;
-      data.data[i++] = speck - 8;
-      data.data[i++] = a;
-    }
-  }
-  g.putImageData(data, 0, 0);
-  gritCanvas = c;
-  return c;
-}
-
 function drawStreetScenes(ctx, iso, world, onScreen) {
   var i, item, q, w, h;
   if (!world || !iso) return;
@@ -495,7 +453,7 @@ function drawOrganicPatches(ctx, iso, world, onScreen) {
       "#4a302478",
       "#2e282070",
     ];
-  for (i = 0; i < 110; i++) {
+  for (i = 0; i < 150; i++) {
     r1 = hash01(i * 17 + 3);
     r2 = hash01(i * 19 + 11);
     r3 = hash01(i * 23 + 7);
@@ -557,7 +515,7 @@ function drawOrganicPatches(ctx, iso, world, onScreen) {
 }
 
 export function drawWartornStreetSurface(ctx, iso, world, onScreen) {
-  var b, grain, origin, pattern, walkL, walkR;
+  var b, walkL, walkR;
   if (!world || !iso) return;
   b = worldBounds(world);
   walkL = -ROAD - WALK;
@@ -573,23 +531,6 @@ export function drawWartornStreetSurface(ctx, iso, world, onScreen) {
   ) {
     ctx.restore();
     return;
-  }
-  grain = getSeamlessGrit();
-  origin = iso(0, 0);
-  if (grain && ctx.createPattern) {
-    ctx.save();
-    ctx.imageSmoothingEnabled = true;
-    ctx.globalAlpha = 0.48;
-    pattern = ctx.createPattern(grain, "repeat");
-    if (pattern) {
-      ctx.translate(
-        ((origin[0] % 256) + 256) % 256,
-        ((origin[1] % 256) + 256) % 256,
-      );
-      ctx.fillStyle = pattern;
-      ctx.fillRect(-5000, -5000, 10000, 10000);
-    }
-    ctx.restore();
   }
   drawOrganicPatches(ctx, iso, world, onScreen);
   ctx.restore();
