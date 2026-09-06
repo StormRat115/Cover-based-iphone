@@ -1,10 +1,25 @@
-import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-102";
+import { sampledLineIntersectsRect } from "./geometry.js?v=20260906-104";
+import { COVER_BLOCK_SIZE, livingBlocks } from "./coverBlocks.js?v=20260906-104";
 
 export const ACTOR_RADIUS = 11;
 export const VAULT_DURATION = 0.46;
 
 export function coverPiecesOf(c) {
   if (c && c.destroyed) return [];
+  if (c && c.blocks && c.blocks.length) {
+    var size = c.blockSize || COVER_BLOCK_SIZE;
+    return livingBlocks(c).map(function (b) {
+      return {
+        x: c.x + b.dx,
+        y: c.y + b.dy,
+        w: size,
+        h: size,
+        type: c.type,
+        gx: b.gx,
+        gy: b.gy,
+      };
+    });
+  }
   if (c && c.segments && c.segments.length)
     return c.segments.map(function (s) {
       return {

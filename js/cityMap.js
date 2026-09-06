@@ -1,138 +1,67 @@
+import {
+  COVER_BLOCK_SIZE,
+  COVER_SHAPES,
+  COVER_THEMES,
+  boundsFromBlocks,
+  cloneBlockCover,
+  coverTypeForTheme,
+  makeBlockCover,
+} from "./coverBlocks.js?v=20260906-104";
+
 const MAP_SCALE = 1.7;
 
-export const COVER_SHAPES = ["square", "rect", "T", "U", "L"];
-
-const SHAPE_KITS = {
-  square: {
-    segments: [{ dx: 0, dy: 0, w: 84, h: 84 }],
-  },
-  rect: {
-    segments: [{ dx: 0, dy: 0, w: 168, h: 38 }],
-  },
-  T: {
-    segments: [
-      { dx: 0, dy: -46, w: 156, h: 38 },
-      { dx: 0, dy: 28, w: 42, h: 96 },
-    ],
-  },
-  U: {
-    segments: [
-      { dx: 0, dy: -52, w: 164, h: 38 },
-      { dx: -63, dy: 20, w: 38, h: 112 },
-      { dx: 63, dy: 20, w: 38, h: 112 },
-    ],
-  },
-  L: {
-    segments: [
-      { dx: -16, dy: 42, w: 148, h: 38 },
-      { dx: -55, dy: -28, w: 38, h: 108 },
-    ],
-  },
+export {
+  COVER_BLOCK_SIZE,
+  COVER_SHAPES,
+  COVER_THEMES,
+  coverTypeForTheme,
 };
-
-const SET_PIECE_KITS = {
-  fortL: {
-    shape: "L",
-    segments: [
-      { dx: -8, dy: 62, w: 220, h: 42 },
-      { dx: -86, dy: -42, w: 42, h: 168 },
-      { dx: 92, dy: 62, w: 100, h: 36 },
-    ],
-  },
-  barricade: {
-    shape: "rect",
-    segments: [
-      { dx: -96, dy: 0, w: 124, h: 38 },
-      { dx: 30, dy: 0, w: 124, h: 38 },
-      { dx: 126, dy: 8, w: 72, h: 34 },
-    ],
-  },
-  bunkerU: {
-    shape: "U",
-    segments: [
-      { dx: 0, dy: -74, w: 220, h: 42 },
-      { dx: -90, dy: 28, w: 42, h: 148 },
-      { dx: 90, dy: 28, w: 42, h: 148 },
-    ],
-  },
-  checkpointT: {
-    shape: "T",
-    segments: [
-      { dx: 0, dy: -60, w: 210, h: 42 },
-      { dx: 0, dy: 40, w: 48, h: 128 },
-    ],
-  },
-};
-
-function rotatePoint(dx, dy, facing) {
-  if (facing === 90) return { dx: dy, dy: -dx };
-  if (facing === 180) return { dx: -dx, dy: -dy };
-  if (facing === 270) return { dx: -dy, dy: dx };
-  return { dx: dx, dy: dy };
-}
 
 export function rotateCoverSegments(segments, facing) {
   facing = ((facing % 360) + 360) % 360;
   return segments.map(function (segment) {
-    var p = rotatePoint(segment.dx || 0, segment.dy || 0, facing);
+    var dx = segment.dx || 0,
+      dy = segment.dy || 0,
+      p =
+        facing === 90
+          ? { dx: dy, dy: -dx }
+          : facing === 180
+            ? { dx: -dx, dy: -dy }
+            : facing === 270
+              ? { dx: -dy, dy: dx }
+              : { dx: dx, dy: dy };
     var swap = facing === 90 || facing === 270;
     return {
       dx: p.dx,
       dy: p.dy,
       w: swap ? segment.h : segment.w,
       h: swap ? segment.w : segment.h,
+      gx: segment.gx,
+      gy: segment.gy,
+      theme: segment.theme,
     };
   });
 }
 
 export function boundsFromSegments(segments) {
-  var minX = Infinity,
-    maxX = -Infinity,
-    minY = Infinity,
-    maxY = -Infinity;
-  segments.forEach(function (segment) {
-    minX = Math.min(minX, (segment.dx || 0) - segment.w / 2);
-    maxX = Math.max(maxX, (segment.dx || 0) + segment.w / 2);
-    minY = Math.min(minY, (segment.dy || 0) - segment.h / 2);
-    maxY = Math.max(maxY, (segment.dy || 0) + segment.h / 2);
-  });
-  return {
-    w: Math.max(36, Math.round(maxX - minX)),
-    h: Math.max(28, Math.round(maxY - minY)),
-  };
-}
-
-export function coverTypeForTheme(theme) {
-  if (theme === "sandbags" || theme === "crates") return "low";
-  if (theme === "wreck") return "car";
-  return "wide";
+  return boundsFromBlocks(
+    (segments || []).map(function (segment) {
+      return {
+        dx: segment.dx || 0,
+        dy: segment.dy || 0,
+        w: segment.w,
+        h: segment.h,
+        gx: segment.gx || 0,
+        gy: segment.gy || 0,
+        destroyed: false,
+      };
+    }),
+    COVER_BLOCK_SIZE,
+  );
 }
 
 export function makeShapedCover(spec) {
-  var setKit = spec.kit && SET_PIECE_KITS[spec.kit];
-  var shape = (setKit && setKit.shape) || spec.shape;
-  var kit = setKit || SHAPE_KITS[shape];
-  if (!kit) throw new Error("Unknown cover shape: " + shape);
-  var facing = spec.facing || 0;
-  var segments = rotateCoverSegments(kit.segments, facing);
-  var box = boundsFromSegments(segments);
-  var theme = spec.theme || "jersey";
-  return {
-    id: spec.id,
-    x: spec.x,
-    y: spec.y,
-    shape: shape,
-    theme: theme,
-    facing: facing,
-    asset: theme + "_" + shape,
-    coverType: spec.coverType || coverTypeForTheme(theme),
-    scale: spec.scale || 0.26,
-    w: box.w,
-    h: box.h,
-    segments: segments,
-    setPiece: spec.kit || null,
-    sprite: spec.sprite || (spec.kit ? "set_" + spec.kit : null),
-  };
+  return makeBlockCover(spec);
 }
 
 function spread(items) {
@@ -144,47 +73,49 @@ function spread(items) {
   });
 }
 
-function createCityCoverTemplates() {
+const TEMPLATE_SPECS = [
+  { id: "p1", x: -180, y: 520, kit: "barricade", shape: "rect", theme: "jersey" },
+  { id: "p2", x: 0, y: 520, shape: "rect", theme: "jersey" },
+  { id: "p3", x: 180, y: 520, shape: "line", theme: "sandbags" },
+  { id: "ml1", x: -280, y: 250, shape: "rect", theme: "sandbags" },
+  { id: "ml2", x: -420, y: 60, kit: "fortL", shape: "L", theme: "jersey", facing: 0 },
+  { id: "ml3", x: -260, y: -120, shape: "square", theme: "crates" },
+  { id: "mr1", x: 280, y: 250, kit: "bunkerU", shape: "U", theme: "sandbags", facing: 180 },
+  { id: "mr2", x: 420, y: 40, shape: "L", theme: "jersey", facing: 90 },
+  { id: "mr3", x: 260, y: -140, shape: "rect", theme: "crates", facing: 90 },
+  { id: "c1", x: 0, y: 210, kit: "checkpointT", shape: "T", theme: "jersey", facing: 0 },
+  { id: "c2", x: -90, y: -25, shape: "cluster", theme: "sandbags", randomize: true },
+  { id: "c3", x: 105, y: -30, shape: "square", theme: "crates" },
+  { id: "c4", x: 0, y: -260, shape: "L", theme: "sandbags", facing: 270 },
+  { id: "f1", x: -260, y: -470, shape: "line", theme: "wreck" },
+  { id: "f2", x: 250, y: -470, shape: "L", theme: "wreck", facing: 0 },
+  { id: "f3", x: 0, y: -610, shape: "cluster", theme: "rubble", randomize: true },
+  { id: "l1", x: -560, y: -180, shape: "T", theme: "rubble", facing: 90 },
+  { id: "l2", x: -620, y: 180, shape: "rect", theme: "jersey" },
+  { id: "r1", x: 560, y: -180, shape: "U", theme: "jersey", facing: 90 },
+  { id: "r2", x: 620, y: 180, shape: "cluster", theme: "jersey", randomize: true },
+  { id: "e1", x: -115, y: 85, shape: "square", theme: "sandbags" },
+  { id: "e2", x: 125, y: 95, shape: "line", theme: "crates" },
+  { id: "e3", x: -360, y: -330, shape: "T", theme: "sandbags", facing: 180 },
+  { id: "e4", x: 360, y: -330, shape: "U", theme: "crates", facing: 0 },
+  { id: "g1", x: -1050, y: 620, shape: "rect", theme: "jersey" },
+  { id: "g2", x: 950, y: 650, shape: "L", theme: "jersey", facing: 180 },
+  { id: "g3", x: 0, y: 950, shape: "T", theme: "jersey", facing: 0 },
+  { id: "g4", x: -900, y: -800, shape: "line", theme: "sandbags" },
+  { id: "g5", x: 850, y: -780, shape: "U", theme: "sandbags", facing: 0 },
+  { id: "g6", x: -1050, y: -250, shape: "cluster", theme: "rubble", randomize: true },
+  { id: "g7", x: 1050, y: -250, shape: "rect", theme: "wreck" },
+  { id: "g8", x: -950, y: 100, shape: "L", theme: "wreck", facing: 90 },
+  { id: "g9", x: 950, y: 100, shape: "cluster", theme: "jersey", randomize: true },
+  { id: "g10", x: 0, y: -1000, shape: "T", theme: "crates", facing: 270 },
+  { id: "g11", x: -600, y: 900, shape: "square", theme: "crates" },
+  { id: "g12", x: 600, y: 900, shape: "U", theme: "jersey", facing: 180 },
+];
+
+function createCityCoverTemplates(random) {
   return spread(
-    [
-      { id: "p1", x: -180, y: 520, kit: "barricade", shape: "rect", theme: "jersey", sprite: "set_barricade" },
-      { id: "p2", x: 0, y: 520, shape: "rect", theme: "jersey" },
-      { id: "p3", x: 180, y: 520, shape: "rect", theme: "sandbags" },
-      { id: "ml1", x: -280, y: 250, shape: "rect", theme: "sandbags" },
-      { id: "ml2", x: -420, y: 60, kit: "fortL", shape: "L", theme: "jersey", facing: 0, sprite: "set_fortL" },
-      { id: "ml3", x: -260, y: -120, shape: "square", theme: "crates" },
-      { id: "mr1", x: 280, y: 250, kit: "bunkerU", shape: "U", theme: "sandbags", facing: 180, sprite: "sandbags_U" },
-      { id: "mr2", x: 420, y: 40, shape: "L", theme: "jersey", facing: 90 },
-      { id: "mr3", x: 260, y: -140, shape: "rect", theme: "crates", facing: 90 },
-      { id: "c1", x: 0, y: 210, kit: "checkpointT", shape: "T", theme: "jersey", facing: 0 },
-      { id: "c2", x: -90, y: -25, shape: "square", theme: "sandbags" },
-      { id: "c3", x: 105, y: -30, shape: "square", theme: "crates" },
-      { id: "c4", x: 0, y: -260, shape: "L", theme: "sandbags", facing: 270 },
-      { id: "f1", x: -260, y: -470, shape: "rect", theme: "wreck" },
-      { id: "f2", x: 250, y: -470, shape: "L", theme: "wreck", facing: 0 },
-      { id: "f3", x: 0, y: -610, shape: "rect", theme: "rubble" },
-      { id: "l1", x: -560, y: -180, shape: "T", theme: "rubble", facing: 90 },
-      { id: "l2", x: -620, y: 180, shape: "rect", theme: "jersey" },
-      { id: "r1", x: 560, y: -180, shape: "U", theme: "jersey", facing: 90 },
-      { id: "r2", x: 620, y: 180, shape: "rect", theme: "jersey" },
-      { id: "e1", x: -115, y: 85, shape: "square", theme: "sandbags" },
-      { id: "e2", x: 125, y: 95, shape: "square", theme: "crates" },
-      { id: "e3", x: -360, y: -330, shape: "T", theme: "sandbags", facing: 180 },
-      { id: "e4", x: 360, y: -330, shape: "U", theme: "crates", facing: 0 },
-      { id: "g1", x: -1050, y: 620, shape: "rect", theme: "jersey" },
-      { id: "g2", x: 950, y: 650, shape: "L", theme: "jersey", facing: 180 },
-      { id: "g3", x: 0, y: 950, shape: "T", theme: "jersey", facing: 0 },
-      { id: "g4", x: -900, y: -800, shape: "rect", theme: "sandbags" },
-      { id: "g5", x: 850, y: -780, shape: "U", theme: "sandbags", facing: 0 },
-      { id: "g6", x: -1050, y: -250, shape: "rect", theme: "rubble" },
-      { id: "g7", x: 1050, y: -250, shape: "rect", theme: "wreck" },
-      { id: "g8", x: -950, y: 100, shape: "L", theme: "wreck", facing: 90 },
-      { id: "g9", x: 950, y: 100, shape: "rect", theme: "jersey" },
-      { id: "g10", x: 0, y: -1000, shape: "T", theme: "crates", facing: 270 },
-      { id: "g11", x: -600, y: 900, shape: "square", theme: "crates" },
-      { id: "g12", x: 600, y: 900, shape: "U", theme: "jersey", facing: 180 },
-    ].map(function (item) {
-      return makeShapedCover(item);
+    TEMPLATE_SPECS.map(function (item) {
+      return makeShapedCover(Object.assign({ random: random }, item));
     }),
   );
 }
@@ -296,18 +227,11 @@ function isClear(candidate, placed) {
 }
 
 function cloneCover(template, id, x, y) {
-  return Object.assign({}, template, {
-    id: id,
-    x: Math.round(x),
-    y: Math.round(y),
-    segments: template.segments
-      ? template.segments.map((segment) => Object.assign({}, segment))
-      : null,
-  });
+  return cloneBlockCover(template, id, x, y);
 }
 
 export function createCityCoverLayout(random = Math.random) {
-  const templates = shuffled(createCityCoverTemplates(), random);
+  const templates = shuffled(createCityCoverTemplates(random), random);
   const targetCount = 22 + Math.floor(random() * 4);
   const placed = [];
   const lanes = STREET_COVER_LANES;

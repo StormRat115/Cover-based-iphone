@@ -1,4 +1,10 @@
-/* Soft street pieces break. Tall jersey stays up. */
+/* Soft street pieces break. Tall jersey stays up. Block-grid HP for soft cover. */
+
+import {
+  findBlockAtPiece,
+  livingBlocks,
+  syncCoverGeometry,
+} from "./coverBlocks.js?v=20260906-104";
 
 export const COVER_HP = {
   sandbags: 78,
@@ -33,6 +39,16 @@ export function prepareCoverHp(cover) {
   cover.destroyed = false;
   cover.destructible = Number.isFinite(hp);
   cover.damageFlash = 0;
+  if (cover.blocks && cover.blocks.length) {
+    cover.blocks.forEach(function (b) {
+      var blockTheme = b.theme || theme;
+      var blockHp = COVER_HP[blockTheme];
+      if (blockHp == null) blockHp = Number.isFinite(hp) ? hp : Infinity;
+      b.maxHp = blockHp;
+      b.hp = blockHp;
+      b.destroyed = false;
+    });
+  }
   return cover;
 }
 
@@ -62,16 +78,46 @@ export function evictCoverUsers(cover, units) {
   return freed;
 }
 
-export function damageCover(cover, amount, occupants) {
+export function damageCover(cover, amount, occupants, piece) {
   if (!cover || cover.destroyed || !cover.destructible) return false;
   var dmg = Math.max(0, Number(amount) || 0);
   if (dmg <= 0) return false;
-  cover.hp = Math.max(0, (cover.hp || 0) - dmg);
   cover.damageFlash = 0.22;
+  if (piece && cover.blocks && cover.blocks.length) {
+    var block = findBlockAtPiece(cover, piece);
+    if (block && !block.destroyed && Number.isFinite(block.hp)) {
+      block.hp = Math.max(0, block.hp - dmg);
+      if (block.hp <= 0) {
+        block.destroyed = true;
+        block.hp = 0;
+      }
+      var live = livingBlocks(cover);
+      cover.hp = live.reduce(function (sum, b) {
+        return sum + (Number.isFinite(b.hp) ? b.hp : 0);
+      }, 0);
+      syncCoverGeometry(cover);
+      if (!live.length || cover.destroyed) {
+        cover.destroyed = true;
+        cover.hp = 0;
+        cover.rubbleT = 0;
+        evictCoverUsers(cover, occupants);
+        return true;
+      }
+      return false;
+    }
+  }
+  cover.hp = Math.max(0, (cover.hp || 0) - dmg);
   if (cover.hp > 0) return false;
   cover.destroyed = true;
   cover.hp = 0;
   cover.rubbleT = 0;
+  if (cover.blocks) {
+    cover.blocks.forEach(function (b) {
+      b.destroyed = true;
+      b.hp = 0;
+    });
+    syncCoverGeometry(cover);
+  }
   evictCoverUsers(cover, occupants);
   return true;
 }

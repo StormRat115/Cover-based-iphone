@@ -3,7 +3,7 @@ import {
   applyCoverChoice,
   moveTowardTarget,
   coverStillUseful,
-} from "./combatAI.js?v=20260906-102";
+} from "./combatAI.js?v=20260906-104";
 
 export function shouldRecover(actor) {
   if (!actor || actor.dead || actor.downed) return false;

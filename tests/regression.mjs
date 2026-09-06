@@ -307,41 +307,111 @@ test("world/screen round trips stay accurate as camera moves and viewport change
   }
 });
 
-test("cover pieces use explicit square/rect/T/U/L segments that match their art", async () => {
+test("cover pieces are uniform blocks assembled into random playable shapes", async () => {
   const h = createHarness();
   const city = await h.importModule(`js/cityMap.js?v=${BUILD}`);
   const coverModule = await h.importModule(`js/cover.js?v=${BUILD}`);
+  const blocks = await h.importModule(`js/coverBlocks.js?v=${BUILD}`);
   const sprites = await h.importModule(`js/soldierAssets.js?v=${BUILD}`);
+  const assets = await h.importModule(`js/cityAssets.js?v=${BUILD}`);
   const shapes = new Set();
-  for (const cover of city.createCityCoverLayout(() => 0.31)) {
+  const themes = new Set();
+  const layout = city.createCityCoverLayout(() => 0.31);
+  assert.equal(city.COVER_BLOCK_SIZE, 40);
+  assert.ok(blocks.allBlocksUniform(layout, 40));
+  for (const cover of layout) {
     assert.ok(
       city.COVER_SHAPES.includes(cover.shape),
-      cover.id + " needs an explicit cover shape",
+      cover.id + " needs a grid shape name",
     );
-    assert.ok(cover.theme, cover.id + " needs a fitted theme");
-    assert.ok(cover.segments && cover.segments.length >= 1);
-    shapes.add(cover.shape);
-    const minSeg = { square: 1, rect: 1, T: 2, U: 3, L: 2 };
+    assert.ok(cover.theme, cover.id + " needs a material skin");
+    assert.ok(cover.blocks && cover.blocks.length >= 1, cover.id + " is block-built");
+    assert.ok(cover.segments && cover.segments.length === cover.blocks.length);
     assert.ok(
-      cover.segments.length >= minSeg[cover.shape],
-      cover.id + " needs the interior segments of a " + cover.shape,
+      cover.blocks.every(
+        (b) => b.w === 40 && b.h === 40 && cover.blockSize === 40,
+      ),
+      cover.id + " must use the uniform block size",
     );
-    if (!cover.setPiece)
-      assert.equal(cover.segments.length, minSeg[cover.shape]);
+    const cells = cover.blocks.map((b) => [b.gx, b.gy]);
+    assert.equal(blocks.cellsConnected(cells), true, cover.id + " must be connected");
+    shapes.add(cover.shape);
+    themes.add(cover.theme);
     const pieces = coverModule.coverPieces(cover);
-    assert.equal(pieces.length, cover.segments.length);
+    assert.equal(pieces.length, cover.blocks.length);
+    assert.ok(pieces.every((p) => p.w === 40 && p.h === 40));
     const threat = { x: cover.x, y: cover.y + 400 };
     const slot = coverModule.getCoverSlot(cover, { coverSlotIndex: 0 }, threat);
     assert.equal(slot.side, "top");
     const wall = slot.segment;
     const gap = Math.abs(slot.y - (wall.y - wall.h / 2));
-    assert.ok(gap <= 20, "units must plant against the facing cover edge");
+    assert.ok(gap <= 20, "units must plant against the facing outer block edge");
+    const map = blocks.blockMap(cover.blocks);
+    cover.blocks.forEach((block) => {
+      const mask = blocks.neighborMask(block, map, true);
+      assert.ok(mask >= 0 && mask <= 15);
+    });
   }
-  assert.deepEqual([...shapes].sort(), ["L", "T", "U", "rect", "square"]);
-  const layout = city.createCityCoverLayout(() => 0.31);
+  ["L", "T", "U", "rect", "square"].forEach((shape) => {
+    assert.ok(shapes.has(shape), "layout should still include a " + shape);
+  });
   assert.ok(
-    layout.some((cover) => cover.setPiece && cover.segments.length > 2),
+    shapes.has("line") || shapes.has("cluster"),
+    "random kits should add lines or clusters",
+  );
+  assert.ok(themes.size >= 3, "street cover should mix material skins");
+  assert.ok(
+    layout.some((cover) => cover.setPiece && cover.blocks.length > 4),
     "street should include larger combined set pieces",
+  );
+  assert.ok(existsSync("assets/generated/cover/blocks/manifest.json"));
+  assert.ok(existsSync("assets/generated/cover/blocks/atlas-preview.png"));
+  blocks.allCoverSkinFiles().forEach((file) => {
+    assert.ok(
+      existsSync("assets/generated/cover/blocks/" + file),
+      "missing Phone Art skin " + file,
+    );
+  });
+  assert.equal(blocks.allCoverSkinFiles().length, 16);
+  assert.equal(typeof assets.coverBlockSkins, "object");
+  assert.equal(Object.keys(assets.coverBlockSkins).length, 16);
+  assert.equal(
+    blocks.pickCoverBlockSkin("jersey", blocks.E | blocks.W),
+    "concrete-center.webp",
+  );
+  assert.equal(
+    blocks.pickCoverBlockSkin("jersey", blocks.W),
+    "concrete-edge-right.webp",
+  );
+  assert.equal(
+    blocks.pickCoverBlockSkin("sandbags", 0),
+    "sandbags-gap.webp",
+  );
+  assert.equal(
+    blocks.pickCoverBlockSkin("crates", 0),
+    "crate-corner-a.webp",
+  );
+  assert.equal(blocks.skinMaterialForTheme("jersey"), "concrete");
+
+  const rect = city.makeShapedCover({
+    id: "merge",
+    x: 0,
+    y: 0,
+    shape: "rect",
+    theme: "jersey",
+  });
+  const ends = rect.blocks.filter((b) => {
+    const mask = blocks.neighborMask(b, rect.blocks, true);
+    return mask === blocks.E || mask === blocks.W;
+  });
+  const mids = rect.blocks.filter((b) => {
+    const mask = blocks.neighborMask(b, rect.blocks, true);
+    return (mask & blocks.E) && (mask & blocks.W);
+  });
+  assert.ok(ends.length >= 2 && mids.length >= 1, "same-skin neighbors share an edge mask");
+  assert.equal(
+    blocks.pickCoverBlockSkin("jersey", blocks.neighborMask(mids[0], rect.blocks, true)),
+    "concrete-center.webp",
   );
 
   const low = {
@@ -1052,12 +1122,17 @@ test("player range ring follows weapon range and auto play fires bright yellow t
 
   const coverRules = await h.importModule(`js/cover.js?v=${BUILD}`);
   const cover = h.window.__battleCovers[0];
-  player.x = cover.x;
-  player.y = cover.y + cover.h / 2 + 28;
+  const block = (cover.blocks && cover.blocks[0]) || {
+    dx: 0,
+    dy: 0,
+    h: cover.h,
+  };
+  player.x = cover.x + (block.dx || 0);
+  player.y = cover.y + (block.dy || 0) + (block.h || 40) / 2 + 28;
   player.tx = player.x;
   player.ty = player.y;
-  enemies[0].x = cover.x;
-  enemies[0].y = cover.y - 300;
+  enemies[0].x = cover.x + (block.dx || 0);
+  enemies[0].y = cover.y + (block.dy || 0) - 300;
   enemies[0].dead = false;
   enemies[0].hp = enemies[0].maxHp;
   enemies[0].exposed = false;
@@ -1085,8 +1160,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    37,
-    "soldier/vault/monster/charger sources plus cover atlases and wartorn plates",
+    53,
+    "soldier/vault/monster/charger sources plus cover atlases, 16 Phone Art block skins, and wartorn plates",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
@@ -1982,6 +2057,26 @@ test("soft cover breaks and frees slots; jersey stays up", async () => {
   assert.equal(occupant.cover, null);
   assert.equal(soft.damageCover(wall, 400, []), false);
   assert.equal(wall.destroyed, false);
+  const map = await h.importModule(`js/cityMap.js?v=${BUILD}`);
+  const pile = map.makeShapedCover({
+    id: "pile",
+    x: 0,
+    y: 0,
+    shape: "rect",
+    theme: "sandbags",
+  });
+  soft.prepareCoverHp(pile);
+  const firstBlock = pile.blocks[0];
+  const piece = {
+    x: pile.x + firstBlock.dx,
+    y: pile.y + firstBlock.dy,
+    w: 40,
+    h: 40,
+  };
+  assert.equal(soft.damageCover(pile, 80, [], piece), false);
+  assert.equal(firstBlock.destroyed, true);
+  assert.equal(pile.destroyed, false);
+  assert.ok(pile.blocks.some((b) => !b.destroyed));
 });
 
 test("street objectives cycle and give marines a local goal", async () => {

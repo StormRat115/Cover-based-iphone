@@ -1,6 +1,16 @@
-import { loadImage } from "./assets.js?v=20260906-102";
-import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-102";
-import { preloadWartornAssets } from "./wartornCity.js?v=20260906-102";
+import { loadImage } from "./assets.js?v=20260906-104";
+import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-104";
+import { preloadWartornAssets } from "./wartornCity.js?v=20260906-104";
+import {
+  COVER_BLOCK_SIZE,
+  E,
+  S,
+  allCoverSkinFiles,
+  blockMap,
+  livingBlocks,
+  neighborMask,
+  pickCoverBlockSkin,
+} from "./coverBlocks.js?v=20260906-104";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
@@ -11,6 +21,13 @@ generatedCoverAtlas.src =
 export const coverShapeAtlas = new Image();
 coverShapeAtlas.src =
   "./assets/generated/cover/cover-shape-atlas.webp?v=20260906-88";
+export const coverBlockSkins = {};
+allCoverSkinFiles().forEach(function (file) {
+  var image = new Image();
+  image.src = "./assets/generated/cover/blocks/" + file + "?v=20260906-104";
+  coverBlockSkins[file] = image;
+});
+export const coverBlockAtlas = coverBlockSkins["concrete-center.webp"];
 
 const THEME = {
   jersey: {
@@ -58,12 +75,16 @@ const THEME = {
 export function preloadCityAssets(onProgress) {
   onProgress = onProgress || function () {};
   onProgress(0.1, "LOADING CITY ASSETS");
-  return Promise.all([
-    loadImage(cityAtlas),
-    loadImage(generatedCoverAtlas),
-    loadImage(coverShapeAtlas),
-    preloadWartornAssets(onProgress),
-  ]).then(
+  var skinImages = allCoverSkinFiles().map(function (file) {
+    return coverBlockSkins[file];
+  });
+  return Promise.all(
+    [loadImage(cityAtlas), loadImage(generatedCoverAtlas), loadImage(coverShapeAtlas)]
+      .concat(skinImages.map(function (img) {
+        return loadImage(img);
+      }))
+      .concat([preloadWartornAssets(onProgress)]),
+  ).then(
     function (images) {
       if (images.some(function (img) {
         return !img;
@@ -74,6 +95,7 @@ export function preloadCityAssets(onProgress) {
         cityAtlas: images[0],
         generatedCoverAtlas: images[1],
         coverShapeAtlas: images[2],
+        coverBlockSkins: coverBlockSkins,
       };
     },
   );
@@ -121,7 +143,8 @@ function prismHeight(cover, segment) {
   return base + Math.min(5, long * 0.015);
 }
 
-function drawPrism(ctx, iso, x, y, w, h, z, palette) {
+function drawPrism(ctx, iso, x, y, w, h, z, palette, mask) {
+  mask = mask || 0;
   var a = iso(x - w / 2, y - h / 2),
     b = iso(x + w / 2, y - h / 2),
     c = iso(x + w / 2, y + h / 2),
@@ -130,20 +153,95 @@ function drawPrism(ctx, iso, x, y, w, h, z, palette) {
     B = lift(b, z),
     C = lift(c, z),
     D = lift(d, z);
+  var hideSouth = (mask & S) !== 0;
+  var hideEast = (mask & E) !== 0;
   ctx.save();
-  ctx.fillStyle = "#00000055";
-  ctx.beginPath();
-  ctx.moveTo(a[0], a[1] + 3);
-  ctx.lineTo(b[0], b[1] + 3);
-  ctx.lineTo(c[0], c[1] + 3);
-  ctx.lineTo(d[0], d[1] + 3);
-  ctx.closePath();
-  ctx.fill();
-  fillPoly(ctx, [d, c, C, D], palette.left, palette.stroke, 1);
-  fillPoly(ctx, [c, b, B, C], palette.right, palette.stroke, 1);
-  fillPoly(ctx, [A, B, C, D], palette.top, palette.stroke, 1.1);
+  if (!hideSouth && !hideEast) {
+    ctx.fillStyle = "#00000055";
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1] + 3);
+    ctx.lineTo(b[0], b[1] + 3);
+    ctx.lineTo(c[0], c[1] + 3);
+    ctx.lineTo(d[0], d[1] + 3);
+    ctx.closePath();
+    ctx.fill();
+  }
+  if (!hideSouth)
+    fillPoly(ctx, [d, c, C, D], palette.left, palette.stroke, hideEast ? 0 : 1);
+  if (!hideEast)
+    fillPoly(ctx, [c, b, B, C], palette.right, palette.stroke, hideSouth ? 0 : 1);
+  fillPoly(
+    ctx,
+    [A, B, C, D],
+    palette.top,
+    mask ? null : palette.stroke,
+    mask ? 0 : 1.1,
+  );
   ctx.restore();
   return { a: a, b: b, c: c, d: d, A: A, B: B, C: C, D: D, z: z };
+}
+
+function stampBlockSkin(ctx, prism, theme, mask, shape) {
+  var file = pickCoverBlockSkin(theme, mask, shape);
+  var tile = coverBlockSkins[file];
+  if (!tile || !tile.complete || !tile.naturalWidth || !prism) return false;
+  var minX = Math.min(prism.A[0], prism.B[0], prism.C[0], prism.D[0]);
+  var maxX = Math.max(prism.A[0], prism.B[0], prism.C[0], prism.D[0]);
+  var minY = Math.min(prism.A[1], prism.B[1], prism.C[1], prism.D[1]);
+  var maxY = Math.max(prism.A[1], prism.B[1], prism.C[1], prism.D[1]);
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(prism.A[0], prism.A[1]);
+  ctx.lineTo(prism.B[0], prism.B[1]);
+  ctx.lineTo(prism.C[0], prism.C[1]);
+  ctx.lineTo(prism.D[0], prism.D[1]);
+  ctx.closePath();
+  ctx.clip();
+  ctx.imageSmoothingEnabled = true;
+  ctx.globalAlpha = 0.96;
+  ctx.drawImage(
+    tile,
+    0,
+    0,
+    tile.naturalWidth,
+    tile.naturalHeight,
+    minX,
+    minY,
+    Math.max(4, maxX - minX),
+    Math.max(4, maxY - minY),
+  );
+  ctx.restore();
+  return true;
+}
+
+function drawBlockCover(ctx, cover, iso) {
+  var blocks = livingBlocks(cover);
+  if (!blocks.length) return false;
+  var size = cover.blockSize || COVER_BLOCK_SIZE;
+  var map = blockMap(blocks);
+  var ordered = blocks
+    .map(function (block) {
+      return {
+        block: block,
+        depth: cover.x + block.dx + cover.y + block.dy,
+      };
+    })
+    .sort(function (a, b) {
+      return a.depth - b.depth;
+    });
+  for (var i = 0; i < ordered.length; i++) {
+    var block = ordered[i].block;
+    var theme = block.theme || cover.theme || "jersey";
+    var palette = THEME[theme] || THEME.jersey;
+    var mask = neighborMask(block, map, true);
+    var x = cover.x + block.dx;
+    var y = cover.y + block.dy;
+    var z = prismHeight(cover, { w: size, h: size });
+    var prism = drawPrism(ctx, iso, x, y, size, size, z, palette, mask);
+    if (!stampBlockSkin(ctx, prism, theme, mask, cover.shape) && (mask & 15) !== 15)
+      decorateSegment(ctx, prism, cover, { w: size, h: size });
+  }
+  return true;
 }
 
 function alongTop(prism, t) {
@@ -406,6 +504,8 @@ function drawCoverSprite(ctx, cover, iso) {
 }
 
 export function drawShapedCover(ctx, cover, iso) {
+  if (cover && cover.blocks && cover.blocks.length)
+    return drawBlockCover(ctx, cover, iso);
   if (drawCoverSprite(ctx, cover, iso)) return true;
   var segments = cover.segments && cover.segments.length
     ? cover.segments
