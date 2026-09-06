@@ -1041,8 +1041,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    12,
-    "nine character sources plus three environment atlases",
+    13,
+    "soldier/vault/monster sources plus charger sheet and environment atlases",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
@@ -1139,6 +1139,140 @@ test("living friendlies stay fully opaque every animation frame", async () => {
     );
     sprites.drawSoldier(ctx, actor, { team: "ally", alpha: 1 });
   }
+});
+
+test("team XP formula levels and grants one skill point per level", async () => {
+  const h = createHarness();
+  const xp = await h.importModule(`js/teamProgress.js?v=${BUILD}`);
+  assert.equal(xp.killXp("rifleman", 1), 18);
+  assert.equal(xp.killXp("charger", 2), 34);
+  assert.equal(xp.waveXp(1), 70);
+  assert.equal(xp.xpForLevel(1), 110);
+  assert.equal(xp.totalXpForLevel(2), 110);
+  assert.equal(xp.levelFromXp(0), 1);
+  assert.equal(xp.levelFromXp(109), 1);
+  assert.equal(xp.levelFromXp(110), 2);
+  assert.equal(xp.skillPointsFromLevel(1), 0);
+  assert.equal(xp.skillPointsFromLevel(4), 3);
+  const state = xp.grantXp(110);
+  assert.equal(state.level, 2);
+  assert.equal(state.unspent, 1);
+});
+
+test("wave segments release packs instead of dumping the roster", async () => {
+  const h = createHarness();
+  const waves = await h.importModule(`js/waveSegments.js?v=${BUILD}`);
+  const roster = Array.from({ length: 9 }, (_, i) => ({
+    spawnTimer: 0.2,
+    pendingSegment: false,
+    dead: false,
+    deathTimer: 0,
+    deathDuration: 0.8,
+  }));
+  const director = waves.segmentWave(roster, {
+    packSize: 3,
+    interval: 8,
+    firstDelay: 0.5,
+  });
+  assert.equal(director.packs, 3);
+  assert.equal(roster.filter((e) => e.pendingSegment).length, 6);
+  assert.ok(roster.slice(0, 3).every((e) => e.spawnTimer >= 0.5));
+  waves.updateWaveSegments(director, 8, roster);
+  assert.equal(director.released, 2);
+  assert.equal(roster.filter((e) => e.pendingSegment).length, 3);
+  roster.forEach((e) => {
+    e.dead = true;
+    e.deathTimer = 1;
+    e.pendingSegment = false;
+  });
+  assert.equal(waves.waveFullyCleared(roster, director), true);
+});
+
+test("armor modifiers trade defense, hit chance, and movement speed", async () => {
+  const h = createHarness();
+  const armor = await h.importModule(`js/armor.js?v=${BUILD}`);
+  const light = armor.applyArmorMods(
+    { defense: 50, accuracy: 6, speed: 250 },
+    "light",
+  );
+  const heavy = armor.applyArmorMods(
+    { defense: 50, accuracy: 6, speed: 250 },
+    "heavy",
+  );
+  const fortress = armor.applyArmorMods(
+    { defense: 50, accuracy: 6, speed: 250 },
+    "fortress",
+  );
+  assert.ok(light.speed > 250 && light.defense < 50 && light.accuracy > 6);
+  assert.ok(heavy.defense > 50 && heavy.speed < 250 && heavy.accuracy < 6);
+  assert.ok(fortress.defense > heavy.defense && fortress.speed < heavy.speed);
+  const desc = armor.describeArmorStats("assault");
+  assert.equal(desc.defenseDelta, -10);
+  assert.equal(desc.hitDelta, 3);
+  assert.equal(desc.speedDelta, 25);
+});
+
+test("charger uses its own sheet and charges through cover to melee", async () => {
+  const h = createHarness();
+  const charger = await h.importModule(`js/chargerEnemy.js?v=${BUILD}`);
+  const enemies = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
+  const sheet = charger.getChargerSheet();
+  assert.equal(sheet.file, "enemy-gorehorn-charger-sheet.png");
+  assert.equal(sheet.frames, 4);
+  assert.ok(sheet.animations.idle && sheet.animations.charge && sheet.animations.melee && sheet.animations.death);
+  const png = readFileSync(resolve("assets/generated/enemies", sheet.file));
+  assert.equal(png[25], 6, "charger sheet must be an RGBA PNG");
+  const roster = enemies.createBandits(1, { extraCount: 6, random: () => 0 });
+  assert.ok(roster.some((e) => e.type === "charger"));
+  const gore = roster.find((e) => e.type === "charger");
+  gore.x = 0;
+  gore.y = 0;
+  gore.spawnTimer = 0;
+  const marine = {
+    x: 240,
+    y: 0,
+    hp: 90,
+    maxHp: 90,
+    defense: 20,
+    dead: false,
+    downed: false,
+    isMarine: true,
+    permanentDeath: true,
+  };
+  h.window.__battleMarines = [marine];
+  h.window.__battleAllies = [];
+  h.window.__battlePlayer = { x: 400, y: 400, hp: 100, dead: false, downed: false };
+  charger.updateChargers([gore], 0.2, h.window.__battlePlayer, [], null);
+  assert.equal(gore.combatTarget, marine);
+  assert.ok(gore.x > 0, "charger should close distance");
+  assert.ok(gore.charging || gore.combatState === "melee" || gore.combatState === "charge");
+  charger.updateChargers([gore], 0.8, h.window.__battlePlayer, [], null);
+  assert.ok(marine.hp < 90 || gore.combatState === "melee" || gore.meleeTimer > 0);
+  const ctx = h.document.createElement("canvas").getContext("2d");
+  assert.equal(charger.drawCharger(ctx, gore, { scale: 0.4 }), true);
+});
+
+test("skill tree grenade and marine mods are applied from spent nodes", async () => {
+  const h = createHarness();
+  const skills = await h.importModule(`js/skillTree.js?v=${BUILD}`);
+  const base = skills.computeSkillMods({});
+  assert.equal(base.grenades, false);
+  assert.equal(base.marineSpawn, false);
+  const owned = skills.computeSkillMods({
+    "grenade.unlock": 1,
+    "grenade.ally": 1,
+    "grenade.frag": 1,
+    "marine.hp": 1,
+    "marine.accuracy": 1,
+    "marine.reinforce": 1,
+  });
+  assert.equal(owned.grenades, true);
+  assert.equal(owned.allyGrenades, true);
+  assert.ok(owned.grenadeDamage > base.grenadeDamage);
+  assert.equal(owned.marineSpawn, true);
+  assert.equal(owned.marineSpawnInterval, 60);
+  assert.equal(skills.isNodeUnlocked("grenade.ally", { "grenade.unlock": 1 }), true);
+  assert.equal(skills.isNodeUnlocked("grenade.ally", {}), false);
 });
 
 test("sustained simulated play stays finite at mobile and desktop sizes", async () => {

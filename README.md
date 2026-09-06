@@ -118,6 +118,20 @@ When replacing an image, also bump that image's source URL in the relevant asset
 - Cover is authored as square, rectangle, T, U, and L pieces. Collision segments and procedural art (sandbags, jersey barriers, crates, wrecks, rubble) follow those silhouettes.
 - Soldiers and monsters plant against the facing cover edge: closer slots, tall vs low poses, peek/lean offsets, and a slight depth nudge so tucked units sit on the cover silhouette instead of floating through it.
 
+## Team XP, skills, armor, and segmented waves: 20260906-81
+
+Shared team XP for the player, allies, and Marines:
+
+```
+killXP(type, wave) = 12 + 4 * wave + typeBonus
+  charger 14, heavy 10, sniper 8, shotgunner 6, marksman 5, else 2
+waveXP(wave)       = 50 + 20 * wave
+xp to next level   = 70 + 40 * currentLevel
+skill points       = 1 per level gained
+```
+
+Loadout shows team level, unspent points, a four-branch skill tree (combat / grenades / squad / Marines), and armor that trades defense, hit chance, and move speed. Waves arrive in packs of three. Fodder holds threat-aware cover; Gorehorn chargers ignore cover and melee the closest marine, ally, or player.
+
 ## Northeast assault waves: 20260905-68
 
 - Monster animation states now use per-enemy clocks, calmer frame rates, and held firing/hit reactions instead of racing through six-frame rows.

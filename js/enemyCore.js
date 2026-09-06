@@ -1,20 +1,20 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260906-80";
-import { weaponCopy } from "./weapons.js?v=20260906-80";
+import { isLineBlocked, getHitChance } from "./cover.js?v=20260906-81";
+import { weaponCopy } from "./weapons.js?v=20260906-81";
 import {
-  pickTacticalCover,
-  applyCoverChoice,
   moveTowardTarget,
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-80";
+} from "./combatAI.js?v=20260906-81";
 import {
   ENEMY_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-80";
-import { AudioBus } from "./audio.js?v=20260906-80";
+} from "./combatStats.js?v=20260906-81";
+import { AudioBus } from "./audio.js?v=20260906-81";
+import { assignEnemyCover } from "./enemyCoverAI.js?v=20260906-81";
+import { chargerWeapon } from "./chargerEnemy.js?v=20260906-81";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -24,7 +24,9 @@ var TYPES = {
   marksman: { weapon: "dmr", hp: 75, speed: 190, scale: 1 },
   smg: { weapon: "smg", hp: 52, speed: 235, scale: 0.98 },
   pistol: { weapon: "pistol", hp: 45, speed: 220, scale: 0.95 },
+  charger: { weapon: "melee", hp: 120, speed: 255, scale: 1.12 },
 };
+var PACE = 0.86;
 function rand(a, b) {
   return a + Math.random() * (b - a);
 }
@@ -120,8 +122,9 @@ export function createBandits(wave, options) {
     if (wave >= 3 && i % 7 === 4) type = "marksman";
     if (wave >= 4 && i % 6 === 1) type = "smg";
     if (wave >= 4 && i % 8 === 6) type = "pistol";
-    var s = TYPES[type],
-      w = weaponCopy(s.weapon),
+    if (i === 2 || i % 6 === 5) type = "charger";
+    var s = TYPES[type] || TYPES.rifleman,
+      w = type === "charger" ? chargerWeapon() : weaponCopy(s.weapon),
       stats = ENEMY_STATS[type] || ENEMY_STATS.rifleman;
     return {
       x: x,
@@ -167,6 +170,9 @@ export function createBandits(wave, options) {
       repositionCooldown: 0,
       combatTarget: null,
       targetTimer: 0,
+      meleeCharge: type === "charger",
+      charging: false,
+      meleeTimer: 0,
     };
   });
 }
@@ -231,7 +237,7 @@ function chooseCombatTarget(e, player, covers, enemies) {
 }
 function enterCovered(e) {
   e.combatState = "covered";
-  e.combatTimer = rand(0.45, 0.85);
+  e.combatTimer = rand(0.85, 1.45);
   e.exposed = false;
   e.targetX = e.coverAnchorX;
   e.targetY = e.coverAnchorY;
@@ -239,7 +245,7 @@ function enterCovered(e) {
 }
 function enterExposed(e, target) {
   e.combatState = "exposed";
-  e.combatTimer = rand(1.25, 2.15);
+  e.combatTimer = rand(0.85, 1.45);
   e.shotsLeft = 3 + Math.floor(Math.random() * 5);
   e.exposed = true;
   var p = peekPoint(e, target, e.cover && e.cover.type === "wide" ? 62 : 48);
@@ -254,24 +260,21 @@ function enterTucking(e) {
   e.targetY = e.coverAnchorY;
 }
 function chooseCover(e, target, covers, enemies, forceNew) {
-  var role = e.weapon.role;
-  var choice = pickTacticalCover(e, target, covers, enemies, {
-    desiredRange: desiredRange(e),
-    maxTravel: 1250,
-    minThreat: role === "breach" ? 180 : role === "flanker" ? 220 : 300,
-    maxThreat: role === "precision" ? 1550 : role === "marksman" ? 1400 : 1250,
-    flankSide: role === "flanker" || role === "assault" ? e.flankSide : 0,
-    flankWeight: role === "flanker" ? 300 : role === "assault" ? 160 : 80,
-    forceNew: !!forceNew,
+  if (e.type === "charger") return false;
+  var friendlies = playerRoster().concat(enemies || []);
+  return assignEnemyCover(e, target, covers, friendlies, forceNew);
+}
+function playerRoster() {
+  var list = [];
+  if (typeof window === "undefined") return list;
+  if (window.__battlePlayer) list.push(window.__battlePlayer);
+  (window.__battleAllies || []).forEach(function (a) {
+    list.push(a);
   });
-  if (choice) {
-    applyCoverChoice(e, choice);
-    e.combatState = "seeking";
-    e.exposed = true;
-    e.coverCycles = 0;
-    return true;
-  }
-  return false;
+  (window.__battleMarines || []).forEach(function (m) {
+    list.push(m);
+  });
+  return list;
 }
 function shouldReposition(e, target, covers) {
   if (
@@ -340,6 +343,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       faceThreat(e, player);
       continue;
     }
+    if (e.type === "charger") continue;
     if (!validTarget(e.combatTarget) || e.targetTimer <= 0) {
       e.combatTarget = chooseCombatTarget(e, player, covers, enemies);
       e.targetTimer = rand(2.2, 4.2);
@@ -378,7 +382,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
     }
     if (e.combatState === "seeking") {
       e.exposed = true;
-      if (moveTowardTarget(e, dt, 1.08)) {
+      if (moveTowardTarget(e, dt, 1.08 * PACE)) {
         if (e.cover) enterCovered(e);
         else {
           e.combatState = "exposed";
@@ -390,7 +394,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       e.exposed = false;
       e.targetX = e.coverAnchorX;
       e.targetY = e.coverAnchorY;
-      moveTowardTarget(e, dt, 1);
+      moveTowardTarget(e, dt, 1 * PACE);
       faceThreat(e, threat);
       e.combatTimer -= dt;
       if (
@@ -405,7 +409,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
         var pp = peekPoint(e, threat, e.cover.type === "wide" ? 62 : 48);
         e.targetX = pp.x;
         e.targetY = pp.y;
-        moveTowardTarget(e, dt, 0.88);
+        moveTowardTarget(e, dt, 0.88 * PACE);
       }
       faceThreat(e, threat);
       e.combatTimer -= dt;
@@ -420,7 +424,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       e.exposed = true;
       e.targetX = e.coverAnchorX;
       e.targetY = e.coverAnchorY;
-      var tucked = moveTowardTarget(e, dt, 1.18);
+      var tucked = moveTowardTarget(e, dt, 1.18 * PACE);
       e.combatTimer -= dt;
       if (tucked || e.combatTimer <= 0) enterCovered(e);
     }
@@ -468,7 +472,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       e.lastHitChance = chance;
       e.weapon.ammo--;
       if (Math.random() < 0.4) AudioBus.playFire(e.weapon, { volume: 0.32, priority: 0 });
-      e.fire = e.weapon.cooldown + Math.random() * e.weapon.cooldown * 0.55;
+      e.fire = (e.weapon.cooldown + Math.random() * e.weapon.cooldown * 0.55) * 1.22;
       faceThreat(e, threat);
       e.muzzle = 0.13;
       if (e.cover && e.combatState === "exposed") e.shotsLeft--;

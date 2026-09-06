@@ -191,6 +191,7 @@ export const AudioBus = {
     });
     loadBuffer("reload", "reload.mp3");
     loadBuffer("empty", "empty.mp3");
+    loadBuffer("boom", "grenade_boom.ogg");
   },
   playFire(weaponOrId, opts) {
     opts = opts || {};
@@ -230,6 +231,13 @@ export const AudioBus = {
     playKey("empty", "empty.mp3", {
       volume: opts.volume == null ? 0.45 : opts.volume,
       priority: opts.priority == null ? 2 : opts.priority,
+    });
+  },
+  playBoom(opts) {
+    opts = opts || {};
+    playKey("boom", "grenade_boom.ogg", {
+      volume: opts.volume == null ? 0.68 : opts.volume,
+      priority: opts.priority == null ? 3 : opts.priority,
     });
   },
 };

@@ -2,20 +2,38 @@ import {
   WEAPONS,
   weaponCopy,
   weaponWithAttachments,
-} from "./weapons.js?v=20260906-80";
-import { soldierSource } from "./soldierAssets.js?v=20260906-80";
+} from "./weapons.js?v=20260906-81";
+import { soldierSource } from "./soldierAssets.js?v=20260906-81";
 import {
   CHARACTER_STATS,
   damageReductionPercent,
   GENERAL_ACCURACY_PENALTY,
-} from "./combatStats.js?v=20260906-80";
+} from "./combatStats.js?v=20260906-81";
 import {
   ATTACHMENT_SLOTS,
   ATTACHMENT_SLOT_LABELS,
   attachmentsForSlot,
   emptyAttachmentIds,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260906-80";
+} from "./attachments.js?v=20260906-81";
+import {
+  getTeamProgress,
+  xpIntoLevel,
+  xpForLevel,
+} from "./teamProgress.js?v=20260906-81";
+import {
+  SKILL_BRANCHES,
+  canBuySkill,
+  buySkill,
+  getSkillMods,
+} from "./skillTree.js?v=20260906-81";
+import {
+  ARMOR_OPTIONS,
+  describeArmorStats,
+  selectArmor,
+  selectedArmorId,
+  signed,
+} from "./armor.js?v=20260906-81";
 
 var DEFAULT_WEAPONS = { player: "rifle", Rook: "rifle", Viper: "smg", Doc: "dmr" },
   STORAGE = "coverShooterLoadout",
@@ -128,7 +146,7 @@ function ensureStyle() {
   var s = document.createElement("style");
   s.id = "loadoutPanelStyle";
   s.textContent =
-    ".loadoutTabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 12px}.loadoutTab{min-height:36px;border:1px solid #ffffff33;border-radius:8px;background:#172126;color:#9eb0b8;font:900 9px system-ui}.loadoutTab.active{background:#315a68;color:#fff}.characterLoadoutCard{position:relative;text-align:left;border:1px solid #ffffff2d;border-radius:12px;background:#11191ed9;padding:14px;min-height:270px;overflow:hidden}.characterLoadoutName{font:950 20px system-ui;color:#fff;padding-right:94px}.characterLoadoutRole{font:800 9px system-ui;color:#7fa7b8;margin:2px 0 12px}.characterSprite{position:absolute;right:3px;top:1px;width:100px;height:110px}.characterStatsGrid,.weaponStatsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0 12px}.statCell{padding:7px 8px;border-radius:8px;background:#ffffff09;border:1px solid #ffffff14}.statCell b{display:block;color:#8fb7c8;font:800 8px system-ui}.statCell strong{display:block;margin-top:2px;color:#fff;font:950 13px system-ui}.weaponBlock{margin-top:8px;padding-top:10px;border-top:1px solid #ffffff1c}.weaponBlockTitle{font:900 9px system-ui;color:#8fb7c8;margin-bottom:6px}.weaponSelect,.attachmentSelect{width:100%;min-height:42px;border:1px solid #ffffff44;border-radius:9px;background:#182228;color:#fff;padding:0 10px;font:850 11px system-ui}.attachmentGrid{display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0 8px}.attachmentRow label{display:block;font:850 8px system-ui;color:#8fb7c8;letter-spacing:1px;margin:0 0 4px}.accuracyNote{font:750 8px system-ui;color:#7f929a;margin-top:6px}";
+    ".loadoutTabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 12px}.loadoutTab{min-height:36px;border:1px solid #ffffff33;border-radius:8px;background:#172126;color:#9eb0b8;font:900 9px system-ui}.loadoutTab.active{background:#315a68;color:#fff}.characterLoadoutCard{position:relative;text-align:left;border:1px solid #ffffff2d;border-radius:12px;background:#11191ed9;padding:14px;min-height:270px;overflow:hidden}.characterLoadoutName{font:950 20px system-ui;color:#fff;padding-right:94px}.characterLoadoutRole{font:800 9px system-ui;color:#7fa7b8;margin:2px 0 12px}.characterSprite{position:absolute;right:3px;top:1px;width:100px;height:110px}.characterStatsGrid,.weaponStatsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0 12px}.statCell{padding:7px 8px;border-radius:8px;background:#ffffff09;border:1px solid #ffffff14}.statCell b{display:block;color:#8fb7c8;font:800 8px system-ui}.statCell strong{display:block;margin-top:2px;color:#fff;font:950 13px system-ui}.weaponBlock{margin-top:8px;padding-top:10px;border-top:1px solid #ffffff1c}.weaponBlockTitle{font:900 9px system-ui;color:#8fb7c8;margin-bottom:6px}.weaponSelect,.attachmentSelect{width:100%;min-height:42px;border:1px solid #ffffff44;border-radius:9px;background:#182228;color:#fff;padding:0 10px;font:850 11px system-ui}.attachmentGrid{display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0 8px}.attachmentRow label{display:block;font:850 8px system-ui;color:#8fb7c8;letter-spacing:1px;margin:0 0 4px}.accuracyNote{font:750 8px system-ui;color:#7f929a;margin-top:6px}.teamBar{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin:0 0 10px;padding:10px;border:1px solid #ffffff24;border-radius:10px;background:#0f171b;text-align:left}.teamBar b{display:block;color:#8fb7c8;font:800 8px system-ui}.teamBar strong{color:#fff;font:950 16px system-ui}.xpTrack{height:6px;border-radius:99px;background:#ffffff14;overflow:hidden}.xpFill{height:100%;background:#7eb8d2}.pageTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 0 12px}.pageTab{min-height:34px;border:1px solid #ffffff33;border-radius:8px;background:#172126;color:#9eb0b8;font:900 9px system-ui}.pageTab.active{background:#3d5344;color:#fff}.skillTree{display:grid;grid-template-columns:1fr;gap:10px}.skillBranch{border:1px solid #ffffff1f;border-radius:10px;padding:10px;text-align:left;background:#0f171bd4}.skillBranch h3{margin:0 0 8px;font:900 11px system-ui;letter-spacing:1px}.skillNode{width:100%;margin:4px 0;padding:8px 10px;border-radius:8px;border:1px solid #ffffff2a;background:#182228;color:#d5e2e7;text-align:left}.skillNode small{display:block;color:#8aa0aa;font:750 9px system-ui;margin-top:2px}.skillNode.owned{background:#2b4a38;border-color:#7dca8a55}.skillNode.locked{opacity:.42}.armorGrid{display:grid;gap:8px}.armorCard{text-align:left;border:1px solid #ffffff24;border-radius:10px;background:#11191ed9;padding:10px;color:#dce7eb}.armorCard.active{border-color:#7eb8d2;background:#1a2a31}.armorCard b{display:block;font:900 12px system-ui}.armorCard p{margin:4px 0 6px;font:750 9px system-ui;color:#8aa0aa}.armorStats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font:800 8px system-ui;color:#c5d6dd}";
   document.head.appendChild(s);
 }
 
@@ -148,7 +166,122 @@ function statCell(l, v) {
   );
 }
 
-function renderPanel(rows, key, selection) {
+function teamBarHtml() {
+  var p = getTeamProgress(),
+    into = xpIntoLevel(p.xp),
+    need = xpForLevel(p.level),
+    pct = Math.max(0, Math.min(100, Math.round((into / need) * 100)));
+  return (
+    '<div class="teamBar"><div><b>TEAM LEVEL</b><strong>' +
+    p.level +
+    '</strong></div><div><b>TEAM XP ' +
+    into +
+    " / " +
+    need +
+    '</b><div class="xpTrack"><div class="xpFill" style="width:' +
+    pct +
+    '%"></div></div></div><div><b>SKILL POINTS</b><strong>' +
+    p.unspent +
+    "</strong></div></div>"
+  );
+}
+
+function pageTabsHtml(page) {
+  return (
+    '<div class="pageTabs">' +
+    ["squad", "skills", "armor"]
+      .map(function (id) {
+        return (
+          '<button type="button" class="pageTab' +
+          (page === id ? " active" : "") +
+          '" data-page="' +
+          id +
+          '">' +
+          id.toUpperCase() +
+          "</button>"
+        );
+      })
+      .join("") +
+    "</div>"
+  );
+}
+
+function renderSkills() {
+  var spent = getTeamProgress().spent || {};
+  return (
+    '<div class="skillTree">' +
+    SKILL_BRANCHES.map(function (b) {
+      return (
+        '<div class="skillBranch"><h3 style="color:' +
+        b.color +
+        '">' +
+        b.name +
+        "</h3>" +
+        b.nodes
+          .map(function (n) {
+            var owned = (spent[n.id] || 0) > 0,
+              locked = !owned && !canBuySkill(n.id);
+            return (
+              '<button type="button" class="skillNode' +
+              (owned ? " owned" : locked ? " locked" : "") +
+              '" data-skill="' +
+              n.id +
+              '"' +
+              (locked || owned ? " disabled" : "") +
+              ">" +
+              n.name +
+              (owned ? "  ✓" : "") +
+              "<small>" +
+              n.desc +
+              "</small></button>"
+            );
+          })
+          .join("") +
+        "</div>"
+      );
+    }).join("") +
+    '<div class="accuracyNote">1 skill point per team level. Deeper nodes need the node above. Grenades, squad buffs, and marine reinforcements apply in combat.</div></div>'
+  );
+}
+
+function renderArmor() {
+  var selected = selectedArmorId();
+  return (
+    '<div class="armorGrid">' +
+    ARMOR_OPTIONS.map(function (a) {
+      var d = describeArmorStats(a);
+      return (
+        '<button type="button" class="armorCard' +
+        (a.id === selected ? " active" : "") +
+        '" data-armor="' +
+        a.id +
+        '"><b>' +
+        a.name +
+        (a.id === selected ? "  · EQUIPPED" : "") +
+        "</b><p>" +
+        a.blurb +
+        '</p><div class="armorStats"><span>DEF ' +
+        signed(d.defenseDelta) +
+        " → " +
+        d.defense +
+        " (" +
+        d.mit +
+        "% MIT)</span><span>HIT " +
+        signed(d.hitDelta) +
+        " → " +
+        d.hitChance +
+        "</span><span>SPD " +
+        signed(d.speedDelta) +
+        " → " +
+        d.speed +
+        "</span></div></button>"
+      );
+    }).join("") +
+    "</div>"
+  );
+}
+
+function renderSquad(key, selection) {
   var c =
       CHARACTERS.find(function (x) {
         return x.key === key;
@@ -156,7 +289,8 @@ function renderPanel(rows, key, selection) {
     stats = CHARACTER_STATS[key] || CHARACTER_STATS.player,
     entry = normalizeEntry(selection[key], DEFAULT_WEAPONS[key]),
     w = weaponWithAttachments(entry.weapon, entry.attachments),
-    totalDamage = w.damage + stats.damage,
+    mods = getSkillMods(),
+    totalDamage = w.damage + stats.damage + (key === "player" ? mods.playerDamage : mods.allyDamage),
     fireRate = (1 / w.cooldown).toFixed(1);
   selection[key] = entry;
   var attachmentHtml = ATTACHMENT_SLOTS.map(function (slot, idx) {
@@ -172,7 +306,7 @@ function renderPanel(rows, key, selection) {
       "</select></div>"
     );
   }).join("");
-  rows.innerHTML =
+  return (
     '<div class="loadoutTabs">' +
     CHARACTERS.map(function (x) {
       return (
@@ -215,8 +349,21 @@ function renderPanel(rows, key, selection) {
     statCell("MAGAZINE", w.magazine) +
     '</div><div class="accuracyNote">Character Accuracy is added after the general ' +
     Math.abs(GENERAL_ACCURACY_PENALTY) +
-    " point accuracy reduction. Attachments modify the weapon stats above.</div></div></div>";
-  drawPreview();
+    " point accuracy reduction. Attachments modify the weapon stats above. Armor and skill tree bonuses apply on PLAY.</div></div></div>"
+  );
+}
+
+function renderPanel(rows, key, selection, page) {
+  page = page || "squad";
+  rows.innerHTML =
+    teamBarHtml() +
+    pageTabsHtml(page) +
+    (page === "skills"
+      ? renderSkills()
+      : page === "armor"
+        ? renderArmor()
+        : renderSquad(key, selection));
+  if (page === "squad") drawPreview();
 }
 
 function drawPreview() {
@@ -259,6 +406,7 @@ export function initMainMenu(onPlay) {
   ensureStyle();
   var selection = loadSelection(),
     active = "player",
+    page = "squad",
     screen = document.getElementById("mainMenu"),
     home = document.getElementById("mainMenuHome"),
     loadout = document.getElementById("mainMenuLoadout"),
@@ -267,15 +415,40 @@ export function initMainMenu(onPlay) {
     back = document.getElementById("menuBack"),
     rows = document.getElementById("menuLoadoutRows");
   window.__selectedLoadout = cloneSelection(selection);
+  var kicker =
+    loadout && loadout.querySelector
+      ? loadout.querySelector(".menuKicker")
+      : null;
+  if (kicker) kicker.textContent = "TEAM LEVEL · SKILLS · ARMOR";
   if (rows) {
-    renderPanel(rows, active, selection);
+    renderPanel(rows, active, selection, page);
     rows.addEventListener("pointerdown", function (e) {
-      var key =
-        e.target && e.target.dataset ? e.target.dataset.character : null;
-      if (key && e.target.classList && e.target.classList.contains("loadoutTab")) {
+      var t = e.target;
+      while (t && t !== rows && (!t.dataset || (!t.dataset.character && !t.dataset.page && !t.dataset.skill && !t.dataset.armor)))
+        t = t.parentElement;
+      if (!t || !t.dataset) return;
+      if (t.dataset.page) {
         e.preventDefault();
-        active = key;
-        renderPanel(rows, active, selection);
+        page = t.dataset.page;
+        renderPanel(rows, active, selection, page);
+        return;
+      }
+      if (t.dataset.character && t.classList && t.classList.contains("loadoutTab")) {
+        e.preventDefault();
+        active = t.dataset.character;
+        renderPanel(rows, active, selection, page);
+        return;
+      }
+      if (t.dataset.skill) {
+        e.preventDefault();
+        buySkill(t.dataset.skill);
+        renderPanel(rows, active, selection, page);
+        return;
+      }
+      if (t.dataset.armor) {
+        e.preventDefault();
+        selectArmor(t.dataset.armor);
+        renderPanel(rows, active, selection, page);
       }
     });
     rows.addEventListener("change", function (e) {
@@ -287,7 +460,7 @@ export function initMainMenu(onPlay) {
         selection[key].weapon = t.value;
         selection[key].attachments = emptyAttachmentIds();
         saveSelection(selection);
-        renderPanel(rows, active, selection);
+        renderPanel(rows, active, selection, page);
         return;
       }
       if (t.dataset.slot != null && t.dataset.character) {
@@ -302,7 +475,7 @@ export function initMainMenu(onPlay) {
           selection[ck].attachments,
         );
         saveSelection(selection);
-        renderPanel(rows, active, selection);
+        renderPanel(rows, active, selection, page);
       }
     });
   }
@@ -311,7 +484,7 @@ export function initMainMenu(onPlay) {
       e.preventDefault();
       home.classList.add("hidden");
       loadout.classList.remove("hidden");
-      renderPanel(rows, active, selection);
+      renderPanel(rows, active, selection, page);
     });
   if (back)
     back.addEventListener("pointerdown", function (e) {

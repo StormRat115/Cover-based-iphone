@@ -1,58 +1,80 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-80";
+import { createGameLoop } from "./gameLoop.js?v=20260906-81";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-80";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-80";
+} from "./geometry.js?v=20260906-81";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-81";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-80";
-import { updateSquadHud } from "./squadHud.js?v=20260906-80";
-import { updateCombatHud } from "./combatHud.js?v=20260906-80";
-import { updatePlayerHud } from "./player.js?v=20260906-80";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-80";
-import "./squadDrawer.js?v=20260906-80";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-80";
+} from "./bloodEffects.js?v=20260906-81";
+import { updateSquadHud } from "./squadHud.js?v=20260906-81";
+import { updateCombatHud } from "./combatHud.js?v=20260906-81";
+import { updatePlayerHud } from "./player.js?v=20260906-81";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-81";
+import "./squadDrawer.js?v=20260906-81";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-81";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-80";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-80";
+} from "./enemy.js?v=20260906-81";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-81";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-80";
+} from "./marines.js?v=20260906-81";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-80";
+} from "./streetMission.js?v=20260906-81";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-80";
+} from "./supportVehicle.js?v=20260906-81";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260906-80";
+} from "./cover.js?v=20260906-81";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-80";
-import { initTactical } from "./tactical.js?v=20260906-80";
-import { AudioBus } from "./audio.js?v=20260906-80";
+} from "./input.js?v=20260906-81";
+import { initTactical } from "./tactical.js?v=20260906-81";
+import { AudioBus } from "./audio.js?v=20260906-81";
+import {
+  segmentWave,
+  updateWaveSegments,
+  waveFullyCleared,
+  pendingHostiles,
+} from "./waveSegments.js?v=20260906-81";
+import {
+  grantKillXp,
+  grantWaveXp,
+  getTeamProgress,
+} from "./teamProgress.js?v=20260906-81";
+import {
+  updateGrenades,
+  drawGrenades,
+  trySquadGrenades,
+  resetGrenades,
+} from "./grenades.js?v=20260906-81";
+import {
+  applyRunModifiers,
+  updateMarineReinforcements,
+  resetMarineTimer,
+} from "./runModifiers.js?v=20260906-81";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -88,7 +110,8 @@ var W = 0,
   autoTargetTimer = 0,
   wave = 1,
   waveState = "active",
-  waveTimer = 0;
+  waveTimer = 0,
+  waveDirector = null;
 var world = {
   scaleX: 0.25,
   scaleY: 0.125,
@@ -150,7 +173,7 @@ export function iso(x, y) {
   return worldToScreen(x, y, world, W, H);
 }
 function createWaveEnemies() {
-  return createBandits(wave, {
+  var roster = createBandits(wave, {
     spawnMode: mission && mission.captured ? "surround" : "northeast",
     spawnView: {
       world: world,
@@ -158,6 +181,8 @@ function createWaveEnemies() {
       height: H || 844,
     },
   });
+  waveDirector = segmentWave(roster, { packSize: 3, interval: 9.5, firstDelay: 0.7 });
+  return roster;
 }
 function nearestEnemy() {
   return nearestLivingEnemy(player, enemies);
@@ -418,7 +443,7 @@ function attemptFire() {
         ),
         t: 0,
       });
-      if (e.dead) kills++;
+      if (e.dead) noteTeamKill(e);
     }
   }
 }
@@ -664,6 +689,19 @@ initKeyboard({
   },
   onReload: reload,
 });
+function noteTeamKill(enemy) {
+  if (!enemy || enemy._xpGranted) return;
+  enemy._xpGranted = true;
+  kills++;
+  grantKillXp(enemy, wave);
+}
+
+function collectTeamKills() {
+  enemies.forEach(function (e) {
+    if (e.dead && !e._xpGranted) noteTeamKill(e);
+  });
+}
+
 function beginNextWave() {
   wave++;
   window.__wave = wave;
@@ -686,17 +724,15 @@ function finishFailure() {
   message.classList.remove("hidden");
 }
 function updateWaveDefense(dt) {
+  collectTeamKills();
   if (waveState === "cleared") {
     waveTimer -= dt;
     if (waveTimer <= 0) beginNextWave();
     return;
   }
-  if (
-    enemies.length &&
-    enemies.every(function (e) {
-      return e.dead && e.deathTimer >= e.deathDuration;
-    })
-  ) {
+  updateWaveSegments(waveDirector, dt, enemies);
+  if (waveFullyCleared(enemies, waveDirector)) {
+    grantWaveXp(wave);
     waveState = "cleared";
     waveTimer = 2.8;
     target = null;
@@ -717,6 +753,8 @@ function reset() {
   window.__battleMarines = marines;
   resetSquadCommands();
   resetBlood();
+  resetGrenades();
+  resetMarineTimer();
   clearKeyboard();
   hudDirty = true;
   runtime.resetClock();
@@ -747,6 +785,8 @@ function reset() {
   pauseMenu.classList.add("hidden");
   pauseButton.textContent = "Ⅱ";
   message.classList.add("hidden");
+  applyRunModifiers(player, allies, marines);
+  window.__battleMarines = marines;
   rebuildLayers();
 }
 function update(dt) {
@@ -817,6 +857,14 @@ function update(dt) {
     }
   });
   updateProjectiles(dt);
+  var clock =
+    (typeof performance !== "undefined" ? performance.now() : Date.now()) / 1000;
+  trySquadGrenades([player].concat(allies), enemies, dt, clock);
+  updateGrenades(dt, enemies);
+  updateMarineReinforcements(dt, marines, player, function () {
+    window.__battleMarines = marines;
+    rebuildLayers();
+  });
   updateFeedback(dt);
   updateBlood(dt);
   updateWaveDefense(dt);
@@ -1222,6 +1270,7 @@ function drawMissionUI() {
           wave +
           "  •  HOSTILES " +
           alive +
+          (pendingHostiles(enemies) ? " +" + pendingHostiles(enemies) : "") +
           "  •  MARINES " +
           marineStrength;
   ctx.fillText(objectiveLine, x + 14, y + 63);
@@ -1257,6 +1306,7 @@ function draw(now) {
   drawPlayerEngagementRange();
   drawBlood(ctx, iso);
   drawProjectiles();
+  drawGrenades(ctx, iso);
   for (const layer of layers) {
     var o = layer.o;
     layer.y = o.x + o.y;
@@ -1299,7 +1349,9 @@ function draw(now) {
     Math.max(0, Math.ceil(player.hp)) +
     " • " +
     kills +
-    " KILLS • WAVE " +
+    " KILLS • LV " +
+    getTeamProgress().level +
+    " • WAVE " +
     wave +
     " • " +
     aliveEnemies +
@@ -1375,6 +1427,10 @@ export function startGame() {
   clearKeyboard();
   covers = createCover();
   window.__battleCovers = covers;
+  applyRunModifiers(player, allies, marines);
+  window.__battleMarines = marines;
+  resetGrenades();
+  resetMarineTimer();
   enemies = createWaveEnemies();
   window.__battleEnemies = enemies;
   started = true;

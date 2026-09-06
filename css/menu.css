@@ -80,7 +80,7 @@
   text-align: center;
 }
 #mainMenu .menuPanel {
-  width: min(460px, 94vw);
+  width: min(520px, 94vw);
   text-align: center;
   max-height: 92vh;
   overflow: auto;
