@@ -1,64 +1,64 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-77";
+import { createGameLoop } from "./gameLoop.js?v=20260906-78";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-77";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-77";
+} from "./geometry.js?v=20260906-78";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-78";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-77";
-import { updateSquadHud } from "./squadHud.js?v=20260906-77";
-import { updateCombatHud } from "./combatHud.js?v=20260906-77";
-import { updatePlayerHud } from "./player.js?v=20260906-77";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-77";
-import "./squadDrawer.js?v=20260906-77";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-77";
+} from "./bloodEffects.js?v=20260906-78";
+import { updateSquadHud } from "./squadHud.js?v=20260906-78";
+import { updateCombatHud } from "./combatHud.js?v=20260906-78";
+import { updatePlayerHud } from "./player.js?v=20260906-78";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-78";
+import "./squadDrawer.js?v=20260906-78";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-78";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-77";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-77";
+} from "./enemy.js?v=20260906-78";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-78";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-77";
+} from "./marines.js?v=20260906-78";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-77";
+} from "./streetMission.js?v=20260906-78";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-77";
+} from "./supportVehicle.js?v=20260906-78";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260906-77";
+} from "./cover.js?v=20260906-78";
 import {
   groundTile,
   buildingRuinA,
   buildingRuinB,
   roadSegments,
-} from "./cityAssets.js?v=20260906-77";
+} from "./cityAssets.js?v=20260906-78";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-77";
-import { initTactical } from "./tactical.js?v=20260906-77";
-import { AudioBus } from "./audio.js?v=20260906-77";
+} from "./input.js?v=20260906-78";
+import { initTactical } from "./tactical.js?v=20260906-78";
+import { AudioBus } from "./audio.js?v=20260906-78";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -1003,32 +1003,77 @@ function drawMapDecor() {
     drawCrosswalk(crossY);
 
   // Buildings parked — street-only map for now.
-  // Isometric road segment accents (overlapping, irregular — not a grid).
-  if (roadSegments) {
-    var kinds = ["plain", "lane", "stain", "plain", "crosswalk", "plain", "stain"];
-    var idx = 0;
-    for (var ry = world.minY + 80; ry < world.maxY; ry += 210) {
-      for (var rx = -720; rx <= 720; rx += 260) {
-        var img = roadSegments[kinds[idx++ % kinds.length]];
+  // Continuous asphalt: clip to the street slab and stretch one texture across it.
+  var asphaltImg =
+    (groundTile && groundTile.complete && groundTile.naturalWidth && groundTile) ||
+    (roadSegments &&
+      roadSegments.plain &&
+      roadSegments.plain.complete &&
+      roadSegments.plain.naturalWidth &&
+      roadSegments.plain) ||
+    null;
+  if (asphaltImg) {
+    var corners = [
+      iso(curbL, world.minY),
+      iso(curbR, world.minY),
+      iso(curbR, world.maxY),
+      iso(curbL, world.maxY),
+    ];
+    var minSx = Math.min(corners[0][0], corners[1][0], corners[2][0], corners[3][0]);
+    var maxSx = Math.max(corners[0][0], corners[1][0], corners[2][0], corners[3][0]);
+    var minSy = Math.min(corners[0][1], corners[1][1], corners[2][1], corners[3][1]);
+    var maxSy = Math.max(corners[0][1], corners[1][1], corners[2][1], corners[3][1]);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(corners[0][0], corners[0][1]);
+    for (var ci = 1; ci < corners.length; ci++)
+      ctx.lineTo(corners[ci][0], corners[ci][1]);
+    ctx.closePath();
+    ctx.clip();
+    // Stretch asphalt across the clipped street — one continuous surface.
+    ctx.globalAlpha = 0.88;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    var pad = 40;
+    ctx.drawImage(
+      asphaltImg,
+      minSx - pad,
+      minSy - pad,
+      maxSx - minSx + pad * 2,
+      maxSy - minSy + pad * 2,
+    );
+    // Soft center wash so it still reads as a road, not a photo slab.
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = "#2a302e";
+    ctx.fillRect(minSx - pad, minSy - pad, maxSx - minSx + pad * 2, maxSy - minSy + pad * 2);
+    ctx.restore();
+
+    // Rare lane / stain / crosswalk marks only (props, not tiling).
+    if (roadSegments) {
+      var accents = [
+        { k: "crosswalk", x: 0, y: world.minY + 420, w: 640, h: 170 },
+        { k: "lane", x: -30, y: world.minY + 780, w: 120, h: 320 },
+        { k: "stain", x: -260, y: world.minY + 980, w: 300, h: 170 },
+        { k: "crosswalk", x: 0, y: world.minY + 1320, w: 640, h: 170 },
+        { k: "stain", x: 280, y: world.minY + 1560, w: 280, h: 160 },
+        { k: "lane", x: 20, y: world.minY + 1880, w: 120, h: 300 },
+        { k: "stain", x: -120, y: world.minY + 2200, w: 260, h: 150 },
+      ];
+      for (var ai = 0; ai < accents.length; ai++) {
+        var a = accents[ai];
+        var img = roadSegments[a.k];
         if (!img || !img.complete || !img.naturalWidth) continue;
-        if (!onScreen(rx, ry, 220)) continue;
-        // jitter so seams do not align into a lattice
-        var jx = ((ry * 17 + rx * 13) % 70) - 35;
-        var jy = ((ry * 11 + rx * 7) % 50) - 25;
-        var q = iso(rx + jx, ry + jy);
-        var dw = 210,
-          dh = 120;
+        if (!onScreen(a.x, a.y, 320)) continue;
+        var p = iso(a.x, a.y);
         ctx.save();
-        ctx.globalAlpha = 0.55;
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(img, q[0] - dw * 0.5, q[1] - dh * 0.45, dw, dh);
+        ctx.globalAlpha = a.k === "stain" ? 0.5 : 0.65;
+        ctx.drawImage(img, p[0] - a.w * 0.5, p[1] - a.h * 0.45, a.w, a.h);
         ctx.restore();
       }
     }
   }
 
-    // Street lamps along the wide curbs
+  // Street lamps along the wide curbs
   for (var ly = world.minY + 160; ly <= world.maxY; ly += 420) {
     drawStreetLamp(curbL + 50, ly);
     drawStreetLamp(curbR - 50, ly);

@@ -2,20 +2,20 @@ import {
   WEAPONS,
   weaponCopy,
   weaponWithAttachments,
-} from "./weapons.js?v=20260906-77";
-import { soldierSource } from "./soldierAssets.js?v=20260906-77";
+} from "./weapons.js?v=20260906-78";
+import { soldierSource } from "./soldierAssets.js?v=20260906-78";
 import {
   CHARACTER_STATS,
   damageReductionPercent,
   GENERAL_ACCURACY_PENALTY,
-} from "./combatStats.js?v=20260906-77";
+} from "./combatStats.js?v=20260906-78";
 import {
   ATTACHMENT_SLOTS,
   ATTACHMENT_SLOT_LABELS,
   attachmentsForSlot,
   emptyAttachmentIds,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260906-77";
+} from "./attachments.js?v=20260906-78";
 
 var DEFAULT_WEAPONS = { player: "rifle", Rook: "rifle", Viper: "smg", Doc: "dmr" },
   STORAGE = "coverShooterLoadout",

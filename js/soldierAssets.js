@@ -1,7 +1,7 @@
-import { loadImage } from "./assets.js?v=20260906-77";
+import { loadImage } from "./assets.js?v=20260906-78";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
-  "./assets/generated/soldier/player-ally-atlas.png?v=20260906-77";
+  "./assets/generated/soldier/player-ally-atlas.png?v=20260906-78";
 export const soldierSource = new Image();
 soldierSource.src =
   "./assets/EE4CA451-8D37-42A3-9F54-ED1930481CF9.png?v=20260905-60";
@@ -432,7 +432,9 @@ function frameForFriendly(actor, state) {
   } else {
     col = Math.floor(phase) % count;
     next = (col + 1) % count;
-    blend = softenBlend(phase - Math.floor(phase));
+    // Light snap — opaque sheets look milky if blend stays mid-frame long.
+    var frac = phase - Math.floor(phase);
+    blend = frac < 0.18 ? 0 : frac > 0.82 ? 1 : softenBlend((frac - 0.18) / 0.64);
   }
   return {
     col: col,
@@ -767,6 +769,7 @@ export function drawSoldier(ctx, actor, options) {
     } else if (!runtimeFriendlyAtlas) state = "lowCover";
   }
   var useFriendly = !isEnemy && runtimeFriendlyAtlas;
+  if (useFriendly) scale *= 1.15;
   var r = useFriendly
       ? frameForFriendly(actor, state)
       : frameFor(actor, state, boxes),
