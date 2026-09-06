@@ -1,6 +1,6 @@
-import { loadImage } from "./assets.js?v=20260906-102";
-import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-102";
-import { preloadWartornAssets } from "./wartornCity.js?v=20260906-102";
+import { loadImage } from "./assets.js?v=20260906-103";
+import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260906-103";
+import { preloadWartornAssets } from "./wartornCity.js?v=20260906-103";
 import {
   COVER_BLOCK_SIZE,
   E,
@@ -8,7 +8,7 @@ import {
   blockMap,
   livingBlocks,
   neighborMask,
-} from "./coverBlocks.js?v=20260906-102";
+} from "./coverBlocks.js?v=20260906-103";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
@@ -21,7 +21,7 @@ coverShapeAtlas.src =
   "./assets/generated/cover/cover-shape-atlas.webp?v=20260906-88";
 export const coverBlockAtlas = new Image();
 coverBlockAtlas.src =
-  "./assets/generated/cover/blocks/atlas.png?v=20260906-99";
+  "./assets/generated/cover/blocks/atlas.png?v=20260906-103";
 const BLOCK_TILE = 40;
 const THEME_ROW = {
   jersey: 0,
@@ -173,8 +173,8 @@ function drawPrism(ctx, iso, x, y, w, h, z, palette, mask) {
     ctx,
     [A, B, C, D],
     palette.top,
-    hideSouth && hideEast ? null : palette.stroke,
-    hideSouth || hideEast ? 0.4 : 1.1,
+    mask ? null : palette.stroke,
+    mask ? 0 : 1.1,
   );
   ctx.restore();
   return { a: a, b: b, c: c, d: d, A: A, B: B, C: C, D: D, z: z };
