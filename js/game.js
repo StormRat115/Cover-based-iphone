@@ -915,9 +915,10 @@ function getAsphaltGrain() {
   var c = document.createElement("canvas");
   c.width = 96;
   c.height = 96;
-  var g = c.getContext("2d");
-  if (!g) return null;
+  var g = c.getContext && c.getContext("2d");
+  if (!g || typeof g.createImageData !== "function") return null;
   var data = g.createImageData(96, 96);
+  if (!data || !data.data) return null;
   var i = 0;
   for (var y = 0; y < 96; y++) {
     for (var x = 0; x < 96; x++) {
