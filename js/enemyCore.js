@@ -1,5 +1,5 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260906-72";
-import { weaponCopy } from "./weapons.js?v=20260906-72";
+import { isLineBlocked, getHitChance } from "./cover.js?v=20260906-73";
+import { weaponCopy } from "./weapons.js?v=20260906-73";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -7,14 +7,14 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-72";
+} from "./combatAI.js?v=20260906-73";
 import {
   ENEMY_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-72";
-import { AudioBus } from "./audio.js?v=20260906-72";
+} from "./combatStats.js?v=20260906-73";
+import { AudioBus } from "./audio.js?v=20260906-73";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -467,7 +467,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       }
       e.lastHitChance = chance;
       e.weapon.ammo--;
-      AudioBus.playFire(e.weapon, { volume: 0.5 });
+      if (Math.random() < 0.4) AudioBus.playFire(e.weapon, { volume: 0.32, priority: 0 });
       e.fire = e.weapon.cooldown + Math.random() * e.weapon.cooldown * 0.55;
       faceThreat(e, threat);
       e.muzzle = 0.13;

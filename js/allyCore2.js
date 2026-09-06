@@ -2,9 +2,9 @@ import {
   isLineBlocked,
   getHitChance,
   getCoverSlot,
-} from "./cover.js?v=20260906-72";
-import { weaponCopy } from "./weapons.js?v=20260906-72";
-import { AudioBus } from "./audio.js?v=20260906-72";
+} from "./cover.js?v=20260906-73";
+import { weaponCopy } from "./weapons.js?v=20260906-73";
+import { AudioBus } from "./audio.js?v=20260906-73";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -12,14 +12,14 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-72";
+} from "./combatAI.js?v=20260906-73";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-72";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-72";
+} from "./combatStats.js?v=20260906-73";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-73";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -218,7 +218,7 @@ function shoot(a, e, spawnProjectile, covers) {
     hit = Math.random() * 100 < chance;
   a.weapon.ammo--;
   a.weapon.fireCooldown = a.weapon.cooldown;
-  AudioBus.playFire(a.weapon, { volume: 0.58 });
+  AudioBus.playFire(a.weapon, { volume: 0.48, priority: 2 });
   a.muzzle = 0.12;
   a.shotsLeft = Math.max(0, (a.shotsLeft || 1) - 1);
   if (spawnProjectile) spawnProjectile(a, e, "ally", hit ? 1 : 0);

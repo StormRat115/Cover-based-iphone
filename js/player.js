@@ -1,13 +1,13 @@
-import { getHitChance } from "./cover.js?v=20260906-72";
-import { weaponCopy } from "./weapons.js?v=20260906-72";
-import { AudioBus } from "./audio.js?v=20260906-72";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-72";
+import { getHitChance } from "./cover.js?v=20260906-73";
+import { weaponCopy } from "./weapons.js?v=20260906-73";
+import { AudioBus } from "./audio.js?v=20260906-73";
+import { drawSoldier } from "./soldierAssets.js?v=20260906-73";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   finalAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260906-72";
+} from "./combatStats.js?v=20260906-73";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,
@@ -188,7 +188,7 @@ export function createPlayer() {
       this.weapon.ammo--;
       this.weapon.fireCooldown = this.weapon.cooldown;
       this.weapon.recoil = this.weapon.cooldown;
-      AudioBus.playFire(this.weapon);
+      AudioBus.playFire(this.weapon, { priority: 3 });
       this.state = "shoot";
       this.shootTimer = Math.min(0.22, this.weapon.cooldown);
       this.peek = 0.22;

@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260906-72";
+import { loadImage } from "./assets.js?v=20260906-73";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
@@ -7,22 +7,33 @@ export const generatedCoverAtlas = new Image();
 generatedCoverAtlas.src =
   "./assets/generated/cover-runtime-atlas.webp?v=20260905-62";
 export const groundTile = new Image();
-groundTile.src = "./assets/generated/tile-asphalt.png?v=20260906-72";
+groundTile.src = "./assets/generated/tile-asphalt.png?v=20260906-73";
 export const buildingRuinA = new Image();
-buildingRuinA.src = "./assets/generated/building-ruin-a.png?v=20260906-72";
+buildingRuinA.src = "./assets/generated/building-ruin-a.png?v=20260906-73";
 export const buildingRuinB = new Image();
-buildingRuinB.src = "./assets/generated/building-ruin-b.png?v=20260906-72";
+buildingRuinB.src = "./assets/generated/building-ruin-b.png?v=20260906-73";
+export const organicCovers = {
+  jersey: Object.assign(new Image(), { src: "./assets/generated/cover-jersey-organic.png?v=20260906-73" }),
+  sandbags: Object.assign(new Image(), { src: "./assets/generated/cover-sandbags-organic.png?v=20260906-73" }),
+  crates: Object.assign(new Image(), { src: "./assets/generated/cover-crates-organic.png?v=20260906-73" }),
+  sedan: Object.assign(new Image(), { src: "./assets/generated/cover-sedan-organic.png?v=20260906-73" }),
+};
 
 export function preloadCityAssets(onProgress) {
   onProgress = onProgress || function () {};
   onProgress(0.1, "LOADING CITY ASSETS");
-  return Promise.all([
-    loadImage(cityAtlas),
-    loadImage(generatedCoverAtlas),
-    loadImage(groundTile),
-    loadImage(buildingRuinA),
-    loadImage(buildingRuinB),
-  ]).then(function (images) {
+  var organicList = Object.keys(organicCovers).map(function (k) {
+    return loadImage(organicCovers[k]);
+  });
+  return Promise.all(
+    [
+      loadImage(cityAtlas),
+      loadImage(generatedCoverAtlas),
+      loadImage(groundTile),
+      loadImage(buildingRuinA),
+      loadImage(buildingRuinB),
+    ].concat(organicList),
+  ).then(function (images) {
     if (images.some(function (img) { return !img; }))
       throw new Error("City environment images are not ready");
     onProgress(1, "CITY ASSETS READY");
@@ -32,6 +43,7 @@ export function preloadCityAssets(onProgress) {
       groundTile: images[2],
       buildingRuinA: images[3],
       buildingRuinB: images[4],
+      organicCovers: organicCovers,
     };
   });
 }
@@ -178,7 +190,61 @@ export const CITY_ASSET_DEFS = {
   gen_planter: { x: 1536, y: 768, w: 512, h: 384, atlas: "generated" },
 };
 
+
+const ORGANIC_COVER_MAP = {
+  barrier_long: "jersey",
+  barrier_short: "jersey",
+  barrier_mid: "jersey",
+  barrier_corner: "jersey",
+  barrier_yellow: "jersey",
+  barrier_striped: "jersey",
+  barrier_small: "jersey",
+  barrier_small_2: "jersey",
+  road_blocker: "jersey",
+  sandbag_long: "sandbags",
+  sandbag_corner: "sandbags",
+  sandbag_short: "sandbags",
+  sandbag_crates: "sandbags",
+  gen_sandbag_long: "sandbags",
+  gen_sandbag_u: "sandbags",
+  crate_stack: "crates",
+  supply_stack: "crates",
+  gen_crate_stack: "crates",
+  ammo_pallet: "crates",
+  burned_sedan: "sedan",
+  pickup_truck: "sedan",
+  gen_wrecked_suv: "sedan",
+  gen_cargo_truck: "sedan",
+};
+
+export function drawOrganicCover(ctx, key, x, y, options) {
+  options = options || {};
+  var which = ORGANIC_COVER_MAP[key];
+  if (!which) return false;
+  var img = organicCovers[which];
+  if (!img || !img.complete || !img.naturalWidth) return false;
+  var scale = options.scale == null ? 0.34 : options.scale;
+  var dw = img.naturalWidth * scale;
+  var dh = img.naturalHeight * scale;
+  var anchorX = options.anchorX == null ? 0.5 : options.anchorX;
+  var anchorY = options.anchorY == null ? 0.9 : options.anchorY;
+  ctx.save();
+  ctx.translate(x, y);
+  // Soft contact shadow so props sit on asphalt.
+  ctx.fillStyle = "#00000066";
+  ctx.beginPath();
+  ctx.ellipse(0, 2, Math.max(14, dw * 0.34), Math.max(4, dh * 0.08), 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.globalAlpha = options.alpha == null ? 1 : options.alpha;
+  ctx.drawImage(img, -dw * anchorX, -dh * anchorY, dw, dh);
+  ctx.restore();
+  return true;
+}
+
 export function drawCityAsset(ctx, key, x, y, options) {
+  if (drawOrganicCover(ctx, key, x, y, options)) return true;
   var def = CITY_ASSET_DEFS[key];
   if (!def) return false;
   options = options || {};

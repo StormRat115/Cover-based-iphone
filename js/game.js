@@ -1,63 +1,63 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-72";
+import { createGameLoop } from "./gameLoop.js?v=20260906-73";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-72";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-72";
+} from "./geometry.js?v=20260906-73";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-73";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-72";
-import { updateSquadHud } from "./squadHud.js?v=20260906-72";
-import { updateCombatHud } from "./combatHud.js?v=20260906-72";
-import { updatePlayerHud } from "./player.js?v=20260906-72";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-72";
-import "./squadDrawer.js?v=20260906-72";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-72";
+} from "./bloodEffects.js?v=20260906-73";
+import { updateSquadHud } from "./squadHud.js?v=20260906-73";
+import { updateCombatHud } from "./combatHud.js?v=20260906-73";
+import { updatePlayerHud } from "./player.js?v=20260906-73";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-73";
+import "./squadDrawer.js?v=20260906-73";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-73";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-72";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-72";
+} from "./enemy.js?v=20260906-73";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-73";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-72";
+} from "./marines.js?v=20260906-73";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-72";
+} from "./streetMission.js?v=20260906-73";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-72";
+} from "./supportVehicle.js?v=20260906-73";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
-} from "./cover.js?v=20260906-72";
+} from "./cover.js?v=20260906-73";
 import {
   groundTile,
   buildingRuinA,
   buildingRuinB,
-} from "./cityAssets.js?v=20260906-72";
+} from "./cityAssets.js?v=20260906-73";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-72";
-import { initTactical } from "./tactical.js?v=20260906-72";
-import { AudioBus } from "./audio.js?v=20260906-72";
+} from "./input.js?v=20260906-73";
+import { initTactical } from "./tactical.js?v=20260906-73";
+import { AudioBus } from "./audio.js?v=20260906-73";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -852,15 +852,18 @@ function drawBuilding(x, y, w, h, roof, variant) {
   var q = iso(x, y);
   var img = variant === "b" ? buildingRuinB : buildingRuinA;
   if (img && img.complete && img.naturalWidth > 0) {
-    var scale = Math.max(w, h) / 220;
-    var dw = img.naturalWidth * scale * 0.92;
-    var dh = img.naturalHeight * scale * 0.92;
+    var scale = Math.max(w, h) / 260;
+    var dw = img.naturalWidth * scale;
+    var dh = img.naturalHeight * scale;
     ctx.save();
-    ctx.shadowColor = "#0008";
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetY = 6;
+    // Grounding shadow under the ruin footprint.
+    ctx.fillStyle = "#00000055";
+    ctx.beginPath();
+    ctx.ellipse(q[0], q[1] + 4, dw * 0.34, dh * 0.08, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.imageSmoothingEnabled = true;
-    ctx.drawImage(img, q[0] - dw * 0.5, q[1] - dh * 0.88, dw, dh);
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, q[0] - dw * 0.5, q[1] - dh * 0.92, dw, dh);
     ctx.restore();
     return;
   }
@@ -941,20 +944,25 @@ function drawMapDecor() {
     "#4b514c",
   );
   if (groundTile && groundTile.complete && groundTile.naturalWidth > 0) {
-    var stepX = 140,
-      stepY = 78;
-    for (var gy = world.minY; gy <= world.maxY; gy += stepY) {
-      for (var gx = world.minX; gx <= world.maxX; gx += stepX) {
-        if (!onScreen(gx, gy, 160)) continue;
+    // Larger diamond tiles, slight overlap, high-quality filter — less muddy upscale.
+    var stepX = 118,
+      stepY = 66,
+      tw = 168,
+      th = 96;
+    for (var gy = world.minY - 40; gy <= world.maxY + 40; gy += stepY) {
+      for (var gx = world.minX - 40; gx <= world.maxX + 40; gx += stepX) {
+        if (!onScreen(gx, gy, 200)) continue;
         var p = iso(gx, gy);
         ctx.save();
-        ctx.globalAlpha = 0.92;
         ctx.imageSmoothingEnabled = true;
-        ctx.drawImage(groundTile, p[0] - 70, p[1] - 40, 140, 80);
+        ctx.imageSmoothingQuality = "high";
+        ctx.globalAlpha = 1;
+        ctx.drawImage(groundTile, p[0] - tw * 0.5, p[1] - th * 0.45, tw, th);
         ctx.restore();
       }
     }
   }
+  // Soft center road wash so lane reads without crushing tile detail.
   worldPoly(
     [
       [-310, world.minY],
@@ -962,7 +970,7 @@ function drawMapDecor() {
       [310, world.maxY],
       [-310, world.maxY],
     ],
-    "#41454266",
+    "#41454233",
   );
   for (var y = world.minY + 80; y <= world.maxY - 50; y += 118)
     worldPoly(
