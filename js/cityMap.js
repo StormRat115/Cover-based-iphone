@@ -6,7 +6,7 @@ import {
   cloneBlockCover,
   coverTypeForTheme,
   makeBlockCover,
-} from "./coverBlocks.js?v=20260906-109";
+} from "./coverBlocks.js?v=20260906-110";
 
 const MAP_SCALE = 1.7;
 

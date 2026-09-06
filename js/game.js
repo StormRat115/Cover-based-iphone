@@ -1,43 +1,43 @@
-import { createGameLoop } from "./gameLoop.js?v=20260906-109";
+import { createGameLoop } from "./gameLoop.js?v=20260906-110";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260906-109";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-109";
+} from "./geometry.js?v=20260906-110";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-110";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260906-109";
-import { updateSquadHud } from "./squadHud.js?v=20260906-109";
-import { updateCombatHud } from "./combatHud.js?v=20260906-109";
-import { updatePlayerHud } from "./player.js?v=20260906-109";
-import { resetSquadCommands } from "./allyCore2.js?v=20260906-109";
-import "./squadDrawer.js?v=20260906-109";
-import { createPlayer, drawPlayer } from "./player.js?v=20260906-109";
+} from "./bloodEffects.js?v=20260906-110";
+import { updateSquadHud } from "./squadHud.js?v=20260906-110";
+import { updateCombatHud } from "./combatHud.js?v=20260906-110";
+import { updatePlayerHud } from "./player.js?v=20260906-110";
+import { resetSquadCommands } from "./allyCore2.js?v=20260906-110";
+import "./squadDrawer.js?v=20260906-110";
+import { createPlayer, drawPlayer } from "./player.js?v=20260906-110";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260906-109";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-109";
+} from "./enemy.js?v=20260906-110";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260906-110";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260906-109";
+} from "./marines.js?v=20260906-110";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260906-109";
+} from "./streetMission.js?v=20260906-110";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260906-109";
+} from "./supportVehicle.js?v=20260906-110";
 import {
   createCover,
   findCoverForPoint,
@@ -46,75 +46,75 @@ import {
   isLineBlocked,
   firstCoverOnSegment,
   registerCover,
-} from "./cover.js?v=20260906-109";
+} from "./cover.js?v=20260906-110";
 import {
   isCoverFull,
   nearestFreeSlot,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260906-109";
+} from "./coverSlots.js?v=20260906-110";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260906-109";
-import { initTactical } from "./tactical.js?v=20260906-109";
-import { AudioBus } from "./audio.js?v=20260906-109";
+} from "./input.js?v=20260906-110";
+import { initTactical } from "./tactical.js?v=20260906-110";
+import { AudioBus } from "./audio.js?v=20260906-110";
 import {
   segmentWave,
   updateWaveSegments,
   waveFullyCleared,
   pendingHostiles,
-} from "./waveSegments.js?v=20260906-109";
+} from "./waveSegments.js?v=20260906-110";
 import {
   grantKillXp,
   grantWaveXp,
   getTeamProgress,
-} from "./teamProgress.js?v=20260906-109";
+} from "./teamProgress.js?v=20260906-110";
 import {
   updateGrenades,
   drawGrenades,
   trySquadGrenades,
   resetGrenades,
-} from "./grenades.js?v=20260906-109";
+} from "./grenades.js?v=20260906-110";
 import {
   applyRunModifiers,
   updateMarineReinforcements,
   resetMarineTimer,
-} from "./runModifiers.js?v=20260906-109";
+} from "./runModifiers.js?v=20260906-110";
 import {
   drawWartornAtmosphere,
   drawWartornDressing,
   drawWartornStreetSurface,
-} from "./wartornCity.js?v=20260906-109";
+} from "./wartornCity.js?v=20260906-110";
 import {
   updateSquadDialog,
   drawDialogBubbles,
   resetSquadDialog,
-} from "./squadDialog.js?v=20260906-109";
+} from "./squadDialog.js?v=20260906-110";
 import {
   unstickOverlappingUnits,
   resetUnitUnstick,
-} from "./unitCollision.js?v=20260906-109";
+} from "./unitCollision.js?v=20260906-110";
 import {
   camModeLabel,
   cameraLookAt,
   easeCameraToward,
-} from "./frontLineCam.js?v=20260906-109";
+} from "./frontLineCam.js?v=20260906-110";
 import {
   spraySuppression,
-} from "./suppression.js?v=20260906-109";
+} from "./suppression.js?v=20260906-110";
 import {
   updateAmmoDrops,
   drawAmmoDrops,
   spawnKillAmmo,
   spawnWaveAmmo,
-} from "./ammoEconomy.js?v=20260906-109";
+} from "./ammoEconomy.js?v=20260906-110";
 import {
   damageCover,
   tickCoverVisuals,
-} from "./destructibleCover.js?v=20260906-109";
+} from "./destructibleCover.js?v=20260906-110";
 import {
   createStreetObjectives,
   resetStreetObjectives,
@@ -122,7 +122,7 @@ import {
   currentPushGoal,
   objectiveStatusLine,
   drawStreetTask,
-} from "./streetObjectives.js?v=20260906-109";
+} from "./streetObjectives.js?v=20260906-110";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),

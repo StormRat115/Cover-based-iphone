@@ -1,5 +1,5 @@
-import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260906-109";
-import { moveTowardTarget } from "./combatAI.js?v=20260906-109";
+import { getCoverSlot, isLineBlocked } from "./cover.js?v=20260906-110";
+import { moveTowardTarget } from "./combatAI.js?v=20260906-110";
 
 function livingCover(c) {
   return !!(c && !c.destroyed);

@@ -1,9 +1,9 @@
 import {
   isLineBlocked,
   getHitChance,
-} from "./cover.js?v=20260906-109";
-import { weaponCopy } from "./weapons.js?v=20260906-109";
-import { AudioBus } from "./audio.js?v=20260906-109";
+} from "./cover.js?v=20260906-110";
+import { weaponCopy } from "./weapons.js?v=20260906-110";
+import { AudioBus } from "./audio.js?v=20260906-110";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -11,29 +11,29 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-109";
+} from "./combatAI.js?v=20260906-110";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260906-109";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-109";
+} from "./combatStats.js?v=20260906-110";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-110";
 import {
   isCoverFull,
   occupancyPenalty,
   occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260906-109";
+} from "./coverSlots.js?v=20260906-110";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260906-109";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-109";
-import { currentPushGoal } from "./streetObjectives.js?v=20260906-109";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-109";
+} from "./suppression.js?v=20260906-110";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-110";
+import { currentPushGoal } from "./streetObjectives.js?v=20260906-110";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-110";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -189,17 +189,18 @@ function chooseCombatEnemy(a, enemies, covers, friendlies, player, mode) {
         return friendly !== a && friendly.combatTarget === e;
       }).length,
       healthPressure = 1 - e.hp / Math.max(1, e.maxHp),
-      score = Math.max(0, 1700 - d) * 0.04 + healthPressure * 48;
+      score = Math.max(0, 1700 - d) * 0.04 + healthPressure * 76;
     score += blocked ? -16 : 26;
     score += e.exposed ? 24 : -9;
-    score -= focusCount * (healthPressure > 0.65 ? 9 : 55);
+    // Coordinate on wounded/high-value threats instead of constantly splitting fire.
+    score += focusCount * (healthPressure > 0.55 ? 22 : -28);
     if (e.type === "sniper") score += 52;
     else if (e.type === "heavy") score += a.role === "marksman" ? 44 : 24;
     else if (e.type === "shotgunner" && d < 650) score += 48;
     if (e.combatTarget === a) score += 72;
     else if (e.combatTarget === player) score += 36;
     else if (e.combatTarget && !e.combatTarget.dead) score += 18;
-    if (e === a.combatTarget) score += 16;
+    if (e === a.combatTarget) score += 34;
     if (a.role === "flanker" && d < 700 && e.exposed) score += 20;
     if (score > bestScore) {
       bestScore = score;
@@ -216,7 +217,7 @@ function reload(a) {
     AudioBus.playReload({ volume: 0.55 });
   }
 }
-function shoot(a, e, spawnProjectile, covers) {
+function shoot(a, e, spawnProjectile, covers, accuracyModifier) {
   if (
     a.dead ||
     a.downed ||
@@ -229,7 +230,7 @@ function shoot(a, e, spawnProjectile, covers) {
       getHitChance(a, e, covers),
       a.weapon.accuracy,
       a.accuracy,
-      suppressionAccuracyDelta(a) + orderAccuracy(a),
+      suppressionAccuracyDelta(a) + orderAccuracy(a) + (accuracyModifier || 0),
     ),
     hit = Math.random() * 100 < chance;
   a.weapon.ammo--;
@@ -560,6 +561,12 @@ export function updateAllies(
     if (a.cover && !inSlot) {
       a.combatState = "seeking";
       a.exposed = true;
+      // Keep pressure on visible targets while changing cover, with a movement penalty.
+      if (
+        d <= a.weapon.range * 0.92 &&
+        !isLineBlocked(a, e, covers)
+      )
+        shoot(a, e, spawnProjectile, covers, -12);
       moveTowardTarget(a, dt, 1.18);
       if (occupiesCoverSlot(a, 18)) {
         a.x = a.coverAnchorX;
@@ -584,8 +591,11 @@ export function updateAllies(
       if (a.combatState === "covered" && a.combatTimer <= 0) {
         a.combatState = "exposed";
         a.exposed = true;
-        a.combatTimer = 0.7;
-        a.shotsLeft = 3 + Math.floor(Math.random() * 3);
+        a.combatTimer = Math.max(
+          1.05,
+          Math.min(1.7, a.weapon.cooldown * 2.35 + 0.45),
+        );
+        a.shotsLeft = 5 + Math.floor(Math.random() * 4);
       } else if (a.combatState === "exposed") {
         var pp = peekPoint(a, e, 36);
         a.targetX = pp.x;
@@ -597,7 +607,7 @@ export function updateAllies(
           a.exposed = false;
           a.targetX = a.coverAnchorX;
           a.targetY = a.coverAnchorY;
-          a.combatTimer = 0.55;
+          a.combatTimer = 0.32 + Math.random() * 0.18;
         }
       } else {
         a.targetX = a.coverAnchorX;

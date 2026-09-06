@@ -2,9 +2,9 @@ export const GENERAL_ACCURACY_PENALTY = -5;
 
 export const CHARACTER_STATS = {
   player: { hp: 100, defense: 50, accuracy: 6, regen: 5, damage: 3 },
-  Rook: { hp: 150, defense: 100, accuracy: 4, regen: 4, damage: 4 },
-  Viper: { hp: 115, defense: 50, accuracy: 2, regen: 5, damage: 2 },
-  Doc: { hp: 130, defense: 75, accuracy: 8, regen: 7, damage: 5 },
+  Rook: { hp: 150, defense: 100, accuracy: 9, regen: 4, damage: 7 },
+  Viper: { hp: 115, defense: 50, accuracy: 8, regen: 5, damage: 5 },
+  Doc: { hp: 130, defense: 75, accuracy: 12, regen: 7, damage: 8 },
 };
 
 export const ENEMY_STATS = {
