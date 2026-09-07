@@ -1,6 +1,6 @@
-import { loadImage } from "./assets.js?v=20260907-113";
-import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260907-113";
-import { preloadWartornAssets } from "./wartornCity.js?v=20260907-113";
+import { loadImage } from "./assets.js?v=20260907-114";
+import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260907-114";
+import { preloadWartornAssets } from "./wartornCity.js?v=20260907-114";
 import {
   COVER_BLOCK_SIZE,
   E,
@@ -11,7 +11,7 @@ import {
   neighborMask,
   pickCoverBlockFaceSkin,
   pickCoverIsoTile,
-} from "./coverBlocks.js?v=20260907-113";
+} from "./coverBlocks.js?v=20260907-114";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
@@ -25,7 +25,7 @@ coverShapeAtlas.src =
 export const coverBlockSkins = {};
 allCoverSkinFiles().forEach(function (file) {
   var image = new Image();
-  image.src = "./assets/generated/cover/blocks/" + file + "?v=20260907-113";
+  image.src = "./assets/generated/cover/blocks/" + file + "?v=20260907-114";
   coverBlockSkins[file] = image;
 });
 export const coverBlockAtlas = coverBlockSkins["concrete-center.webp"];
@@ -290,7 +290,8 @@ function isoSkinTile(file) {
   return tile;
 }
 
-function blitIsoCube(ctx, iso, x, y, size, tile) {
+function blitIsoCube(ctx, iso, x, y, size, tile, stackLevel) {
+  stackLevel = stackLevel || 0;
   var half = size / 2;
   var nw = iso(x - half, y - half),
     ne = iso(x + half, y - half),
@@ -307,16 +308,18 @@ function blitIsoCube(ctx, iso, x, y, size, tile) {
   var dw = Math.max(20, (maxX - minX) * 1.08),
     dh = dw * (th / tw);
   var destX = (minX + maxX) / 2 - dw / 2,
-    destY = maxY - dh + 1;
+    destY = maxY - dh + 1 - stackLevel * dh * 0.56;
   ctx.save();
-  ctx.fillStyle = "rgba(0,0,0,0.3)";
-  ctx.beginPath();
-  ctx.moveTo(nw[0], nw[1] + 2);
-  ctx.lineTo(ne[0], ne[1] + 2);
-  ctx.lineTo(se[0], se[1] + 2);
-  ctx.lineTo(sw[0], sw[1] + 2);
-  ctx.closePath();
-  ctx.fill();
+  if (stackLevel === 0) {
+    ctx.fillStyle = "rgba(0,0,0,0.3)";
+    ctx.beginPath();
+    ctx.moveTo(nw[0], nw[1] + 2);
+    ctx.lineTo(ne[0], ne[1] + 2);
+    ctx.lineTo(se[0], se[1] + 2);
+    ctx.lineTo(sw[0], sw[1] + 2);
+    ctx.closePath();
+    ctx.fill();
+  }
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(tile, 0, 0, tw, th, destX, destY, dw, dh);
   ctx.restore();
@@ -344,10 +347,20 @@ function drawBlockCover(ctx, cover, iso) {
     var mask = neighborMask(block, map, true);
     var x = cover.x + block.dx;
     var y = cover.y + block.dy;
+    var stackLevels =
+      cover.type === "low" ||
+      cover.type === "car" ||
+      cover.shape === "halfwall"
+        ? 2
+        : 3;
     var tile = isoSkinTile(
-      pickCoverIsoTile(theme, mask, cover.shape, cover.type),
+      pickCoverIsoTile(theme, 0, "square", "low"),
     );
-    if (tile && blitIsoCube(ctx, iso, x, y, size, tile)) continue;
+    if (tile) {
+      for (var level = 0; level < stackLevels; level++)
+        blitIsoCube(ctx, iso, x, y, size, tile, level);
+      continue;
+    }
     var palette = THEME[theme] || THEME.jersey;
     var z = prismHeight(cover, { w: size, h: size });
     var prism = drawPrism(ctx, iso, x, y, size, size, z, palette, mask);
