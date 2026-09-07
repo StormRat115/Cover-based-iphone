@@ -1,12 +1,12 @@
 import {
   getAttachment,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260907-111";
+} from "./attachments.js?v=20260907-112";
 import {
   SIDEARMS,
   startingReserve,
   prepareWeaponAmmo,
-} from "./ammoEconomy.js?v=20260907-111";
+} from "./ammoEconomy.js?v=20260907-112";
 export { SIDEARMS };
 
 export const WEAPONS = {
@@ -15,7 +15,7 @@ export const WEAPONS = {
     name: "ASSAULT RIFLE",
     short: "RIFLE",
     damage: 24,
-    range: 1550,
+    range: 1085,
     cooldown: 0.24,
     magazine: 24,
     reload: 1.35,
@@ -30,7 +30,7 @@ export const WEAPONS = {
     name: "SIDEARM",
     short: "PISTOL",
     damage: 16,
-    range: 1050,
+    range: 735,
     cooldown: 0.42,
     magazine: 15,
     reload: 1.05,
@@ -45,7 +45,7 @@ export const WEAPONS = {
     name: "BREACH SHOTGUN",
     short: "SHOTGUN",
     damage: 13,
-    range: 800,
+    range: 560,
     cooldown: 0.9,
     magazine: 6,
     reload: 1.65,
@@ -60,7 +60,7 @@ export const WEAPONS = {
     name: "PRECISION RIFLE",
     short: "SNIPER",
     damage: 96,
-    range: 2200,
+    range: 1540,
     cooldown: 2.6,
     magazine: 5,
     reload: 3.1,
@@ -75,7 +75,7 @@ export const WEAPONS = {
     name: "LIGHT MACHINE GUN",
     short: "LMG",
     damage: 16,
-    range: 1750,
+    range: 1225,
     cooldown: 0.19,
     magazine: 48,
     reload: 2.15,
@@ -90,7 +90,7 @@ export const WEAPONS = {
     name: "DESIGNATED MARKSMAN RIFLE",
     short: "DMR",
     damage: 38,
-    range: 2000,
+    range: 1400,
     cooldown: 0.68,
     magazine: 12,
     reload: 1.55,
@@ -105,7 +105,7 @@ export const WEAPONS = {
     name: "SUBMACHINE GUN",
     short: "SMG",
     damage: 18,
-    range: 1200,
+    range: 840,
     cooldown: 0.15,
     magazine: 32,
     reload: 1.25,

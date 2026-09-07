@@ -26,14 +26,14 @@ export const ATTACHMENTS = {
     name: "ACOG Scope",
     slot: "optic",
     description: "Magnified optic: more accuracy and range, slower hip work.",
-    mods: { accuracy: 6, range: 120, hipAccuracy: -4, cooldown: 0.02 },
+    mods: { accuracy: 6, range: 84, hipAccuracy: -4, cooldown: 0.02 },
   },
   thermal_optic: {
     id: "thermal_optic",
     name: "Thermal Optic",
     slot: "optic",
     description: "Highlights threats; solid accuracy, mild fire-rate cost.",
-    mods: { accuracy: 5, range: 80, cooldown: 0.03 },
+    mods: { accuracy: 5, range: 56, cooldown: 0.03 },
   },
   compensator: {
     id: "compensator",
@@ -47,14 +47,14 @@ export const ATTACHMENTS = {
     name: "Suppressor",
     slot: "barrel",
     description: "Quieter shots; slight damage and range loss.",
-    mods: { sfxVolume: 0.55, damage: -2, range: -60, pressure: -2 },
+    mods: { sfxVolume: 0.55, damage: -2, range: -42, pressure: -2 },
   },
   heavy_barrel: {
     id: "heavy_barrel",
     name: "Heavy Barrel",
     slot: "barrel",
     description: "Stabilizes long shots; slows handling a bit.",
-    mods: { accuracy: 4, range: 150, cooldown: 0.04, spread: -0.4 },
+    mods: { accuracy: 4, range: 105, cooldown: 0.04, spread: -0.4 },
   },
   muzzle_brake: {
     id: "muzzle_brake",

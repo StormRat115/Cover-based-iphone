@@ -1,8 +1,8 @@
 let elements = null;
-import { getHitChance } from "./cover.js?v=20260907-111";
-import { combatAccuracy } from "./combatStats.js?v=20260907-111";
-import { suppressionAccuracyDelta } from "./suppression.js?v=20260907-111";
-import { orderAccuracy } from "./squadDialog.js?v=20260907-111";
+import { getHitChance } from "./cover.js?v=20260907-112";
+import { combatAccuracy } from "./combatStats.js?v=20260907-112";
+import { suppressionAccuracyDelta } from "./suppression.js?v=20260907-112";
+import { orderAccuracy } from "./squadDialog.js?v=20260907-112";
 
 function nearestEnemy(p, enemies) {
   var best = null,

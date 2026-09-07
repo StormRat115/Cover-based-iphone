@@ -1,6 +1,6 @@
-import { isLineBlocked } from "./cover.js?v=20260907-111";
-import { drawSoldier } from "./soldierAssets.js?v=20260907-111";
-import { mitigateDamage } from "./combatStats.js?v=20260907-111";
+import { isLineBlocked } from "./cover.js?v=20260907-112";
+import { drawSoldier } from "./soldierAssets.js?v=20260907-112";
+import { mitigateDamage } from "./combatStats.js?v=20260907-112";
 
 export function createSupportVehicle(objective) {
   const vehicle = {
@@ -23,7 +23,7 @@ export function createSupportVehicle(objective) {
     weapon: {
       name: "SUPPORT TURRET",
       damage: 3,
-      range: 2700,
+      range: 1890,
       cooldown: 0.075,
     },
     isSupportVehicle: true,

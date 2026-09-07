@@ -1,6 +1,6 @@
-import { loadImage } from "./assets.js?v=20260907-111";
-import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260907-111";
-import { faceThreat } from "./combatAI.js?v=20260907-111";
+import { loadImage } from "./assets.js?v=20260907-112";
+import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260907-112";
+import { faceThreat } from "./combatAI.js?v=20260907-112";
 
 export const CHARGER_SHEET = {
   file: "enemy-charger-melee-sheet.png",
@@ -46,7 +46,7 @@ export function chargerWeapon() {
     name: "RUSHBLADE",
     short: "MELEE",
     damage: 28,
-    range: 72,
+    range: 50,
     cooldown: 0.74,
     magazine: 99,
     reload: 0.2,
