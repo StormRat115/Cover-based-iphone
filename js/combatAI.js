@@ -1,22 +1,22 @@
-import { isLineBlocked } from "./cover.js?v=20260907-119";
+import { isLineBlocked } from "./cover.js?v=20260907-120";
 import {
   resolveSolidMove,
   updateVault,
   findDetour,
   firstCoverOnSegment,
   ignoreCoverFor,
-} from "./coverCollision.js?v=20260907-119";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260907-119";
+} from "./coverCollision.js?v=20260907-120";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260907-120";
 import {
   coverSlotCount,
   isCoverFull,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260907-119";
+} from "./coverSlots.js?v=20260907-120";
 import {
   suppressionPeekScale,
   suppressionMoveScale,
-} from "./suppression.js?v=20260907-119";
+} from "./suppression.js?v=20260907-120";
 function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }

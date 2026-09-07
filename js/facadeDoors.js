@@ -3,9 +3,9 @@ import {
   doorExplodeSheet,
   doorBlownIdle,
   playableStreetHalfWidth,
-} from "./wartornCity.js?v=20260907-119";
-import { createHostileAt, doorHostileType } from "./enemyCore.js?v=20260907-119";
-import { moveTowardTarget } from "./combatAI.js?v=20260907-119";
+} from "./wartornCity.js?v=20260907-120";
+import { createHostileAt, doorHostileType } from "./enemyCore.js?v=20260907-120";
+import { moveTowardTarget } from "./combatAI.js?v=20260907-120";
 
 export const DOOR_EXPLODE_FRAMES = 8;
 export const DOOR_EXPLODE_FRAME_W = 96;
@@ -72,10 +72,20 @@ export function resetFacadeDoors(director, wave) {
   return director;
 }
 
+function inPlay(e) {
+  return !!(
+    e &&
+    !e.dead &&
+    e.hp > 0 &&
+    !e.pendingSegment &&
+    (e.spawnTimer || 0) <= 0
+  );
+}
+
 function livingCount(enemies) {
   var n = 0;
   (enemies || []).forEach(function (e) {
-    if (e && !e.dead && e.hp > 0) n++;
+    if (inPlay(e)) n++;
   });
   return n;
 }
@@ -83,7 +93,7 @@ function livingCount(enemies) {
 function liveDoorCount(enemies) {
   var n = 0;
   (enemies || []).forEach(function (e) {
-    if (e && !e.dead && e.fromDoor) n++;
+    if (inPlay(e) && e.fromDoor) n++;
   });
   return n;
 }

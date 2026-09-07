@@ -1966,6 +1966,29 @@ test("top facade doors explode then spill 1-3 hostiles onto the road", async () 
     "door hostiles must walk from the top sidewalk toward the road",
   );
   assert.ok(enemies[0].x > -city.playableStreetHalfWidth() + 40);
+  const padded = [];
+  for (let i = 0; i < 15; i++) {
+    padded.push({
+      dead: false,
+      hp: 10,
+      pendingSegment: i > 2,
+      spawnTimer: i > 2 ? 1e6 : 0,
+    });
+  }
+  const crowded = doors.createFacadeDoorDirector();
+  doors.updateFacadeDoors(crowded, 8.6, {
+    wave: 1,
+    waveState: "active",
+    enemies: padded,
+    world,
+    random: () => 0,
+    onScreen: () => true,
+  });
+  assert.equal(
+    crowded.bursts.length,
+    1,
+    "pending northeast packs must not suppress doorway bursts",
+  );
 });
 
 test("cover pieces expose exclusive slots by shape", async () => {
