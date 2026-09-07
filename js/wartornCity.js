@@ -645,7 +645,11 @@ function drawFarBackdrop(ctx, iso, world, W, H) {
     count,
     band,
     dw,
-    dh;
+    dh,
+    camY,
+    sample,
+    q,
+    s;
   facades = [
     punched(facadeApartment),
     punched(facadeOffice),
@@ -654,23 +658,36 @@ function drawFarBackdrop(ctx, iso, world, W, H) {
     ready(wartornRuinCut) ? wartornRuinCut : punched(wartornRuin),
     punched(facadeAlley),
   ];
-  origin = iso(
-    world && world.cameraX != null ? world.cameraX : 0,
-    world && world.cameraY != null ? world.cameraY : 0,
-  );
-  scroll = ((origin[0] % 96) + 96) % 96;
-  count = Math.ceil((W || 390) / 84) + 5;
-  band = Math.max(160, Math.min((H || 844) * 0.38, 280));
+  camY = world && world.cameraY != null ? world.cameraY : 0;
+  band = 150;
+  if (iso) {
+    for (s = -900; s <= 900; s += 300) {
+      q = iso(TOP_EDGE + 20, camY + s);
+      if (q && q[1] > band) band = q[1];
+    }
+  }
+  band = Math.max(170, Math.min((H || 844) * 0.52, band + 16));
+  origin = iso
+    ? iso(world && world.cameraX != null ? world.cameraX : 0, camY)
+    : [0, 0];
+  scroll = ((origin[0] % 88) + 88) % 88;
+  count = Math.ceil((W || 390) / 72) + 6;
+  if (ready(wartornSkyline)) {
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.drawImage(wartornSkyline, -8, -10, (W || 390) + 16, band + 8);
+    ctx.restore();
+  }
   ctx.save();
-  for (i = -2; i < count; i++) {
-    x = i * 84 - scroll * 0.4 + 10;
-    dw = 198 + ((i * 17) % 5) * 10;
-    dh = band + 54 + ((i * 13) % 7) * 8;
+  for (i = -3; i < count; i++) {
+    x = i * 72 - scroll * 0.35 + 6;
+    dw = 210 + ((i * 17) % 7) * 12;
+    dh = band + 36 + ((i * 13) % 9) * 10;
     stamp(
       ctx,
-      facades[(i + 12) % facades.length],
-      x + dw * 0.38,
-      band + 18,
+      facades[(i + 18) % facades.length],
+      x + dw * 0.36,
+      band + 6,
       dw,
       dh,
       0.98,
@@ -679,12 +696,12 @@ function drawFarBackdrop(ctx, iso, world, W, H) {
   }
   ctx.restore();
   if (ctx.createLinearGradient) {
-    fade = ctx.createLinearGradient(0, band * 0.7, 0, band + 36);
+    fade = ctx.createLinearGradient(0, band - 24, 0, band + 20);
     if (fade && fade.addColorStop) {
       fade.addColorStop(0, "rgba(36,32,28,0)");
-      fade.addColorStop(1, "rgba(36,32,28,0.18)");
+      fade.addColorStop(1, "rgba(36,32,28,0.22)");
       ctx.fillStyle = fade;
-      ctx.fillRect(0, band * 0.7, W, band * 0.55);
+      ctx.fillRect(0, band - 24, W, 44);
     }
   }
 }
@@ -828,6 +845,7 @@ function drawSideBuildings(ctx, iso, world, onScreen) {
 export function drawWartornDressing(ctx, iso, world, W, H, onScreen) {
   var i, item, q, img, dw, dh;
   if (!ctx || !iso) return;
+  drawFarBackdrop(ctx, iso, world, W, H);
   drawOrganicPatches(ctx, iso, world, onScreen);
   drawStreetScenes(ctx, iso, world, onScreen);
   drawSideBuildings(ctx, iso, world, onScreen);
