@@ -1,9 +1,10 @@
 import {
   isLineBlocked,
+  isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260907-114";
-import { weaponCopy } from "./weapons.js?v=20260907-114";
-import { AudioBus } from "./audio.js?v=20260907-114";
+} from "./cover.js?v=20260907-115";
+import { weaponCopy } from "./weapons.js?v=20260907-115";
+import { AudioBus } from "./audio.js?v=20260907-115";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -11,29 +12,29 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260907-114";
+} from "./combatAI.js?v=20260907-115";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260907-114";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-114";
+} from "./combatStats.js?v=20260907-115";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-115";
 import {
   isCoverFull,
   occupancyPenalty,
   occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260907-114";
+} from "./coverSlots.js?v=20260907-115";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260907-114";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260907-114";
-import { currentPushGoal } from "./streetObjectives.js?v=20260907-114";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260907-114";
+} from "./suppression.js?v=20260907-115";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260907-115";
+import { currentPushGoal } from "./streetObjectives.js?v=20260907-115";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260907-115";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -184,7 +185,7 @@ function chooseCombatEnemy(a, enemies, covers, friendlies, player, mode) {
   enemies.forEach(function (e) {
     if (!activeEnemy(e)) return;
     var d = Math.hypot(a.x - e.x, a.y - e.y),
-      blocked = isLineBlocked(a, e, covers),
+      blocked = isSightBlocked(a, e, covers),
       focusCount = friendlies.filter(function (friendly) {
         return friendly !== a && friendly.combatTarget === e;
       }).length,
@@ -376,7 +377,7 @@ function shouldPressStreetObjective(a, e, d, covers, goal) {
   if ((a.suppressionTimer || 0) > 0.2 || a.timeSinceDamage < 1.2) return false;
   if (!e) return true;
   if (d < 560) return false;
-  var blocked = isLineBlocked(a, e, covers);
+  var blocked = isSightBlocked(a, e, covers);
   var hostileRange = e.weapon && e.weapon.range ? e.weapon.range : 1000;
   return blocked || d > Math.min(1050, hostileRange * 0.85);
 }
@@ -580,7 +581,7 @@ export function updateAllies(
       // Keep pressure on visible targets while changing cover, with a movement penalty.
       if (
         d <= a.weapon.range * 0.92 &&
-        !isLineBlocked(a, e, covers)
+        !isSightBlocked(a, e, covers)
       )
         shoot(a, e, spawnProjectile, covers, -12);
       moveTowardTarget(a, dt, 1.18);

@@ -2,10 +2,10 @@ import {
   createAllies,
   updateAllies as updateAlliesCore,
   SQUAD_MODES,
-} from "./allyCore2.js?v=20260907-114";
-import { drawSoldier } from "./soldierAssets.js?v=20260907-114";
-import { drawCoverShield } from "./coverSlots.js?v=20260907-114";
-import { speak } from "./squadDialog.js?v=20260907-114";
+} from "./allyCore2.js?v=20260907-115";
+import { drawSoldier } from "./soldierAssets.js?v=20260907-115";
+import { drawCoverShield } from "./coverSlots.js?v=20260907-115";
+import { speak } from "./squadDialog.js?v=20260907-115";
 export { createAllies, SQUAD_MODES };
 var ALLY_LINES = {
   contact: ["CONTACT!", "ENEMY SPOTTED!", "I SEE THEM!", "EYES UP!"],

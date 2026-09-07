@@ -1,15 +1,16 @@
 import {
   isLineBlocked,
+  isSightBlocked,
   getCoverSlot,
   getHitChance,
   chooseCoverPeek,
-} from "./cover.js?v=20260907-114";
-import { weaponCopy } from "./weapons.js?v=20260907-114";
+} from "./cover.js?v=20260907-115";
+import { weaponCopy } from "./weapons.js?v=20260907-115";
 import {
   isCoverFull,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260907-114";
+} from "./coverSlots.js?v=20260907-115";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -184,7 +185,7 @@ function choosePosition(e, player, covers, enemies) {
   e.exposed = false;
   e.coverCommit = rand(4.2, 7.2);
   e.coverCycles = 0;
-  e.angleFails = isLineBlocked(peek, player, covers) ? 1 : 0;
+  e.angleFails = isSightBlocked(peek, player, covers) ? 1 : 0;
   e.repathTimer = rand(0.5, 0.85);
   return true;
 }
@@ -298,7 +299,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
           enterPeeking(e, player, covers);
       } else if (e.combatState === "peeking") {
         if (before <= 10) {
-          if (isLineBlocked(e, player, covers)) {
+          if (isSightBlocked(e, player, covers)) {
             e.angleFails++;
             enterTucking(e);
           } else {
@@ -324,7 +325,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
         if (before <= 10 || e.combatTimer <= 0) enterCovered(e);
       }
     } else e.exposed = true;
-    var lineBlocked = isLineBlocked(e, player, covers),
+    var lineBlocked = isSightBlocked(e, player, covers),
       chance = Math.max(
         8,
         Math.min(98, getHitChance(e, player, covers) + e.weapon.accuracy),

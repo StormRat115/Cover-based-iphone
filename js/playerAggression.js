@@ -1,5 +1,5 @@
-import { isLineBlocked } from "./cover.js?v=20260907-114";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-114";
+import { isSightBlocked } from "./cover.js?v=20260907-115";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-115";
 
 var burstUntil = 0,
   burstPauseUntil = 0,
@@ -45,7 +45,7 @@ function tick() {
   p.aimTarget = e;
   var d = distance(p, e);
   if (d > p.weapon.range) return;
-  if (isLineBlocked(p, e, covers) && !e.exposed) return;
+  if (isSightBlocked(p, e, covers)) return;
   if (p.weapon.ammo <= 0) {
     p.startReload();
     return;

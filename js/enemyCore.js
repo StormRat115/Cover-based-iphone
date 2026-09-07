@@ -1,27 +1,31 @@
-import { isLineBlocked, getHitChance } from "./cover.js?v=20260907-114";
-import { weaponCopy } from "./weapons.js?v=20260907-114";
+import {
+  isLineBlocked,
+  isSightBlocked,
+  getHitChance,
+} from "./cover.js?v=20260907-115";
+import { weaponCopy } from "./weapons.js?v=20260907-115";
 import {
   moveTowardTarget,
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260907-114";
+} from "./combatAI.js?v=20260907-115";
 import {
   ENEMY_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260907-114";
-import { AudioBus } from "./audio.js?v=20260907-114";
+} from "./combatStats.js?v=20260907-115";
+import { AudioBus } from "./audio.js?v=20260907-115";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260907-114";
-import { orderDefense } from "./squadDialog.js?v=20260907-114";
-import { assignEnemyCover } from "./enemyCoverAI.js?v=20260907-114";
-import { chargerWeapon } from "./chargerEnemy.js?v=20260907-114";
-import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260907-114";
+} from "./suppression.js?v=20260907-115";
+import { orderDefense } from "./squadDialog.js?v=20260907-115";
+import { assignEnemyCover } from "./enemyCoverAI.js?v=20260907-115";
+import { chargerWeapon } from "./chargerEnemy.js?v=20260907-115";
+import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260907-115";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -235,7 +239,7 @@ function chooseCombatTarget(e, player, covers, enemies) {
     bestScore = -Infinity;
   candidates.forEach(function (t) {
     var d = Math.hypot(t.x - e.x, t.y - e.y),
-      blocked = isLineBlocked(e, t, covers),
+      blocked = isSightBlocked(e, t, covers),
       score = 0;
     score += Math.max(0, 900 - d) * 0.025;
     score += blocked ? -32 : 22;
@@ -471,7 +475,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       dist >= e.weapon.range
     )
       continue;
-    var lineBlocked = isLineBlocked(e, threat, covers);
+    var lineBlocked = isSightBlocked(e, threat, covers);
     var peekOffset = e.cover
       ? Math.hypot(e.x - e.coverAnchorX, e.y - e.coverAnchorY)
       : 999;

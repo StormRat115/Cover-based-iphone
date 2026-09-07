@@ -1,6 +1,6 @@
-import { isLineBlocked } from "./cover.js?v=20260907-114";
-import { drawSoldier } from "./soldierAssets.js?v=20260907-114";
-import { mitigateDamage } from "./combatStats.js?v=20260907-114";
+import { isSightBlocked } from "./cover.js?v=20260907-115";
+import { drawSoldier } from "./soldierAssets.js?v=20260907-115";
+import { mitigateDamage } from "./combatStats.js?v=20260907-115";
 
 export function createSupportVehicle(objective) {
   const vehicle = {
@@ -96,7 +96,8 @@ export function updateSupportVehicle(
     facingY: vehicle.facingY,
     muzzle: vehicle.muzzle,
   });
-  if (vehicle.fireCooldown > 0 || isLineBlocked(vehicle, target, covers)) return;
+  if (vehicle.fireCooldown > 0 || isSightBlocked(vehicle, target, covers))
+    return;
   vehicle.fireCooldown = vehicle.weapon.cooldown;
   vehicle.muzzle = 0.09;
   vehicle.gunner.muzzle = 0.09;

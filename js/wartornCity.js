@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260907-114";
+import { loadImage } from "./assets.js?v=20260907-115";
 
 var ROAD = 980;
 var WALK = 260;
@@ -6,7 +6,7 @@ var WALK = 260;
 function surface(file) {
   var image = new Image();
   image.decoding = "async";
-  image.src = "./assets/generated/environment/" + file + "?v=20260907-114";
+  image.src = "./assets/generated/environment/" + file + "?v=20260907-115";
   return image;
 }
 

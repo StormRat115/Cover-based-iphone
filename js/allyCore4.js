@@ -1,15 +1,16 @@
 import {
   isLineBlocked,
+  isSightBlocked,
   getCoverSlot,
   getHitChance,
   chooseCoverPeek,
-} from "./cover.js?v=20260907-114";
-import { weaponCopy } from "./weapons.js?v=20260907-114";
+} from "./cover.js?v=20260907-115";
+import { weaponCopy } from "./weapons.js?v=20260907-115";
 import {
   isCoverFull,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260907-114";
+} from "./coverSlots.js?v=20260907-115";
 
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW",
@@ -278,7 +279,7 @@ function pickCover(a, player, covers, allies, target, mode) {
   a.exposed = false;
   a.coverCommit = rand(3.8, 6.2);
   a.coverCycles = 0;
-  a.angleFails = isLineBlocked(peek, target, covers) ? 1 : 0;
+  a.angleFails = isSightBlocked(peek, target, covers) ? 1 : 0;
   a.repathTimer = rand(0.45, 0.75);
 }
 function move(a, dt) {
@@ -470,7 +471,7 @@ export function updateAllies(
           peek(a, t, covers);
       } else if (a.combatState === "peeking") {
         if (before <= 10) {
-          if (isLineBlocked(a, t, covers)) {
+          if (isSightBlocked(a, t, covers)) {
             a.angleFails++;
             tuck(a);
           } else {
@@ -508,7 +509,7 @@ export function updateAllies(
       dist < a.weapon.range &&
       !a.reloading &&
       ((a.cover && a.combatState === "firing") || !a.cover) &&
-      !isLineBlocked(a, t, covers);
+      !isSightBlocked(a, t, covers);
     if (a.fire <= 0 && can) {
       var cadence = a.role === "flanker" ? 0.9 : 1.05;
       a.fire = a.weapon.cooldown * cadence + Math.random() * 0.16;

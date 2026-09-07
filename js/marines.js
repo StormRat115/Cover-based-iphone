@@ -1,7 +1,7 @@
-import { updateAllies as updateFriendlyAI } from "./allyCore2.js?v=20260907-114";
-import { weaponCopy } from "./weapons.js?v=20260907-114";
-import { drawSoldier } from "./soldierAssets.js?v=20260907-114";
-import { drawCoverShield } from "./coverSlots.js?v=20260907-114";
+import { updateAllies as updateFriendlyAI } from "./allyCore2.js?v=20260907-115";
+import { weaponCopy } from "./weapons.js?v=20260907-115";
+import { drawSoldier } from "./soldierAssets.js?v=20260907-115";
+import { drawCoverShield } from "./coverSlots.js?v=20260907-115";
 
 const MARINE_STARTS = [
   [-240, 255],

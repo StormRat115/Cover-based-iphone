@@ -1,120 +1,121 @@
-import { createGameLoop } from "./gameLoop.js?v=20260907-114";
+import { createGameLoop } from "./gameLoop.js?v=20260907-115";
 import {
   worldToScreen,
   screenToWorld as unproject,
   nearestLivingEnemy,
-} from "./geometry.js?v=20260907-114";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-114";
+} from "./geometry.js?v=20260907-115";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-115";
 import {
   updateBlood,
   drawBlood,
   resetBlood,
-} from "./bloodEffects.js?v=20260907-114";
-import { updateSquadHud } from "./squadHud.js?v=20260907-114";
-import { updateCombatHud } from "./combatHud.js?v=20260907-114";
-import { updatePlayerHud } from "./player.js?v=20260907-114";
-import { resetSquadCommands } from "./allyCore2.js?v=20260907-114";
-import "./squadDrawer.js?v=20260907-114";
-import { createPlayer, drawPlayer } from "./player.js?v=20260907-114";
+} from "./bloodEffects.js?v=20260907-115";
+import { updateSquadHud } from "./squadHud.js?v=20260907-115";
+import { updateCombatHud } from "./combatHud.js?v=20260907-115";
+import { updatePlayerHud } from "./player.js?v=20260907-115";
+import { resetSquadCommands } from "./allyCore2.js?v=20260907-115";
+import "./squadDrawer.js?v=20260907-115";
+import { createPlayer, drawPlayer } from "./player.js?v=20260907-115";
 import {
   createBandits,
   updateBandits,
   drawBandit,
   drawSniperLasers,
-} from "./enemy.js?v=20260907-114";
-import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260907-114";
+} from "./enemy.js?v=20260907-115";
+import { createAllies, updateAllies, drawAlly } from "./ally.js?v=20260907-115";
 import {
   createMarines,
   updateMarines,
   drawMarine,
-} from "./marines.js?v=20260907-114";
+} from "./marines.js?v=20260907-115";
 import {
   createStreetMission,
   updateStreetMission,
   captureSecondsRemaining,
-} from "./streetMission.js?v=20260907-114";
+} from "./streetMission.js?v=20260907-115";
 import {
   createSupportVehicle,
   updateSupportVehicle,
   drawSupportVehicle,
-} from "./supportVehicle.js?v=20260907-114";
+} from "./supportVehicle.js?v=20260907-115";
 import {
   createCover,
   findCoverForPoint,
   getCoverSlot,
   drawCover,
   isLineBlocked,
+  isSightBlocked,
   firstCoverOnSegment,
   registerCover,
-} from "./cover.js?v=20260907-114";
+} from "./cover.js?v=20260907-115";
 import {
   isCoverFull,
   nearestFreeSlot,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260907-114";
+} from "./coverSlots.js?v=20260907-115";
 import {
   initKeyboard,
   getKeyboardMove,
   isKeyboardFireHeld,
   clearKeyboard,
-} from "./input.js?v=20260907-114";
-import { initTactical } from "./tactical.js?v=20260907-114";
-import { AudioBus } from "./audio.js?v=20260907-114";
+} from "./input.js?v=20260907-115";
+import { initTactical } from "./tactical.js?v=20260907-115";
+import { AudioBus } from "./audio.js?v=20260907-115";
 import {
   segmentWave,
   updateWaveSegments,
   waveFullyCleared,
   pendingHostiles,
-} from "./waveSegments.js?v=20260907-114";
+} from "./waveSegments.js?v=20260907-115";
 import {
   grantKillXp,
   grantWaveXp,
   getTeamProgress,
-} from "./teamProgress.js?v=20260907-114";
+} from "./teamProgress.js?v=20260907-115";
 import {
   updateGrenades,
   drawGrenades,
   trySquadGrenades,
   resetGrenades,
-} from "./grenades.js?v=20260907-114";
+} from "./grenades.js?v=20260907-115";
 import {
   applyRunModifiers,
   updateMarineReinforcements,
   resetMarineTimer,
-} from "./runModifiers.js?v=20260907-114";
+} from "./runModifiers.js?v=20260907-115";
 import {
   drawWartornAtmosphere,
   drawWartornDressing,
   drawWartornStreetSurface,
-} from "./wartornCity.js?v=20260907-114";
+} from "./wartornCity.js?v=20260907-115";
 import {
   updateSquadDialog,
   drawDialogBubbles,
   resetSquadDialog,
-} from "./squadDialog.js?v=20260907-114";
+} from "./squadDialog.js?v=20260907-115";
 import {
   unstickOverlappingUnits,
   resetUnitUnstick,
-} from "./unitCollision.js?v=20260907-114";
+} from "./unitCollision.js?v=20260907-115";
 import {
   camModeLabel,
   cameraLookAt,
   easeCameraToward,
-} from "./frontLineCam.js?v=20260907-114";
+} from "./frontLineCam.js?v=20260907-115";
 import {
   spraySuppression,
-} from "./suppression.js?v=20260907-114";
+} from "./suppression.js?v=20260907-115";
 import {
   updateAmmoDrops,
   drawAmmoDrops,
   spawnKillAmmo,
   spawnWaveAmmo,
-} from "./ammoEconomy.js?v=20260907-114";
+} from "./ammoEconomy.js?v=20260907-115";
 import {
   damageCover,
   tickCoverVisuals,
-} from "./destructibleCover.js?v=20260907-114";
+} from "./destructibleCover.js?v=20260907-115";
 import {
   createStreetObjectives,
   resetStreetObjectives,
@@ -122,7 +123,7 @@ import {
   currentPushGoal,
   objectiveStatusLine,
   drawStreetTask,
-} from "./streetObjectives.js?v=20260907-114";
+} from "./streetObjectives.js?v=20260907-115";
 var canvas = document.querySelector("#game"),
   ctx = canvas.getContext("2d"),
   status = document.querySelector("#status"),
@@ -273,7 +274,7 @@ function chooseAutoCombatEnemy() {
     bestScore = -Infinity;
   activeCombatEnemies().forEach(function (enemy) {
     var d = distance(player, enemy),
-      blocked = isLineBlocked(player, enemy, covers),
+      blocked = isSightBlocked(player, enemy, covers),
       healthPressure = 1 - enemy.hp / Math.max(1, enemy.maxHp),
       score = Math.max(0, 1800 - d) * 0.045 + healthPressure * 42;
     score += blocked ? -18 : 24;
@@ -492,7 +493,7 @@ function canPlayerEngage(e) {
   if (!e || e.dead || distance(player, e) > player.weapon.range) return false;
   // A covered player fires by peeking around their current cover. Checking only
   // the actor's center makes that same cover look like an obstruction.
-  return !isLineBlocked(player, e, covers) || e.exposed || !!player.cover;
+  return !isSightBlocked(player, e, covers);
 }
 function attemptFire() {
   if (
@@ -648,7 +649,7 @@ function updateAutoPlayer(dt) {
   }
   player.objectiveAdvancePaused = true;
   var d = distance(player, e),
-    blocked = isLineBlocked(player, e, covers),
+    blocked = isSightBlocked(player, e, covers),
     engage = Math.min(player.weapon.range * 0.86, 900),
     objectivePush =
       strategicGoal &&
