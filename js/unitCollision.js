@@ -56,6 +56,9 @@ export function resolveUnitMove(actor, nx, ny, units) {
   for (var i = 0; i < units.length; i++) {
     var other = units[i];
     if (other === actor || !isUnitSolid(other)) continue;
+    // Marines yield the lane to direct player input instead of trapping the
+    // player between a friendly body and occupied cover.
+    if (actor.isPlayer && other.yieldsToPlayer) continue;
     if (blockedBy(actor, nx, ny, other)) {
       hit = other;
       break;
@@ -121,6 +124,18 @@ export function unstickOverlappingUnits(units, dt) {
       var push = (min - d) * 0.5 + 1.5,
         nx = dx / d,
         ny = dy / d;
+      var playerYieldPair =
+        (a.isPlayer && b.yieldsToPlayer) ||
+        (b.isPlayer && a.yieldsToPlayer);
+      if (playerYieldPair) {
+        var yielding = a.yieldsToPlayer ? a : b,
+          direction = yielding === b ? 1 : -1,
+          fullPush = min - d + 2;
+        yielding.x += nx * fullPush * direction;
+        yielding.y += ny * fullPush * direction;
+        stuck.delete(key);
+        continue;
+      }
       a.x -= nx * push;
       a.y -= ny * push;
       b.x += nx * push;

@@ -1,9 +1,9 @@
 import {
   isLineBlocked,
   getHitChance,
-} from "./cover.js?v=20260906-110";
-import { weaponCopy } from "./weapons.js?v=20260906-110";
-import { AudioBus } from "./audio.js?v=20260906-110";
+} from "./cover.js?v=20260907-111";
+import { weaponCopy } from "./weapons.js?v=20260907-111";
+import { AudioBus } from "./audio.js?v=20260907-111";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -11,29 +11,29 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260906-110";
+} from "./combatAI.js?v=20260907-111";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260906-110";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260906-110";
+} from "./combatStats.js?v=20260907-111";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-111";
 import {
   isCoverFull,
   occupancyPenalty,
   occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260906-110";
+} from "./coverSlots.js?v=20260907-111";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260906-110";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260906-110";
-import { currentPushGoal } from "./streetObjectives.js?v=20260906-110";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260906-110";
+} from "./suppression.js?v=20260907-111";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260907-111";
+import { currentPushGoal } from "./streetObjectives.js?v=20260907-111";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260907-111";
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -337,6 +337,13 @@ function advanceToMission(a, mission, covers, friendlies, dt, threats) {
     });
     var score =
       remaining * 0.55 + travel * 0.3 + occupancyPenalty(cover, friendlies, a);
+    if (
+      a.isMarine &&
+      typeof window !== "undefined" &&
+      window.__battlePlayer &&
+      cover === window.__battlePlayer.cover
+    )
+      score += 2400;
     if (cover.type === "wide" || cover.type === "car") score -= 90;
     score += exposedTo * 260;
     if (primaryThreat && isLineBlocked(slot, primaryThreat, [cover])) score -= 140;
@@ -385,6 +392,9 @@ export function updateAllies(
 ) {
   squadMode = mode || window.squadMode || squadMode;
   var friendlyTeam = allies.concat(otherFriendlies || []);
+  // The player owns cover slots too. Excluding them let AI friendlies reserve
+  // the same slot and physically pin the player against the barricade.
+  if (player && friendlyTeam.indexOf(player) < 0) friendlyTeam.push(player);
   allies.forEach(function (a) {
     a.hit = Math.max(0, a.hit - dt);
     a.muzzle = Math.max(0, a.muzzle - dt);
@@ -523,6 +533,12 @@ export function updateAllies(
           );
         })
       : covers;
+    if (a.isMarine && player && player.cover) {
+      var marineAlternatives = availableCovers.filter(function (cover) {
+        return cover !== player.cover;
+      });
+      if (marineAlternatives.length) availableCovers = marineAlternatives;
+    }
     var useful = inSlot && coverStillUseful(a, e, covers, 80, 2000);
     var headingToSlot = !!(a.cover && !inSlot && Number.isFinite(a.coverAnchorX));
     var shouldLeap =

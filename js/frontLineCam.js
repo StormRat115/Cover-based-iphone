@@ -4,8 +4,9 @@
 export var CAM_PLAYER = "player";
 export var CAM_FRONT_LINE = "frontLine";
 export var CAMERA_EASE = 0.09;
-export var CAMERA_PAD_X = 430;
-export var CAMERA_PAD_Y = 330;
+// Keep the same edge protection after the 2x field-of-view increase.
+export var CAMERA_PAD_X = 860;
+export var CAMERA_PAD_Y = 660;
 var CLUSTER_DEPTH = 480;
 var FIGHT_RANGE = 880;
 

@@ -1,4 +1,4 @@
-const BUILD = "20260906-110";
+const BUILD = "20260907-111";
 const element = (id) => document.getElementById(id);
 
 function showGameError(label, error) {
@@ -27,11 +27,11 @@ async function boot() {
     // Independent modules and images download concurrently, using the same URLs
     // as the gameplay imports so atlases are built only once.
     const [menu, soldiers, city, audio, charger] = await Promise.all([
-      import("./mainMenu.js?v=20260906-110"),
-      import("./soldierAssets.js?v=20260906-110"),
-      import("./cityAssets.js?v=20260906-110"),
-      import("./audio.js?v=20260906-110"),
-      import("./chargerEnemy.js?v=20260906-110"),
+      import("./mainMenu.js?v=20260907-111"),
+      import("./soldierAssets.js?v=20260907-111"),
+      import("./cityAssets.js?v=20260907-111"),
+      import("./audio.js?v=20260907-111"),
+      import("./chargerEnemy.js?v=20260907-111"),
     ]);
     if (audio && audio.AudioBus) audio.AudioBus.preload();
     let soldierProgress = 0,
@@ -60,7 +60,7 @@ async function boot() {
       throw new Error("Battlefield art is not ready. Please retry loading.");
     }
     setLoad(95, "LOADING STREET PUSH");
-    const game = await import("./game.js?v=20260906-110");
+    const game = await import("./game.js?v=20260907-111");
     setLoad(100, "READY");
     start.classList.add("ready");
     start.addEventListener(

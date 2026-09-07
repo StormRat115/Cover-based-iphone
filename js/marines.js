@@ -1,7 +1,7 @@
-import { updateAllies as updateFriendlyAI } from "./allyCore2.js?v=20260906-110";
-import { weaponCopy } from "./weapons.js?v=20260906-110";
-import { drawSoldier } from "./soldierAssets.js?v=20260906-110";
-import { drawCoverShield } from "./coverSlots.js?v=20260906-110";
+import { updateAllies as updateFriendlyAI } from "./allyCore2.js?v=20260907-111";
+import { weaponCopy } from "./weapons.js?v=20260907-111";
+import { drawSoldier } from "./soldierAssets.js?v=20260907-111";
+import { drawCoverShield } from "./coverSlots.js?v=20260907-111";
 
 const MARINE_STARTS = [
   [-240, 255],
@@ -59,6 +59,7 @@ export function createMarineAt(x, y, index) {
     repositionCooldown: index * 0.12,
     recovering: false,
     isMarine: true,
+    yieldsToPlayer: true,
     aggressiveAdvance: true,
   };
 }
