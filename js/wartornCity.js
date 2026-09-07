@@ -85,7 +85,7 @@ function buildTopFacades() {
       x: TOP_EDGE - 36 - hash01(i * 19 + 4) * 70,
       y: y,
       kind: kind,
-      s: 0.86 + hash01(i * 17 + 1) * 0.32,
+      s: 1.05 + hash01(i * 17 + 1) * 0.28,
       flip: hash01(i * 11 + 8) > 0.52,
       door: i % 3 === 0,
       side: "top",
@@ -654,23 +654,26 @@ function drawFarBackdrop(ctx, iso, world, W, H) {
     ready(wartornRuinCut) ? wartornRuinCut : punched(wartornRuin),
     punched(facadeAlley),
   ];
-  origin = iso(world && world.cameraX != null ? world.cameraX : 0, 0);
-  scroll = ((origin[0] % 118) + 118) % 118;
-  count = Math.ceil((W || 390) / 110) + 4;
-  band = Math.max(118, Math.min((H || 844) * 0.28, 210));
+  origin = iso(
+    world && world.cameraX != null ? world.cameraX : 0,
+    world && world.cameraY != null ? world.cameraY : 0,
+  );
+  scroll = ((origin[0] % 96) + 96) % 96;
+  count = Math.ceil((W || 390) / 84) + 5;
+  band = Math.max(160, Math.min((H || 844) * 0.38, 280));
   ctx.save();
   for (i = -2; i < count; i++) {
-    x = i * 110 - scroll * 0.55 + 18;
-    dw = 168 + ((i * 17) % 5) * 6;
-    dh = band + 28 + ((i * 13) % 7) * 5;
+    x = i * 84 - scroll * 0.4 + 10;
+    dw = 198 + ((i * 17) % 5) * 10;
+    dh = band + 54 + ((i * 13) % 7) * 8;
     stamp(
       ctx,
       facades[(i + 12) % facades.length],
-      x + dw * 0.42,
-      band + 8,
+      x + dw * 0.38,
+      band + 18,
       dw,
       dh,
-      0.94,
+      0.98,
       i % 3 === 0,
     );
   }

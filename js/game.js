@@ -1201,12 +1201,14 @@ function drawMapDecor() {
     walkR = curbR + WALK,
     y,
     step;
+  // Keep the playable corridor filled, but leave the top/side void
+  // so atmosphere façades can dress the grey band above the sidewalk.
   worldPoly(
     [
-      [world.minX, world.minY],
-      [world.maxX, world.minY],
-      [world.maxX, world.maxY],
-      [world.minX, world.maxY],
+      [walkL, world.minY],
+      [walkR, world.minY],
+      [walkR, world.maxY],
+      [walkL, world.maxY],
     ],
     "#322e29",
   );
