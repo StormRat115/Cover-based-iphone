@@ -1,5 +1,5 @@
-import { makeShapedCover } from "./cityMap.js?v=20260907-116";
-import { prepareCoverHp } from "./destructibleCover.js?v=20260907-116";
+import { makeShapedCover } from "./cityMap.js?v=20260907-117";
+import { prepareCoverHp } from "./destructibleCover.js?v=20260907-117";
 
 export const OBJECTIVE_TYPES = ["hold_crosswalk", "clear_blockade", "escort_segment"];
 
@@ -111,6 +111,7 @@ export function currentPushGoal(mission, streetState) {
       radius: streetState.current.radius,
       source: "street",
       type: streetState.current.type,
+      id: streetState.current.id,
     };
   }
   if (mission && mission.objective) {
@@ -119,9 +120,42 @@ export function currentPushGoal(mission, streetState) {
       y: mission.objective.y,
       radius: mission.objective.radius,
       source: "fort",
+      id: "fort",
     };
   }
   return null;
+}
+
+export function pushGoalKey(goal) {
+  if (!goal) return "";
+  return (
+    (goal.source || "") +
+    ":" +
+    (goal.id || "") +
+    ":" +
+    Math.round(goal.x) +
+    ":" +
+    Math.round(goal.y)
+  );
+}
+
+export function releaseStreetObjectiveHold(actors) {
+  (actors || []).forEach(function (a) {
+    if (!a || a.dead) return;
+    a.missionPause = 0;
+    a.objectiveAdvancePaused = false;
+    a.repositionCooldown = 0;
+    a.objectiveHold = false;
+    var parked =
+      Math.hypot(
+        (a.targetX == null ? a.x : a.targetX) - a.x,
+        (a.targetY == null ? a.y : a.targetY) - a.y,
+      ) < 14;
+    if (parked || a.combatState === "covered") {
+      a.combatState = "seeking";
+      a.exposed = true;
+    }
+  });
 }
 
 export function updateStreetObjectives(state, dt, opts) {

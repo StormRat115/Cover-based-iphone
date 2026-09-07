@@ -1,12 +1,12 @@
 import {
   getAttachment,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260907-116";
+} from "./attachments.js?v=20260907-117";
 import {
   SIDEARMS,
   startingReserve,
   prepareWeaponAmmo,
-} from "./ammoEconomy.js?v=20260907-116";
+} from "./ammoEconomy.js?v=20260907-117";
 export { SIDEARMS };
 
 export const WEAPONS = {

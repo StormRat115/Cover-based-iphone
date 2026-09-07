@@ -236,6 +236,10 @@ test("Marines use 20 defense and aggressively advance into firing cover", async 
   const h = createHarness();
   const marineModule = await h.importModule(`js/marines.js?v=${BUILD}`);
   const coverModule = await h.importModule(`js/cover.js?v=${BUILD}`);
+  const knobs = marineModule.MARINE_AGGRO;
+  assert.ok(knobs.leapRangeFactor < 1.3, "marines should leapfrog sooner");
+  assert.ok(knobs.coveredDwell < 0.35, "marines should hold cover less passively");
+  assert.ok(knobs.engageRangeFactor <= 0.42, "marines should close to pressure range");
   const marines = marineModule.createMarines(),
     enemy = {
       x: 1350,
@@ -989,8 +993,16 @@ test("friendly AI pauses the objective push for contact and resumes after the wi
   assert.ok(
     h.window.__battleAllies.every((ally) => ally.objectiveAdvancePaused),
   );
+  const closeHostiles = h.window.__battleMarines.filter((marine) => {
+    const threat = enemies[0];
+    return (
+      !marine.dead &&
+      Math.hypot(marine.x - threat.x, marine.y - threat.y) < 500
+    );
+  });
   assert.ok(
-    h.window.__battleMarines.every((marine) => marine.objectiveAdvancePaused),
+    closeHostiles.every((marine) => marine.objectiveAdvancePaused),
+    "marines in contact should pause the objective rush",
   );
 
   enemies[0].dead = true;
@@ -1159,6 +1171,17 @@ test("enemy magazines are consumed and reload, and blood memory stays bounded", 
   assert.ok(blood.getBloodStains().length <= 240);
   blood.resetBlood();
   assert.equal(blood.getBloodStains().length, 0);
+  h.window.__battleEnemies = [{ x: 0, y: 0, dead: true, hp: 0 }];
+  blood.updateBlood(1);
+  const stains = blood.getBloodStains();
+  assert.ok(stains.length >= 10, "kills should spray a bit more blood");
+  assert.ok(
+    stains.some((stain) => stain.size >= 4),
+    "splatter stamps should be slightly larger",
+  );
+  assert.equal(blood.BLOOD_STAIN_COLOR, "#3d0e0c");
+  assert.equal(blood.BLOOD_PARTICLE_COLOR, "#5c1410");
+  blood.resetBlood();
 });
 
 test("held fire and movement release on blur; form inputs remain usable", async () => {
@@ -2357,4 +2380,112 @@ test("street objectives cycle and give marines a local goal", async () => {
   });
   assert.ok(covers.length >= 3);
   assert.ok(covers.every((c) => c.theme === "wreck"));
+});
+
+test("completing a street objective unsticks friendlies and autoplay", async () => {
+  const h = createHarness();
+  const obj = await h.importModule(`js/streetObjectives.js?v=${BUILD}`);
+  const alliesModule = await h.importModule(`js/allyCore2.js?v=${BUILD}`);
+  const marineModule = await h.importModule(`js/marines.js?v=${BUILD}`);
+  const missionModule = await h.importModule(`js/streetMission.js?v=${BUILD}`);
+  const coverModule = await h.importModule(`js/cover.js?v=${BUILD}`);
+  const mission = missionModule.createStreetMission();
+  h.window.__streetMission = mission;
+  const state = obj.createStreetObjectives();
+  h.window.__streetObjectives = state;
+  const covers = coverModule.createCover(() => 0.42);
+  const player = {
+    x: 0,
+    y: 80,
+    hp: 100,
+    maxHp: 100,
+    dead: false,
+    downed: false,
+  };
+  const allies = alliesModule.createAllies();
+  const marines = marineModule.createMarines();
+  const spawned = obj.spawnStreetObjective(state, {
+    type: "hold_crosswalk",
+    actors: [player],
+    covers,
+    random: () => 0.2,
+  });
+  const parked = [player].concat(allies).concat(marines);
+  parked.forEach((actor, i) => {
+    actor.x = spawned.x + (i - 4) * 18;
+    actor.y = spawned.y;
+    actor.targetX = actor.x;
+    actor.targetY = actor.y;
+    actor.combatState = "covered";
+    actor.missionPause = 2.4;
+    actor.objectiveAdvancePaused = true;
+    actor.repositionCooldown = 2;
+    actor.lastPushGoalKey = "street:" + spawned.id + ":" + Math.round(spawned.x) + ":" + Math.round(spawned.y);
+  });
+  for (let i = 0; i < 20; i++)
+    obj.updateStreetObjectives(state, 0.5, {
+      player,
+      squad: allies,
+      marines,
+      covers,
+    });
+  assert.equal(state.current, null);
+  assert.ok(state.completed >= 1);
+  obj.releaseStreetObjectiveHold(parked);
+  assert.ok(parked.every((actor) => actor.missionPause === 0));
+  assert.ok(parked.every((actor) => actor.combatState === "seeking"));
+  const allyStart = allies.map((ally) => ally.y);
+  const marineStart = marines.map((marine) => marine.y);
+  for (let i = 0; i < 180; i++) {
+    alliesModule.updateAllies(
+      allies,
+      1 / 60,
+      player,
+      covers,
+      [],
+      null,
+      "FOLLOW",
+      marines,
+    );
+    marineModule.updateMarines(marines, 1 / 60, player, covers, [], null, allies);
+  }
+  assert.ok(
+    allies.some((ally, i) => ally.y < allyStart[i] - 40),
+    "squad should leave a finished street marker immediately",
+  );
+  assert.ok(
+    marines.some((marine, i) => marine.y < marineStart[i] - 40),
+    "marines should leave a finished street marker immediately",
+  );
+
+  const game = await h.importModule(entry);
+  game.startGame();
+  const livePlayer = h.window.__battlePlayer;
+  const street = h.window.__streetObjectives;
+  h.window.__battleEnemies.forEach((enemy) => {
+    enemy.dead = true;
+    enemy.hp = 0;
+    enemy.deathTimer = enemy.deathDuration;
+  });
+  const liveTask = obj.spawnStreetObjective(street, {
+    type: "hold_crosswalk",
+    actors: [livePlayer],
+    random: () => 0.15,
+  });
+  livePlayer.x = liveTask.x;
+  livePlayer.y = liveTask.y;
+  livePlayer.tx = liveTask.x;
+  livePlayer.ty = liveTask.y;
+  livePlayer.cover = null;
+  h.nodes.get("autoPlay").emit("pointerdown");
+  street.current.hold = street.current.holdNeed;
+  h.frame();
+  const y0 = livePlayer.y;
+  const dest0 = { x: livePlayer.tx, y: livePlayer.ty };
+  h.advance(2.4);
+  const moved =
+    livePlayer.y < y0 - 24 ||
+    Math.hypot(livePlayer.tx - dest0.x, livePlayer.ty - dest0.y) > 20 ||
+    Math.hypot(livePlayer.x - liveTask.x, livePlayer.y - liveTask.y) > 24;
+  assert.ok(moved, "autoplay should resume advancing after the street task ends");
 });
