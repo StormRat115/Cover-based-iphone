@@ -6,6 +6,13 @@ function living(actor) {
   return !!(actor && !actor.dead && actor.hp > 0);
 }
 
+function friendly(actor) {
+  return !!(
+    actor &&
+    (actor.isPlayer || actor.isMarine || (actor.name && !actor.type))
+  );
+}
+
 export function isUnitSolid(actor) {
   if (!living(actor)) return false;
   if (actor.downed) return false;
@@ -56,9 +63,9 @@ export function resolveUnitMove(actor, nx, ny, units) {
   for (var i = 0; i < units.length; i++) {
     var other = units[i];
     if (other === actor || !isUnitSolid(other)) continue;
-    // Marines yield the lane to direct player input instead of trapping the
-    // player between a friendly body and occupied cover.
-    if (actor.isPlayer && other.yieldsToPlayer) continue;
+    // Friendly units share movement lanes. Cover-slot ownership remains
+    // separate and still prevents two units reserving the same firing point.
+    if (friendly(actor) && friendly(other)) continue;
     if (blockedBy(actor, nx, ny, other)) {
       hit = other;
       break;
@@ -106,7 +113,9 @@ export function unstickOverlappingUnits(units, dt) {
   for (var i = 0; i < solids.length; i++) {
     for (var j = i + 1; j < solids.length; j++) {
       var a = solids[i],
-        b = solids[j],
+        b = solids[j];
+      if (friendly(a) && friendly(b)) continue;
+      var
         min = unitRadius(a) + unitRadius(b),
         dx = b.x - a.x,
         dy = b.y - a.y,
@@ -124,18 +133,6 @@ export function unstickOverlappingUnits(units, dt) {
       var push = (min - d) * 0.5 + 1.5,
         nx = dx / d,
         ny = dy / d;
-      var playerYieldPair =
-        (a.isPlayer && b.yieldsToPlayer) ||
-        (b.isPlayer && a.yieldsToPlayer);
-      if (playerYieldPair) {
-        var yielding = a.yieldsToPlayer ? a : b,
-          direction = yielding === b ? 1 : -1,
-          fullPush = min - d + 2;
-        yielding.x += nx * fullPush * direction;
-        yielding.y += ny * fullPush * direction;
-        stuck.delete(key);
-        continue;
-      }
       a.x -= nx * push;
       a.y -= ny * push;
       b.x += nx * push;

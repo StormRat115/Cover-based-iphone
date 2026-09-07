@@ -1,6 +1,6 @@
-import { loadImage } from "./assets.js?v=20260907-112";
-import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260907-112";
-import { preloadWartornAssets } from "./wartornCity.js?v=20260907-112";
+import { loadImage } from "./assets.js?v=20260907-113";
+import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260907-113";
+import { preloadWartornAssets } from "./wartornCity.js?v=20260907-113";
 import {
   COVER_BLOCK_SIZE,
   E,
@@ -11,7 +11,7 @@ import {
   neighborMask,
   pickCoverBlockFaceSkin,
   pickCoverIsoTile,
-} from "./coverBlocks.js?v=20260907-112";
+} from "./coverBlocks.js?v=20260907-113";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =
@@ -25,7 +25,7 @@ coverShapeAtlas.src =
 export const coverBlockSkins = {};
 allCoverSkinFiles().forEach(function (file) {
   var image = new Image();
-  image.src = "./assets/generated/cover/blocks/" + file + "?v=20260907-112";
+  image.src = "./assets/generated/cover/blocks/" + file + "?v=20260907-113";
   coverBlockSkins[file] = image;
 });
 export const coverBlockAtlas = coverBlockSkins["concrete-center.webp"];
@@ -302,7 +302,9 @@ function blitIsoCube(ctx, iso, x, y, size, tile) {
   var tw = tile.naturalWidth,
     th = tile.naturalHeight;
   if (tw < 2 || th < 2 || maxX - minX < 2) return false;
-  var dw = Math.max(46, (maxX - minX) * 2.7),
+  // Match one texture cube to one projected grid cell. The previous 2.7x
+  // enlargement made neighboring blocks paint over each other.
+  var dw = Math.max(20, (maxX - minX) * 1.08),
     dh = dw * (th / tw);
   var destX = (minX + maxX) / 2 - dw / 2,
     destY = maxY - dh + 1;

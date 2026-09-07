@@ -449,16 +449,9 @@ export function randomShapeCells(random, spec) {
   if (shape === "cluster") return growCluster(random, 4, 7, 4);
   if (shape === "wall" || shape === "halfwall")
     return normalizeCells(wallCells(5 + Math.floor(random() * 4)));
-  var cells = shapeCells(shape);
-  if (
-    !spec.kit &&
-    shape !== "U" &&
-    shape !== "wall" &&
-    shape !== "halfwall" &&
-    random() < 0.28
-  )
-    cells = tryAddBud(cells, random, 5);
-  return normalizeCells(cells);
+  // Preserve authored rows, columns, and corners exactly. Random buds made
+  // recognizable L/T/line shapes look like overlapping piles.
+  return normalizeCells(shapeCells(shape));
 }
 
 function looksLikeU(cells, box) {

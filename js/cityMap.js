@@ -6,7 +6,7 @@ import {
   cloneBlockCover,
   coverTypeForTheme,
   makeBlockCover,
-} from "./coverBlocks.js?v=20260907-112";
+} from "./coverBlocks.js?v=20260907-113";
 
 const MAP_SCALE = 1.7;
 
@@ -236,7 +236,7 @@ function cloneCover(template, id, x, y) {
 
 export function createCityCoverLayout(random = Math.random) {
   const templates = shuffled(createCityCoverTemplates(random), random);
-  const targetCount = 24 + Math.floor(random() * 4);
+  const targetCount = 29 + Math.floor(random() * 4);
   const placed = [];
   const lanes = STREET_COVER_LANES;
   const rows = Math.max(1, Math.ceil(targetCount / lanes.length));
@@ -271,7 +271,7 @@ export function createCityCoverLayout(random = Math.random) {
     }
   }
 
-  // Fill holes so street + fort stay in the 28–32 piece band.
+  // Fill holes so street cover rows remain consistently available.
   let extra = 0;
   while (placed.length < targetCount && extra < 220) {
     const template = templates[extra % templates.length];
