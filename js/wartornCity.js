@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260907-117";
+import { loadImage } from "./assets.js?v=20260907-118";
 
 var ROAD = 980;
 var WALK = 260;
@@ -14,7 +14,14 @@ function surface(file) {
 function plate(file) {
   var image = new Image();
   image.decoding = "async";
-  image.src = "./assets/generated/world/" + file + "?v=20260907-117";
+  image.src = "./assets/generated/world/" + file + "?v=20260907-118";
+  return image;
+}
+
+function backdrop(file) {
+  var image = new Image();
+  image.decoding = "async";
+  image.src = "./assets/generated/world/backdrop/" + file + "?v=20260907-118";
   return image;
 }
 
@@ -31,7 +38,17 @@ export const facadeStorefront = plate("facade-ruin-storefront.webp");
 export const facadeOffice = plate("facade-office.webp");
 export const facadeGraffiti = plate("facade-graffiti-brick.webp");
 export const facadeAlley = plate("facade-alley.webp");
-export const doorExplodeSheet = plate("door-explode-sheet.webp");
+export const facadeStripA = backdrop("facade-strip-a.webp");
+export const facadeStripB = backdrop("facade-strip-b.webp");
+export const facadeBldg01 = backdrop("facade-bldg-01.webp");
+export const facadeBldg02 = backdrop("facade-bldg-02.webp");
+export const facadeBldg03 = backdrop("facade-bldg-03.webp");
+export const facadeBldg04 = backdrop("facade-bldg-04.webp");
+export const facadeBldg05 = backdrop("facade-bldg-05.webp");
+export const alleyMouth = backdrop("alley-mouth.webp");
+export const doorExplodeSheet = backdrop("door-explode-sheet.webp");
+export const doorBlownIdle = backdrop("door-blown-idle.webp");
+export const doorExplodeFallback = plate("door-explode-sheet.webp");
 export const rubbleBrick = plate("rubble-brick.webp");
 export const rubbleConcrete = plate("rubble-concrete-rebar.webp");
 export const rubbleSandbags = plate("rubble-sandbags-crates.webp");
@@ -55,7 +72,6 @@ var OPAQUE_PLATES = [
   facadeOffice,
   facadeGraffiti,
   facadeAlley,
-  doorExplodeSheet,
 ];
 
 function hash01(i) {
@@ -66,14 +82,16 @@ function hash01(i) {
 
 function buildTopFacades() {
   var kinds = [
+    "bldg1",
+    "bldg2",
     "apartment",
-    "office",
+    "bldg3",
     "storefront",
-    "graffiti",
-    "ruin",
+    "bldg4",
     "alley",
-    "apartment",
+    "bldg5",
     "office",
+    "graffiti",
   ];
   var items = [];
   var i = 0;
@@ -296,11 +314,16 @@ function punched(image) {
 }
 
 function spriteForBuilding(kind) {
+  if (kind === "bldg1") return facadeBldg01;
+  if (kind === "bldg2") return facadeBldg02;
+  if (kind === "bldg3") return facadeBldg03;
+  if (kind === "bldg4") return facadeBldg04;
+  if (kind === "bldg5") return facadeBldg05;
+  if (kind === "alley") return ready(alleyMouth) ? alleyMouth : punched(facadeAlley);
   if (kind === "apartment") return punched(facadeApartment);
   if (kind === "storefront") return punched(facadeStorefront);
   if (kind === "office") return punched(facadeOffice);
   if (kind === "graffiti") return punched(facadeGraffiti);
-  if (kind === "alley") return punched(facadeAlley);
   return ready(wartornRuinCut) ? wartornRuinCut : punched(wartornRuin);
 }
 
@@ -348,7 +371,10 @@ function sizeForSidewalk(kind, s) {
 
 function buildingSize(kind, s) {
   if (kind === "ruin") return { dw: 176 * s, dh: 168 * s };
-  if (kind === "alley") return { dw: 132 * s, dh: 150 * s };
+  if (kind === "alley") return { dw: 118 * s, dh: 132 * s };
+  if (kind === "bldg4") return { dw: 110 * s, dh: 176 * s };
+  if (kind === "bldg3") return { dw: 168 * s, dh: 186 * s };
+  if (String(kind).indexOf("bldg") === 0) return { dw: 148 * s, dh: 180 * s };
   if (kind === "office") return { dw: 158 * s, dh: 188 * s };
   return { dw: 148 * s, dh: 172 * s };
 }
@@ -557,7 +583,17 @@ export function preloadWartornAssets(onProgress) {
     loadImage(facadeOffice),
     loadImage(facadeGraffiti),
     loadImage(facadeAlley),
+    loadImage(facadeStripA),
+    loadImage(facadeStripB),
+    loadImage(facadeBldg01),
+    loadImage(facadeBldg02),
+    loadImage(facadeBldg03),
+    loadImage(facadeBldg04),
+    loadImage(facadeBldg05),
+    loadImage(alleyMouth),
     loadImage(doorExplodeSheet),
+    loadImage(doorBlownIdle),
+    loadImage(doorExplodeFallback),
     loadImage(rubbleBrick),
     loadImage(rubbleConcrete),
     loadImage(rubbleSandbags),
@@ -648,15 +684,10 @@ function drawFarBackdrop(ctx, iso, world, W, H) {
     dh,
     camY,
     q,
-    s;
-  facades = [
-    punched(facadeApartment),
-    punched(facadeOffice),
-    punched(facadeStorefront),
-    punched(facadeGraffiti),
-    ready(wartornRuinCut) ? wartornRuinCut : punched(wartornRuin),
-    punched(facadeAlley),
-  ];
+    s,
+    width,
+    stripW;
+  width = W || 390;
   camY = world && world.cameraY != null ? world.cameraY : 0;
   band = 150;
   if (iso) {
@@ -669,28 +700,60 @@ function drawFarBackdrop(ctx, iso, world, W, H) {
   origin = iso
     ? iso(world && world.cameraX != null ? world.cameraX : 0, camY)
     : [0, 0];
-  scroll = ((origin[0] % 88) + 88) % 88;
-  count = Math.ceil((W || 390) / 72) + 6;
+  scroll = ((origin[0] % 220) + 220) % 220;
   if (ready(wartornSkyline)) {
     ctx.save();
-    ctx.globalAlpha = 0.85;
-    ctx.drawImage(wartornSkyline, -8, -10, (W || 390) + 16, band + 8);
+    ctx.globalAlpha = 0.7;
+    ctx.drawImage(wartornSkyline, -8, -10, width + 16, band + 8);
     ctx.restore();
   }
+  // Official Phone Art strips are one continuous skyline, not a tile grid.
+  if (ready(facadeStripA) || ready(facadeStripB)) {
+    stripW = Math.max(width * 1.35, 520);
+    ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    if (ready(facadeStripA))
+      ctx.drawImage(
+        facadeStripA,
+        -scroll * 0.45 - 20,
+        -6,
+        stripW,
+        band + 18,
+      );
+    if (ready(facadeStripB))
+      ctx.drawImage(
+        facadeStripB,
+        stripW * 0.42 - scroll * 0.28,
+        -18,
+        stripW * 0.92,
+        band + 28,
+      );
+    ctx.restore();
+  }
+  facades = [
+    facadeBldg01,
+    facadeBldg03,
+    facadeBldg02,
+    facadeBldg05,
+    facadeBldg04,
+    ready(alleyMouth) ? alleyMouth : punched(facadeAlley),
+  ];
+  count = Math.ceil(width / 92) + 4;
   ctx.save();
-  for (i = -3; i < count; i++) {
-    x = i * 72 - scroll * 0.35 + 6;
-    dw = 210 + ((i * 17) % 7) * 12;
-    dh = band + 36 + ((i * 13) % 9) * 10;
+  for (i = -2; i < count; i++) {
+    x = i * 92 - scroll * 0.22 + (hash01(i + 31) - 0.5) * 18;
+    dw = 118 + hash01(i * 3 + 2) * 36;
+    dh = band * 0.72 + hash01(i * 5 + 1) * 28;
     stamp(
       ctx,
-      facades[(i + 18) % facades.length],
-      x + dw * 0.36,
-      band + 6,
+      facades[(i + 12) % facades.length],
+      x + dw * 0.4,
+      band + 2 + (i % 2) * 8,
       dw,
       dh,
-      0.98,
-      i % 3 === 0,
+      0.96,
+      hash01(i + 8) > 0.55,
     );
   }
   ctx.restore();
@@ -700,7 +763,7 @@ function drawFarBackdrop(ctx, iso, world, W, H) {
       fade.addColorStop(0, "rgba(36,32,28,0)");
       fade.addColorStop(1, "rgba(36,32,28,0.22)");
       ctx.fillStyle = fade;
-      ctx.fillRect(0, band - 24, W, 44);
+      ctx.fillRect(0, band - 24, width, 44);
     }
   }
 }

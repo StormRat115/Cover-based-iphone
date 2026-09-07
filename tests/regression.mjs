@@ -1324,7 +1324,7 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    79,
+    89,
     "soldier/vault/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn facade plates",
   );
   assert.equal(h.metrics.intervals, 0);
@@ -1753,7 +1753,12 @@ test("wartorn city plates load and dress the street sides", async () => {
   assert.match(city.facadeOffice.src, /facade-office\.webp/);
   assert.match(city.facadeGraffiti.src, /facade-graffiti-brick\.webp/);
   assert.match(city.facadeAlley.src, /facade-alley\.webp/);
-  assert.match(city.doorExplodeSheet.src, /door-explode-sheet\.webp/);
+  assert.match(city.facadeStripA.src, /backdrop\/facade-strip-a\.webp/);
+  assert.match(city.facadeStripB.src, /backdrop\/facade-strip-b\.webp/);
+  assert.match(city.facadeBldg01.src, /backdrop\/facade-bldg-01\.webp/);
+  assert.match(city.doorExplodeSheet.src, /backdrop\/door-explode-sheet\.webp/);
+  assert.match(city.doorBlownIdle.src, /backdrop\/door-blown-idle\.webp/);
+  assert.match(city.alleyMouth.src, /backdrop\/alley-mouth\.webp/);
   assert.match(city.rubbleBrick.src, /rubble-brick\.webp/);
   assert.match(city.rubbleConcrete.src, /rubble-concrete-rebar\.webp/);
   assert.match(city.rubbleSandbags.src, /rubble-sandbags-crates\.webp/);
@@ -1780,6 +1785,17 @@ test("wartorn city plates load and dress the street sides", async () => {
     "facade-graffiti-brick.webp",
     "facade-alley.webp",
     "door-explode-sheet.webp",
+    "backdrop/facade-strip-a.webp",
+    "backdrop/facade-strip-b.webp",
+    "backdrop/facade-bldg-01.webp",
+    "backdrop/facade-bldg-02.webp",
+    "backdrop/facade-bldg-03.webp",
+    "backdrop/facade-bldg-04.webp",
+    "backdrop/facade-bldg-05.webp",
+    "backdrop/door-explode-sheet.webp",
+    "backdrop/door-blown-idle.webp",
+    "backdrop/alley-mouth.webp",
+    "backdrop/manifest.json",
     "rubble-brick.webp",
     "rubble-concrete-rebar.webp",
     "rubble-sandbags-crates.webp",
@@ -1811,6 +1827,8 @@ test("wartorn city plates load and dress the street sides", async () => {
   assert.ok(dressing.buildings.some((item) => item.kind === "storefront"));
   assert.ok(dressing.buildings.some((item) => item.kind === "office"));
   assert.ok(dressing.buildings.some((item) => item.kind === "graffiti"));
+  assert.ok(dressing.buildings.some((item) => item.kind === "bldg1"));
+  assert.ok(dressing.buildings.some((item) => item.kind === "alley"));
   assert.ok(dressing.doors.length >= 6);
   assert.ok(
     ["brick", "concrete", "sandbags", "scrap"].every((kind) =>

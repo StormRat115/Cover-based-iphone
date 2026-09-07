@@ -1,0 +1,14 @@
+{
+  "cols": 8,
+  "frameW": 96,
+  "frameH": 128,
+  "frames": 8,
+  "fps": 12,
+  "sheet": "door-explode-sheet.webp",
+  "idle": "door-blown-idle.webp",
+  "idleWidth": 96,
+  "idleHeight": 128,
+  "facing": "camera/street-facing; explode outward toward viewer",
+  "order": "left-to-right frames 0..7 explode; idle from source rightmost cell",
+  "category": "door-explode"
+}

@@ -1,6 +1,6 @@
-import { loadImage } from "./assets.js?v=20260907-117";
-import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260907-117";
-import { preloadWartornAssets } from "./wartornCity.js?v=20260907-117";
+import { loadImage } from "./assets.js?v=20260907-118";
+import { COVER_ATLAS_SPRITES } from "./coverAtlasData.js?v=20260907-118";
+import { preloadWartornAssets } from "./wartornCity.js?v=20260907-118";
 import {
   COVER_BLOCK_SIZE,
   E,
@@ -11,7 +11,7 @@ import {
   neighborMask,
   pickCoverBlockFaceSkin,
   pickCoverIsoTile,
-} from "./coverBlocks.js?v=20260907-117";
+} from "./coverBlocks.js?v=20260907-118";
 export { loadImage };
 export const cityAtlas = new Image();
 cityAtlas.src =

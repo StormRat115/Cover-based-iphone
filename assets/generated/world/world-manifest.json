@@ -18,7 +18,8 @@
       "assets/generated/world/facade-graffiti-brick.webp",
       "assets/generated/world/facade-alley.webp"
     ],
-    "doorExplode": "assets/generated/world/door-explode-sheet.webp",
+    "doorExplode": "assets/generated/world/backdrop/door-explode-sheet.webp",
+    "backdropPack": "assets/generated/world/backdrop/manifest.json",
     "rubble": [
       "assets/generated/world/rubble-concrete-rebar.webp",
       "assets/generated/world/rubble-brick.webp",

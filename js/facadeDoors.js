@@ -1,14 +1,18 @@
 import {
   facadeDoorPoints,
   doorExplodeSheet,
+  doorBlownIdle,
   playableStreetHalfWidth,
-} from "./wartornCity.js?v=20260907-117";
-import { createHostileAt, doorHostileType } from "./enemyCore.js?v=20260907-117";
-import { moveTowardTarget } from "./combatAI.js?v=20260907-117";
+} from "./wartornCity.js?v=20260907-118";
+import { createHostileAt, doorHostileType } from "./enemyCore.js?v=20260907-118";
+import { moveTowardTarget } from "./combatAI.js?v=20260907-118";
 
 export const DOOR_EXPLODE_FRAMES = 8;
-export const DOOR_EXPLODE_DURATION = 0.48;
-export const DOOR_SPAWN_LEAD = 0.34;
+export const DOOR_EXPLODE_FRAME_W = 96;
+export const DOOR_EXPLODE_FRAME_H = 128;
+export const DOOR_EXPLODE_FPS = 12;
+export const DOOR_EXPLODE_DURATION = DOOR_EXPLODE_FRAMES / DOOR_EXPLODE_FPS;
+export const DOOR_SPAWN_LEAD = 0.33;
 
 export const DOOR_SPAWN = {
   waveDelay: function (wave) {
@@ -52,6 +56,7 @@ export function createFacadeDoorDirector() {
     wave: 1,
     lastDoorId: "",
     bursts: [],
+    blown: [],
     spawned: 0,
   };
 }
@@ -62,6 +67,7 @@ export function resetFacadeDoors(director, wave) {
   director.timer = DOOR_SPAWN.waveDelay(director.wave);
   director.lastDoorId = "";
   director.bursts = [];
+  director.blown = [];
   director.spawned = 0;
   return director;
 }
@@ -186,7 +192,14 @@ export function updateFacadeDoors(director, dt, opts) {
       burst.spawned = true;
       spawnBurstHostiles(burst, Object.assign({ director: director }, opts));
     }
-    if (burst.t >= burst.duration) burst.done = true;
+    if (burst.t >= burst.duration) {
+      burst.done = true;
+      if (director.blown)
+        director.blown.push({
+          id: burst.door.id,
+          door: burst.door,
+        });
+    }
   });
   director.bursts = director.bursts.filter(function (burst) {
     return !burst.done;
@@ -240,14 +253,26 @@ export function drawFacadeDoorBursts(ctx, iso, director, onScreen) {
     var q = iso(door.doorX, door.doorY);
     var frame = explodeFrame(burst);
     if (ready(sheet)) {
-      var fw = (sheet.naturalWidth || sheet.width) / DOOR_EXPLODE_FRAMES;
-      var fh = sheet.naturalHeight || sheet.height;
+      var fw = DOOR_EXPLODE_FRAME_W;
+      var fh = DOOR_EXPLODE_FRAME_H;
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(sheet, frame * fw, 0, fw, fh, q[0] - 22, q[1] - 78, 44, 80);
+      ctx.drawImage(sheet, frame * fw, 0, fw, fh, q[0] - 24, q[1] - 72, 48, 64);
       ctx.restore();
     } else drawFallbackBurst(ctx, q[0], q[1], frame);
     drawn++;
+  });
+  (director.blown || []).forEach(function (entry) {
+    var door = entry.door;
+    if (onScreen && !onScreen(door.doorX, door.doorY, 180)) return;
+    var p = iso(door.doorX, door.doorY);
+    if (ready(doorBlownIdle)) {
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(doorBlownIdle, p[0] - 24, p[1] - 72, 48, 64);
+      ctx.restore();
+      drawn++;
+    }
   });
   return drawn;
 }
