@@ -1829,6 +1829,12 @@ test("wartorn city plates load and dress the street sides", async () => {
   assert.ok(dressing.buildings.some((item) => item.kind === "graffiti"));
   assert.ok(dressing.buildings.some((item) => item.kind === "bldg1"));
   assert.ok(dressing.buildings.some((item) => item.kind === "alley"));
+  assert.ok(
+    dressing.buildings
+      .filter((item) => item.side === "top")
+      .every((item) => /^(bldg[1-5]|alley)$/.test(item.kind)),
+    "top void uses official Phone Art façades only",
+  );
   assert.ok(dressing.doors.length >= 6);
   assert.ok(
     ["brick", "concrete", "sandbags", "scrap"].every((kind) =>
@@ -1880,7 +1886,11 @@ test("wartorn city plates load and dress the street sides", async () => {
     "debris piles stay off the playable asphalt",
   );
   assert.ok(
-    dressing.doors.every((door) => door.doorX < -dressing.road),
+    dressing.doors.every(
+      (door) =>
+        door.doorX < -dressing.road &&
+        door.doorX > -dressing.road - dressing.sidewalk - 40,
+    ),
     "door spawn mouths sit on the top sidewalk, not the road",
   );
   assert.equal(city.sidewalkWidth(), dressing.sidewalk);

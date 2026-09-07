@@ -3,9 +3,9 @@ import {
   doorExplodeSheet,
   doorBlownIdle,
   playableStreetHalfWidth,
-} from "./wartornCity.js?v=20260907-118";
-import { createHostileAt, doorHostileType } from "./enemyCore.js?v=20260907-118";
-import { moveTowardTarget } from "./combatAI.js?v=20260907-118";
+} from "./wartornCity.js?v=20260907-119";
+import { createHostileAt, doorHostileType } from "./enemyCore.js?v=20260907-119";
+import { moveTowardTarget } from "./combatAI.js?v=20260907-119";
 
 export const DOOR_EXPLODE_FRAMES = 8;
 export const DOOR_EXPLODE_FRAME_W = 96;
@@ -257,7 +257,7 @@ export function drawFacadeDoorBursts(ctx, iso, director, onScreen) {
       var fh = DOOR_EXPLODE_FRAME_H;
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(sheet, frame * fw, 0, fw, fh, q[0] - 24, q[1] - 72, 48, 64);
+      ctx.drawImage(sheet, frame * fw, 0, fw, fh, q[0] - 36, q[1] - 96, 72, 96);
       ctx.restore();
     } else drawFallbackBurst(ctx, q[0], q[1], frame);
     drawn++;
@@ -269,7 +269,7 @@ export function drawFacadeDoorBursts(ctx, iso, director, onScreen) {
     if (ready(doorBlownIdle)) {
       ctx.save();
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(doorBlownIdle, p[0] - 24, p[1] - 72, 48, 64);
+      ctx.drawImage(doorBlownIdle, p[0] - 36, p[1] - 96, 72, 96);
       ctx.restore();
       drawn++;
     }

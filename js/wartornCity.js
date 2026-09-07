@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260907-118";
+import { loadImage } from "./assets.js?v=20260907-119";
 
 var ROAD = 980;
 var WALK = 260;
@@ -21,7 +21,7 @@ function plate(file) {
 function backdrop(file) {
   var image = new Image();
   image.decoding = "async";
-  image.src = "./assets/generated/world/backdrop/" + file + "?v=20260907-118";
+  image.src = "./assets/generated/world/backdrop/" + file + "?v=20260907-119";
   return image;
 }
 
@@ -81,18 +81,8 @@ function hash01(i) {
 }
 
 function buildTopFacades() {
-  var kinds = [
-    "bldg1",
-    "bldg2",
-    "apartment",
-    "bldg3",
-    "storefront",
-    "bldg4",
-    "alley",
-    "bldg5",
-    "office",
-    "graffiti",
-  ];
+  // Official Phone Art only — no invented stand-in plates on the top void.
+  var kinds = ["bldg1", "bldg2", "bldg3", "alley", "bldg4", "bldg5"];
   var items = [];
   var i = 0;
   var y = 1680;
@@ -100,22 +90,22 @@ function buildTopFacades() {
     var kind = kinds[(i * 3 + ((hash01(i * 9 + 2) * kinds.length) | 0)) % kinds.length];
     items.push({
       id: "top-" + i,
-      x: TOP_EDGE - 36 - hash01(i * 19 + 4) * 70,
+      x: TOP_EDGE - 28 - hash01(i * 19 + 4) * 54,
       y: y,
       kind: kind,
-      s: 1.05 + hash01(i * 17 + 1) * 0.28,
+      s: 1.08 + hash01(i * 17 + 1) * 0.22,
       flip: hash01(i * 11 + 8) > 0.52,
-      door: i % 3 === 0,
+      door: kind !== "alley" && i % 3 === 0,
       side: "top",
     });
-    y -= 118 + hash01(i * 23 + 6) * 42;
+    y -= 128 + hash01(i * 23 + 6) * 36;
     i++;
   }
   return items;
 }
 
 function buildSideFacades() {
-  var kinds = ["storefront", "ruin", "apartment", "office"];
+  var kinds = ["storefront", "ruin", "apartment", "office", "graffiti"];
   var items = [];
   for (var i = 0; i < 14; i++) {
     items.push({
@@ -371,10 +361,10 @@ function sizeForSidewalk(kind, s) {
 
 function buildingSize(kind, s) {
   if (kind === "ruin") return { dw: 176 * s, dh: 168 * s };
-  if (kind === "alley") return { dw: 118 * s, dh: 132 * s };
-  if (kind === "bldg4") return { dw: 110 * s, dh: 176 * s };
-  if (kind === "bldg3") return { dw: 168 * s, dh: 186 * s };
-  if (String(kind).indexOf("bldg") === 0) return { dw: 148 * s, dh: 180 * s };
+  if (kind === "alley") return { dw: 168 * s, dh: 148 * s };
+  if (kind === "bldg4") return { dw: 102 * s, dh: 250 * s };
+  if (kind === "bldg3") return { dw: 178 * s, dh: 250 * s };
+  if (String(kind).indexOf("bldg") === 0) return { dw: 146 * s, dh: 246 * s };
   if (kind === "office") return { dw: 158 * s, dh: 188 * s };
   return { dw: 148 * s, dh: 172 * s };
 }
@@ -435,6 +425,17 @@ function clipWorldPoly(ctx, iso, points) {
   ctx.closePath();
   ctx.clip();
   return true;
+}
+
+function clipAboveSidewalk(ctx, iso, world) {
+  if (!world || !iso) return false;
+  var b = worldBounds(world);
+  return clipWorldPoly(ctx, iso, [
+    [b.minX, b.minY],
+    [TOP_EDGE, b.minY],
+    [TOP_EDGE, b.maxY],
+    [b.minX, b.maxY],
+  ]);
 }
 
 function clipOffStreet(ctx, iso, world, side) {
@@ -662,7 +663,7 @@ export function facadeDoorPoints() {
       id: item.id,
       x: item.x,
       y: item.y,
-      doorX: -ROAD - 36,
+      doorX: TOP_EDGE + 24,
       doorY: item.y,
       approachX: -ROAD + 220,
       approachY: item.y + (hash01(item.y | 0) - 0.5) * 70,
@@ -671,101 +672,99 @@ export function facadeDoorPoints() {
   });
 }
 
-function drawFarBackdrop(ctx, iso, world, W, H) {
-  var origin,
-    scroll,
-    i,
-    x,
-    facades,
-    fade,
-    count,
-    band,
-    dw,
-    dh,
-    camY,
-    q,
-    s,
-    width,
-    stripW;
-  width = W || 390;
-  camY = world && world.cameraY != null ? world.cameraY : 0;
-  band = 150;
+function sidewalkBandY(iso, world, W, H) {
+  var camY = world && world.cameraY != null ? world.cameraY : 0;
+  var band = 150;
+  var s;
+  var q;
   if (iso) {
-    for (s = -900; s <= 900; s += 300) {
-      q = iso(TOP_EDGE + 20, camY + s);
+    for (s = -1200; s <= 1200; s += 200) {
+      q = iso(TOP_EDGE, camY + s);
       if (q && q[1] > band) band = q[1];
     }
   }
-  band = Math.max(170, Math.min((H || 844) * 0.52, band + 16));
+  return Math.max(160, Math.min((H || 844) * 0.48, band + 8));
+}
+
+function drawOfficialStripRow(ctx, width, band, scroll) {
+  var tiles = [];
+  var i;
+  var x;
+  var img;
+  var h;
+  var w;
+  if (ready(facadeStripA)) tiles.push(facadeStripA);
+  if (ready(facadeStripB)) tiles.push(facadeStripB);
+  if (!tiles.length) return;
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  i = 0;
+  x = -((scroll * 0.42) % 80) - 48;
+  while (x < width + 120) {
+    img = tiles[i % tiles.length];
+    h = band + (i % 2 ? 22 : 6);
+    w =
+      img.naturalWidth && img.naturalHeight
+        ? img.naturalWidth * (h / img.naturalHeight)
+        : Math.max(width * 1.15, 480);
+    if (w < 160) w = 480;
+    ctx.drawImage(img, x, band - h + 6, w, h);
+    x += w * 0.86;
+    i++;
+  }
+  if (ready(alleyMouth)) {
+    for (i = 0; i < Math.ceil(width / 320) + 1; i++) {
+      if (hash01(i + 17) < 0.4) continue;
+      stamp(
+        ctx,
+        alleyMouth,
+        i * 320 - scroll * 0.18 + 90,
+        band + 2,
+        110,
+        96,
+        0.94,
+        hash01(i + 3) > 0.5,
+      );
+    }
+  }
+  ctx.restore();
+}
+
+function drawFarBackdrop(ctx, iso, world, W, H) {
+  var origin;
+  var scroll;
+  var fade;
+  var band;
+  var width;
+  width = W || 390;
+  band = sidewalkBandY(iso, world, width, H);
   origin = iso
-    ? iso(world && world.cameraX != null ? world.cameraX : 0, camY)
+    ? iso(
+        world && world.cameraX != null ? world.cameraX : 0,
+        world && world.cameraY != null ? world.cameraY : 0,
+      )
     : [0, 0];
-  scroll = ((origin[0] % 220) + 220) % 220;
+  scroll = ((origin[0] % 260) + 260) % 260;
+  ctx.save();
+  if (iso && world) clipAboveSidewalk(ctx, iso, world);
   if (ready(wartornSkyline)) {
     ctx.save();
-    ctx.globalAlpha = 0.7;
+    ctx.globalAlpha = 0.55;
     ctx.drawImage(wartornSkyline, -8, -10, width + 16, band + 8);
     ctx.restore();
   }
-  // Official Phone Art strips are one continuous skyline, not a tile grid.
-  if (ready(facadeStripA) || ready(facadeStripB)) {
-    stripW = Math.max(width * 1.35, 520);
-    ctx.save();
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    if (ready(facadeStripA))
-      ctx.drawImage(
-        facadeStripA,
-        -scroll * 0.45 - 20,
-        -6,
-        stripW,
-        band + 18,
-      );
-    if (ready(facadeStripB))
-      ctx.drawImage(
-        facadeStripB,
-        stripW * 0.42 - scroll * 0.28,
-        -18,
-        stripW * 0.92,
-        band + 28,
-      );
-    ctx.restore();
-  }
-  facades = [
-    facadeBldg01,
-    facadeBldg03,
-    facadeBldg02,
-    facadeBldg05,
-    facadeBldg04,
-    ready(alleyMouth) ? alleyMouth : punched(facadeAlley),
-  ];
-  count = Math.ceil(width / 92) + 4;
-  ctx.save();
-  for (i = -2; i < count; i++) {
-    x = i * 92 - scroll * 0.22 + (hash01(i + 31) - 0.5) * 18;
-    dw = 118 + hash01(i * 3 + 2) * 36;
-    dh = band * 0.72 + hash01(i * 5 + 1) * 28;
-    stamp(
-      ctx,
-      facades[(i + 12) % facades.length],
-      x + dw * 0.4,
-      band + 2 + (i % 2) * 8,
-      dw,
-      dh,
-      0.96,
-      hash01(i + 8) > 0.55,
-    );
-  }
-  ctx.restore();
+  drawOfficialStripRow(ctx, width, band, scroll);
   if (ctx.createLinearGradient) {
-    fade = ctx.createLinearGradient(0, band - 24, 0, band + 20);
+    fade = ctx.createLinearGradient(0, band - 24, 0, band + 12);
     if (fade && fade.addColorStop) {
       fade.addColorStop(0, "rgba(36,32,28,0)");
-      fade.addColorStop(1, "rgba(36,32,28,0.22)");
+      fade.addColorStop(1, "rgba(36,32,28,0.16)");
       ctx.fillStyle = fade;
-      ctx.fillRect(0, band - 24, width, 44);
+      ctx.fillRect(0, band - 24, width, 36);
     }
   }
+  ctx.restore();
 }
 
 export function drawWartornStreetSurface(ctx, iso, world) {

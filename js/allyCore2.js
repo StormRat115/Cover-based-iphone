@@ -2,9 +2,9 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260907-118";
-import { weaponCopy } from "./weapons.js?v=20260907-118";
-import { AudioBus } from "./audio.js?v=20260907-118";
+} from "./cover.js?v=20260907-119";
+import { weaponCopy } from "./weapons.js?v=20260907-119";
+import { AudioBus } from "./audio.js?v=20260907-119";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -12,32 +12,32 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260907-118";
+} from "./combatAI.js?v=20260907-119";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260907-118";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-118";
+} from "./combatStats.js?v=20260907-119";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-119";
 import {
   isCoverFull,
   occupancyPenalty,
   occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260907-118";
+} from "./coverSlots.js?v=20260907-119";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260907-118";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260907-118";
+} from "./suppression.js?v=20260907-119";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260907-119";
 import {
   currentPushGoal,
   pushGoalKey,
-} from "./streetObjectives.js?v=20260907-118";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260907-118";
+} from "./streetObjectives.js?v=20260907-119";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260907-119";
 export const MARINE_AGGRO = {
   engageRangeFactor: 0.4,
   engageRangeCap: 700,
