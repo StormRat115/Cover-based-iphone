@@ -1,14 +1,16 @@
 const MAX_STAINS = 240;
+export const BLOOD_STAIN_COLOR = "#3d0e0c";
+export const BLOOD_PARTICLE_COLOR = "#5c1410";
 var stains = [],
   seen = new WeakSet(),
   particles = [];
 function spray(actor) {
   if (!actor || seen.has(actor)) return;
   seen.add(actor);
-  var count = 7 + Math.floor(Math.random() * 6);
+  var count = 10 + Math.floor(Math.random() * 6);
   for (var i = 0; i < count; i++) {
     var ang = Math.random() * Math.PI * 2,
-      dist = 12 + Math.random() * 65;
+      dist = 14 + Math.random() * 72;
     particles.push({
       x: actor.x,
       y: actor.y,
@@ -20,7 +22,7 @@ function spray(actor) {
       life: 0.35 + Math.random() * 0.35,
       landX: actor.x + Math.cos(ang) * dist,
       landY: actor.y + Math.sin(ang) * dist,
-      size: 3 + Math.random() * 7,
+      size: 4 + Math.random() * 8,
     });
   }
 }
@@ -61,23 +63,23 @@ export function drawStain(ctx, iso, s) {
   ctx.save();
   ctx.translate(q[0], q[1]);
   ctx.rotate(s.rot);
-  ctx.globalAlpha = 0.58;
-  ctx.fillStyle = "#641812";
+  ctx.globalAlpha = 0.66;
+  ctx.fillStyle = BLOOD_STAIN_COLOR;
   ctx.beginPath();
-  ctx.ellipse(0, 0, s.size * 1.35, s.size * 0.55, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, s.size * 1.45, s.size * 0.58, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
 export function drawParticle(ctx, iso, p) {
   var q = iso(p.x, p.y);
   ctx.save();
-  ctx.globalAlpha = 0.78;
-  ctx.fillStyle = "#a52a20";
+  ctx.globalAlpha = 0.84;
+  ctx.fillStyle = BLOOD_PARTICLE_COLOR;
   ctx.beginPath();
   ctx.arc(
     q[0],
     q[1] - Math.max(0, p.z),
-    Math.max(1.5, p.size * 0.45),
+    Math.max(1.7, p.size * 0.48),
     0,
     Math.PI * 2,
   );

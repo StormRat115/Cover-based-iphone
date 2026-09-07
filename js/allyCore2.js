@@ -2,9 +2,9 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260907-116";
-import { weaponCopy } from "./weapons.js?v=20260907-116";
-import { AudioBus } from "./audio.js?v=20260907-116";
+} from "./cover.js?v=20260907-117";
+import { weaponCopy } from "./weapons.js?v=20260907-117";
+import { AudioBus } from "./audio.js?v=20260907-117";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -12,29 +12,56 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260907-116";
+} from "./combatAI.js?v=20260907-117";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260907-116";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-116";
+} from "./combatStats.js?v=20260907-117";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-117";
 import {
   isCoverFull,
   occupancyPenalty,
   occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260907-116";
+} from "./coverSlots.js?v=20260907-117";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260907-116";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260907-116";
-import { currentPushGoal } from "./streetObjectives.js?v=20260907-116";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260907-116";
+} from "./suppression.js?v=20260907-117";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260907-117";
+import {
+  currentPushGoal,
+  pushGoalKey,
+} from "./streetObjectives.js?v=20260907-117";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260907-117";
+export const MARINE_AGGRO = {
+  engageRangeFactor: 0.4,
+  engageRangeCap: 700,
+  leapRangeFactor: 1.18,
+  coveredDwell: 0.26,
+  peekMin: 1.18,
+  peekMax: 1.85,
+  peekShotsMin: 6,
+  peekShotsExtra: 4,
+  reposition: 0.38,
+  advanceSpeed: 1.18,
+  desiredRangeFactor: 0.52,
+  flankWeight: 260,
+  pushHp: 0.42,
+  pushDamageGrace: 0.75,
+  pushSuppression: 0.28,
+  pushHoldDistance: 500,
+  pushFarDistance: 880,
+  pushRangeFactor: 0.78,
+  behindFront: 120,
+};
+function marineTuned(a) {
+  return a && a.isMarine ? MARINE_AGGRO : null;
+}
 export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
 var squadMode = "FOLLOW";
 var SQUAD = [
@@ -299,6 +326,22 @@ function advanceToMission(a, mission, covers, friendlies, dt, threats) {
   var goal = currentPushGoal(mission, street) || (mission && mission.objective);
   if (!goal) return false;
   var goalDistance = Math.hypot(goal.x - a.x, goal.y - a.y);
+  var key = pushGoalKey(goal);
+  if (a.lastPushGoalKey && a.lastPushGoalKey !== key) {
+    a.missionPause = 0;
+    if (a.cover && Number.isFinite(a.coverAnchorX)) {
+      var stayDist = Math.hypot(
+        a.coverAnchorX - goal.x,
+        a.coverAnchorY - goal.y,
+      );
+      if (stayDist > goalDistance - 80) {
+        a.cover = null;
+        a.combatState = "seeking";
+        a.exposed = true;
+      }
+    }
+  }
+  a.lastPushGoalKey = key;
   threats = (threats || []).filter(activeEnemy);
   var primaryThreat = threats[0] || null;
   if (goalDistance <= goal.radius * 0.72) {
@@ -360,26 +403,29 @@ function advanceToMission(a, mission, covers, friendlies, dt, threats) {
     a.exposed = true;
     return true;
   }
-  // The final short crossing is inside the fortified capture perimeter.
-  if (goalDistance < goal.radius + 260) {
-    a.cover = null;
-    a.targetX = goal.x + ((a.coverSlotIndex || 0) - 1) * 72;
-    a.targetY = goal.y + 70 + (a.isMarine ? 75 : 0);
-    moveTowardTarget(a, dt, 1.05);
-    return true;
-  }
+  // No leapfrog slot — keep walking so a finished street task cannot freeze AI.
+  a.cover = null;
+  a.targetX = goal.x + ((a.coverSlotIndex || 0) - 1) * 72;
+  a.targetY = goal.y + 70 + (a.isMarine ? 75 : 0);
+  a.exposed = true;
+  a.combatState = "seeking";
+  moveTowardTarget(a, dt, a.aggressiveAdvance ? 1.16 : 1.05);
   return true;
 }
 function shouldPressStreetObjective(a, e, d, covers, goal) {
-  if (!goal || goal.source !== "street" || a.isMarine) return false;
-  if (squadMode === "HOLD") return false;
-  if (a.hp < a.maxHp * 0.55) return false;
-  if ((a.suppressionTimer || 0) > 0.2 || a.timeSinceDamage < 1.2) return false;
+  if (!goal || goal.source !== "street") return false;
+  if (squadMode === "HOLD" && !a.isMarine) return false;
+  var tun = marineTuned(a);
+  if (a.hp < a.maxHp * (tun ? tun.pushHp : 0.55)) return false;
+  if ((a.suppressionTimer || 0) > (tun ? tun.pushSuppression : 0.2)) return false;
+  if (a.timeSinceDamage < (tun ? tun.pushDamageGrace : 1.2)) return false;
   if (!e) return true;
-  if (d < 560) return false;
+  if (d < (tun ? tun.pushHoldDistance : 560)) return false;
   var blocked = isSightBlocked(a, e, covers);
   var hostileRange = e.weapon && e.weapon.range ? e.weapon.range : 1000;
-  return blocked || d > Math.min(1050, hostileRange * 0.85);
+  var far = tun ? tun.pushFarDistance : 1050;
+  var rangeFactor = tun ? tun.pushRangeFactor : 0.85;
+  return blocked || d > Math.min(far, hostileRange * rangeFactor);
 }
 export function updateAllies(
   allies,
@@ -449,9 +495,14 @@ export function updateAllies(
       ),
       e = pick.target,
       d = pick.dist,
-      aggressiveAdvance = !!a.aggressiveAdvance && squadMode === "ASSAULT",
+      tun = marineTuned(a),
+      aggressiveAdvance =
+        !!a.aggressiveAdvance && (a.isMarine || squadMode === "ASSAULT"),
       engagementRange = aggressiveAdvance
-        ? Math.min(a.weapon.range * 0.48, 760)
+        ? Math.min(
+            a.weapon.range * (tun ? tun.engageRangeFactor : 0.48),
+            tun ? tun.engageRangeCap : 760,
+          )
         : a.weapon.range * 0.82;
     var mission =
         typeof window !== "undefined" ? window.__streetMission : null,
@@ -542,11 +593,21 @@ export function updateAllies(
     }
     var useful = inSlot && coverStillUseful(a, e, covers, 80, 2000);
     var headingToSlot = !!(a.cover && !inSlot && Number.isFinite(a.coverAnchorX));
+    var frontY = a.y;
+    if (player && !player.dead && !player.downed) frontY = Math.min(frontY, player.y);
+    friendlyTeam.forEach(function (f) {
+      if (f && f !== a && !f.dead && !f.downed) frontY = Math.min(frontY, f.y);
+    });
+    var pinned =
+      a.timeSinceDamage < 0.55 || (a.suppressionTimer || 0) > 0.35;
+    var behindFront = !!(tun && a.y > frontY + tun.behindFront);
     var shouldLeap =
       inSlot &&
       aggressiveAdvance &&
       squadMode !== "HOLD" &&
-      d > engagementRange * 1.45;
+      !pinned &&
+      (d > engagementRange * (tun ? tun.leapRangeFactor : 1.45) ||
+        behindFront);
     if (
       ((!inSlot && !headingToSlot) ||
         shouldLeap ||
@@ -558,10 +619,16 @@ export function updateAllies(
         minThreat: 50,
         maxThreat: 2400,
         desiredRange: aggressiveAdvance
-          ? engagementRange
+          ? tun
+            ? Math.min(a.weapon.range * tun.desiredRangeFactor, tun.engageRangeCap)
+            : engagementRange
           : Math.min(a.weapon.range * 0.68, 1050),
         flankSide: a.flankSide,
-        flankWeight: aggressiveAdvance ? 230 : 150,
+        flankWeight: tun
+          ? tun.flankWeight
+          : aggressiveAdvance
+            ? 230
+            : 150,
         forceNew: shouldLeap || (!useful && inSlot),
         slotPriority: true,
         allowUnprotected: true,
@@ -571,7 +638,11 @@ export function updateAllies(
       if (choice && !claimed(choice, a, friendlyTeam)) {
         applyCoverChoice(a, choice);
         a.combatState = "seeking";
-        a.repositionCooldown = aggressiveAdvance ? 0.55 : 0.85;
+        a.repositionCooldown = aggressiveAdvance
+          ? tun
+            ? tun.reposition
+            : 0.55
+          : 0.85;
         inSlot = false;
       }
     }
@@ -590,7 +661,7 @@ export function updateAllies(
         a.y = a.coverAnchorY;
         a.combatState = "covered";
         a.exposed = false;
-        a.combatTimer = 0.45;
+        a.combatTimer = tun ? tun.coveredDwell : 0.45;
       }
       return;
     }
@@ -602,17 +673,21 @@ export function updateAllies(
         }
         a.combatState = "covered";
         a.exposed = false;
-        a.combatTimer = 0.45;
+        a.combatTimer = tun ? tun.coveredDwell : 0.45;
       }
       a.combatTimer -= dt;
       if (a.combatState === "covered" && a.combatTimer <= 0) {
         a.combatState = "exposed";
         a.exposed = true;
-        a.combatTimer = Math.max(
-          1.05,
-          Math.min(1.7, a.weapon.cooldown * 2.35 + 0.45),
-        );
-        a.shotsLeft = 5 + Math.floor(Math.random() * 4);
+        a.combatTimer = tun
+          ? Math.max(
+              tun.peekMin,
+              Math.min(tun.peekMax, a.weapon.cooldown * 2.1 + 0.4),
+            )
+          : Math.max(1.05, Math.min(1.7, a.weapon.cooldown * 2.35 + 0.45));
+        a.shotsLeft = tun
+          ? tun.peekShotsMin + Math.floor(Math.random() * tun.peekShotsExtra)
+          : 5 + Math.floor(Math.random() * 4);
       } else if (a.combatState === "exposed") {
         var pp = peekPoint(a, e, 36);
         a.targetX = pp.x;
@@ -624,7 +699,9 @@ export function updateAllies(
           a.exposed = false;
           a.targetX = a.coverAnchorX;
           a.targetY = a.coverAnchorY;
-          a.combatTimer = 0.32 + Math.random() * 0.18;
+          a.combatTimer = tun
+            ? tun.coveredDwell * 0.7 + Math.random() * 0.12
+            : 0.32 + Math.random() * 0.18;
         }
       } else {
         a.targetX = a.coverAnchorX;
