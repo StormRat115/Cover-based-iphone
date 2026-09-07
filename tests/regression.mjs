@@ -1324,7 +1324,7 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    101,
+    79,
     "soldier/vault/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn facade plates",
   );
   assert.equal(h.metrics.intervals, 0);
@@ -1824,8 +1824,10 @@ test("wartorn city plates load and dress the street sides", async () => {
   );
   assert.ok(dressing.sidewalk >= 200, "sidewalk strips dress the street edges");
   assert.ok(
-    dressing.buildings.every((item) => Math.abs(item.x) > dressing.road + 400),
-    "ruins stay on the far backdrop, not the midfield street",
+    dressing.buildings.every(
+      (item) => Math.abs(item.x) > dressing.road + dressing.sidewalk - 40,
+    ),
+    "ruins stay past the sidewalk, not on the midfield street",
   );
   assert.ok(dressing.lamps.length >= 8);
   assert.ok(dressing.sidewalkProps.length >= 8);

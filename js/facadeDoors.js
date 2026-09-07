@@ -180,7 +180,6 @@ export function updateFacadeDoors(director, dt, opts) {
   if (!director) return director;
   director.wave = opts.wave || director.wave;
   if (opts.waveState === "active") director.timer -= dt;
-  if (director.timer <= 0) tryFacadeDoorBurst(director, opts);
   director.bursts.forEach(function (burst) {
     burst.t += dt;
     if (!burst.spawned && burst.t >= DOOR_SPAWN_LEAD) {
@@ -192,6 +191,7 @@ export function updateFacadeDoors(director, dt, opts) {
   director.bursts = director.bursts.filter(function (burst) {
     return !burst.done;
   });
+  if (director.timer <= 0) tryFacadeDoorBurst(director, opts);
   updateDoorEgress(opts.enemies, dt);
   return director;
 }
