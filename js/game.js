@@ -90,6 +90,12 @@ import {
   drawWartornStreetSurface,
 } from "./wartornCity.js?v=20260907-117";
 import {
+  createFacadeDoorDirector,
+  resetFacadeDoors,
+  updateFacadeDoors,
+  drawFacadeDoorBursts,
+} from "./facadeDoors.js?v=20260907-117";
+import {
   updateSquadDialog,
   drawDialogBubbles,
   resetSquadDialog,
@@ -164,7 +170,8 @@ var W = 0,
   wave = 1,
   waveState = "active",
   waveTimer = 0,
-  waveDirector = null;
+  waveDirector = null,
+  doorDirector = createFacadeDoorDirector();
 var world = {
   scaleX: 0.23,
   scaleY: 0.115,
@@ -260,6 +267,7 @@ function createWaveEnemies() {
     },
   });
   waveDirector = segmentWave(roster, { packSize: 3, interval: 9.5, firstDelay: 0.7 });
+  resetFacadeDoors(doorDirector, wave);
   return roster;
 }
 function nearestEnemy() {
@@ -885,6 +893,14 @@ function updateWaveDefense(dt) {
     return;
   }
   updateWaveSegments(waveDirector, dt, enemies);
+  updateFacadeDoors(doorDirector, dt, {
+    wave: wave,
+    waveState: waveState,
+    enemies: enemies,
+    world: world,
+    onScreen: onScreen,
+    rebuildLayers: rebuildLayers,
+  });
   if (waveFullyCleared(enemies, waveDirector)) {
     grantWaveXp(wave);
     waveState = "cleared";
@@ -1184,8 +1200,7 @@ function drawMapDecor() {
     walkL = curbL - WALK,
     walkR = curbR + WALK,
     y,
-    step,
-    fade;
+    step;
   worldPoly(
     [
       [world.minX, world.minY],
@@ -1255,16 +1270,6 @@ function drawMapDecor() {
     );
   for (var crossY = world.minY + 420; crossY < world.maxY; crossY += 1100)
     drawCrosswalk(crossY);
-  if (ctx.createLinearGradient) {
-    fade = ctx.createLinearGradient(0, 0, 0, H * 0.3);
-    if (fade && fade.addColorStop) {
-      fade.addColorStop(0, "rgba(42,38,34,0.55)");
-      fade.addColorStop(0.45, "rgba(48,44,40,0.18)");
-      fade.addColorStop(1, "rgba(58,54,48,0)");
-      ctx.fillStyle = fade;
-      ctx.fillRect(0, 0, W, H * 0.3);
-    }
-  }
 }
 function drawStreetObjective() {
   var objective = mission.objective,
@@ -1303,6 +1308,7 @@ function drawWorld() {
   drawWartornAtmosphere(ctx, W, H, iso, world);
   drawMapDecor();
   drawWartornDressing(ctx, iso, world, W, H, onScreen);
+  drawFacadeDoorBursts(ctx, iso, doorDirector, onScreen);
   drawStreetTask(ctx, iso, streetTasks);
   drawAmmoDrops(ctx, iso, ammoDrops);
   drawStreetObjective();

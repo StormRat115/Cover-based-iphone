@@ -119,32 +119,27 @@ export function enemyCountForWave(wave, random, extraCount) {
         : Math.max(6, Math.min(12, Math.floor(extraCount)));
   return baseCount + reinforcements;
 }
-export function createBandits(wave, options) {
-  wave = wave || 1;
+export function doorHostileType(wave, index, random) {
+  random = random || Math.random;
+  if (wave <= 1) return "rifleman";
+  if (wave <= 2) return index === 1 && random() > 0.45 ? "shotgunner" : "rifleman";
+  if (index === 2 && wave >= 4 && random() > 0.7) return "charger";
+  if (random() > 0.55) return "smg";
+  if (random() > 0.5) return "shotgunner";
+  return "rifleman";
+}
+
+export function createHostileAt(x, y, type, options) {
   options = options || {};
-  var random = options.random || Math.random,
-    count = enemyCountForWave(wave, random, options.extraCount),
-    spawns =
-      options.spawnMode === "surround"
-        ? createSurroundSpawnPoints(count, options.spawnView)
-        : createNortheastSpawnPoints(count, options.spawnView);
-  return spawns.map(function (pos, i) {
-    var x = pos.x,
-      y = pos.y,
-      type = "rifleman";
-    if (wave >= 2 && i % 5 === 1) type = "shotgunner";
-    if (wave >= 2 && i % 6 === 3) type = "heavy";
-    if (wave >= 3 && i % 10 === 0) type = "sniper";
-    if (wave >= 3 && i % 7 === 4) type = "marksman";
-    if (wave >= 4 && i % 6 === 1) type = "smg";
-    if (wave >= 4 && i % 8 === 6) type = "pistol";
-    if (i === 2 || i % 6 === 5) type = "charger";
-    var s = TYPES[type] || TYPES.rifleman,
-      w = type === "charger" ? chargerWeapon() : weaponCopy(s.weapon),
-      stats = ENEMY_STATS[type] || ENEMY_STATS.rifleman;
-    var attackRange = rollEnemyAttackRange(type, random);
-    if (attackRange != null) w.range = attackRange;
-    return tagEnemyStance({
+  var i = options.index || 0;
+  var s = TYPES[type] || TYPES.rifleman,
+    w = type === "charger" ? chargerWeapon() : weaponCopy(s.weapon),
+    stats = ENEMY_STATS[type] || ENEMY_STATS.rifleman;
+  var random = options.random || Math.random;
+  var attackRange = rollEnemyAttackRange(type, random);
+  if (attackRange != null) w.range = attackRange;
+  return tagEnemyStance(
+    {
       x: x,
       y: y,
       type: type,
@@ -161,14 +156,14 @@ export function createBandits(wave, options) {
       deathDuration: 0.8,
       muzzle: 0,
       hit: 0,
-      targetX: x,
-      targetY: y,
-      moveTimer: 0.35 + i * 0.06,
-      spawnTimer: 1.8 + (i % 3) * 0.28,
-      spawnScreenX: pos.screenX,
-      spawnScreenY: pos.screenY,
-      spawnLane: pos.lane,
-      enteredWorld: false,
+      targetX: options.doorApproachX != null ? options.doorApproachX : x,
+      targetY: options.doorApproachY != null ? options.doorApproachY : y,
+      moveTimer: 0.12,
+      spawnTimer: options.spawnTimer != null ? options.spawnTimer : 0.2,
+      spawnScreenX: options.spawnScreenX,
+      spawnScreenY: options.spawnScreenY,
+      spawnLane: options.spawnLane || "door",
+      enteredWorld: !!options.fromDoor,
       cover: null,
       coverSlotIndex: i % 3,
       speed: s.speed,
@@ -191,7 +186,41 @@ export function createBandits(wave, options) {
       meleeCharge: type === "charger",
       charging: false,
       meleeTimer: 0,
-    }, i);
+      fromDoor: !!options.fromDoor,
+      doorEgress: !!options.fromDoor,
+      doorApproachX: options.doorApproachX,
+      doorApproachY: options.doorApproachY,
+    },
+    i,
+  );
+}
+
+export function createBandits(wave, options) {
+  wave = wave || 1;
+  options = options || {};
+  var random = options.random || Math.random,
+    count = enemyCountForWave(wave, random, options.extraCount),
+    spawns =
+      options.spawnMode === "surround"
+        ? createSurroundSpawnPoints(count, options.spawnView)
+        : createNortheastSpawnPoints(count, options.spawnView);
+  return spawns.map(function (pos, i) {
+    var type = "rifleman";
+    if (wave >= 2 && i % 5 === 1) type = "shotgunner";
+    if (wave >= 2 && i % 6 === 3) type = "heavy";
+    if (wave >= 3 && i % 10 === 0) type = "sniper";
+    if (wave >= 3 && i % 7 === 4) type = "marksman";
+    if (wave >= 4 && i % 6 === 1) type = "smg";
+    if (wave >= 4 && i % 8 === 6) type = "pistol";
+    if (i === 2 || i % 6 === 5) type = "charger";
+    return createHostileAt(pos.x, pos.y, type, {
+      index: i,
+      random: random,
+      spawnTimer: 1.8 + (i % 3) * 0.28,
+      spawnScreenX: pos.screenX,
+      spawnScreenY: pos.screenY,
+      spawnLane: pos.lane,
+    });
   });
 }
 function desiredRange(e) {
