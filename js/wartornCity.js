@@ -647,7 +647,6 @@ function drawFarBackdrop(ctx, iso, world, W, H) {
     dw,
     dh,
     camY,
-    sample,
     q,
     s;
   facades = [
