@@ -1,5 +1,5 @@
-import { isSightBlocked } from "./cover.js?v=20260907-115";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-115";
+import { isSightBlocked } from "./cover.js?v=20260907-116";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-116";
 
 var burstUntil = 0,
   burstPauseUntil = 0,

@@ -642,73 +642,105 @@ export function slotCountFromBlocks(blocks) {
   if (!live.length) return 1;
   var best = 1;
   ["top", "right", "bottom", "left"].forEach(function (side) {
-    best = Math.max(best, exposedBlocksOnSide(live, side).length);
+    best = Math.max(best, slotSpansOnSide(live, side).length);
   });
   return Math.max(1, Math.min(4, best));
 }
 
+function blocksTouchAlongSide(a, b, side) {
+  if (side === "top" || side === "bottom")
+    return a.gy === b.gy && Math.abs(a.gx - b.gx) === 1;
+  return a.gx === b.gx && Math.abs(a.gy - b.gy) === 1;
+}
+
+function slotSpansOnSide(blocks, side) {
+  var exposed = exposedBlocksOnSide(blocks, side);
+  var spans = [];
+  var run = [];
+
+  function flushRun() {
+    var i;
+    for (i = 0; i < run.length; i += 2)
+      spans.push({ blocks: run.slice(i, i + 2), side: side });
+    run = [];
+  }
+
+  exposed.forEach(function (block) {
+    if (run.length && !blocksTouchAlongSide(run[run.length - 1], block, side))
+      flushRun();
+    run.push(block);
+  });
+  flushRun();
+  return spans;
+}
+
 export function pointOnBlockEdge(cover, block, side) {
+  return pointOnBlockSpan(cover, [block], side);
+}
+
+function pointOnBlockSpan(cover, blocks, side) {
   var size = (cover && cover.blockSize) || COVER_BLOCK_SIZE;
   var standoff = cover && cover.type === "low" ? 16 : 18;
-  var x = cover.x + block.dx;
-  var y = cover.y + block.dy;
-  if (side === "top") y -= size / 2 + standoff;
-  else if (side === "bottom") y += size / 2 + standoff;
-  else if (side === "left") x -= size / 2 + standoff;
-  else x += size / 2 + standoff;
+  var minX = Infinity,
+    maxX = -Infinity,
+    minY = Infinity,
+    maxY = -Infinity;
+  blocks.forEach(function (block) {
+    minX = Math.min(minX, block.dx - size / 2);
+    maxX = Math.max(maxX, block.dx + size / 2);
+    minY = Math.min(minY, block.dy - size / 2);
+    maxY = Math.max(maxY, block.dy + size / 2);
+  });
+  var x = cover.x + (minX + maxX) / 2;
+  var y = cover.y + (minY + maxY) / 2;
+  if (side === "top") y = cover.y + minY - standoff;
+  else if (side === "bottom") y = cover.y + maxY + standoff;
+  else if (side === "left") x = cover.x + minX - standoff;
+  else x = cover.x + maxX + standoff;
   return {
     x: x,
     y: y,
     side: side,
     segment: {
-      x: cover.x + block.dx,
-      y: cover.y + block.dy,
-      w: size,
-      h: size,
+      x: cover.x + (minX + maxX) / 2,
+      y: cover.y + (minY + maxY) / 2,
+      w: maxX - minX,
+      h: maxY - minY,
     },
-    block: block,
+    block: blocks[0],
+    blocks: blocks,
   };
 }
 
 export function describeOuterSlots(cover, side, count) {
   var live = livingBlocks(cover);
   if (!live.length) return [];
-  var facing = exposedBlocksOnSide(live, side);
+  var facing = slotSpansOnSide(live, side);
   var extras = [];
   ["top", "right", "bottom", "left"].forEach(function (s) {
     if (s === side) return;
-    extras = extras.concat(exposedBlocksOnSide(live, s));
+    extras = extras.concat(slotSpansOnSide(live, s));
   });
   var pool = facing.concat(extras);
   var used = {};
   var picked = [];
   var i,
-    key,
-    block,
-    slotSide;
+    j,
+    span,
+    blocked;
   count = Math.max(1, count || slotCountFromBlocks(live));
   for (i = 0; i < pool.length && picked.length < count; i++) {
-    block = pool[i];
-    key = cellKey(block.gx, block.gy);
-    if (used[key]) continue;
-    used[key] = true;
-    slotSide = i < facing.length ? side : edgeSideForBlock(block, live, side);
-    picked.push(pointOnBlockEdge(cover, block, slotSide));
+    span = pool[i];
+    blocked = false;
+    for (j = 0; j < span.blocks.length; j++)
+      if (used[cellKey(span.blocks[j].gx, span.blocks[j].gy)]) blocked = true;
+    if (blocked) continue;
+    for (j = 0; j < span.blocks.length; j++)
+      used[cellKey(span.blocks[j].gx, span.blocks[j].gy)] = true;
+    picked.push(pointOnBlockSpan(cover, span.blocks, span.side));
   }
   if (!picked.length) picked.push(pointOnBlockEdge(cover, live[0], side));
   return picked;
-}
-
-function edgeSideForBlock(block, blocks, preferred) {
-  var map = blockMap(blocks);
-  var mask = neighborMask(block, map, false);
-  if ((mask & (preferred === "top" ? N : preferred === "right" ? E : preferred === "bottom" ? S : W)) === 0)
-    return preferred;
-  if ((mask & S) === 0) return "bottom";
-  if ((mask & N) === 0) return "top";
-  if ((mask & E) === 0) return "right";
-  if ((mask & W) === 0) return "left";
-  return preferred;
 }
 
 export function syncCoverGeometry(cover) {

@@ -318,6 +318,25 @@ test("cover pieces are uniform blocks assembled into random playable shapes", as
   const themes = new Set();
   const layout = city.createCityCoverLayout(() => 0.31);
   assert.equal(city.COVER_BLOCK_SIZE, 40);
+  const fourCubeBlocks = blocks.cellsToBlocks(
+    [[0, 0], [1, 0], [2, 0], [3, 0]],
+    "jersey",
+    40,
+  );
+  const fourCubeCover = {
+    x: 0,
+    y: 0,
+    type: "wide",
+    blockSize: 40,
+    blocks: fourCubeBlocks,
+  };
+  const topRowSlots = blocks.describeOuterSlots(fourCubeCover, "top");
+  const bottomRowSlots = blocks.describeOuterSlots(fourCubeCover, "bottom");
+  assert.equal(blocks.slotCountFromBlocks(fourCubeBlocks), 2);
+  assert.equal(topRowSlots.length, 2);
+  assert.equal(bottomRowSlots.length, 2);
+  assert.ok(topRowSlots.every((slot) => slot.segment.w === 80));
+  assert.ok(bottomRowSlots.every((slot) => slot.segment.w === 80));
   assert.ok(blocks.allBlocksUniform(layout, 40));
   for (const cover of layout) {
     assert.ok(
