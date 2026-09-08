@@ -366,6 +366,11 @@ function spawnProjectile(from, to, owner, damage) {
     tx: tx,
     ty: ty,
     life: 0,
+    resolved: false,
+    visualAge: 0,
+    rendered: false,
+    directionX: tx - from.x,
+    directionY: ty - from.y,
     maxLife: Math.min(0.62, d / 5200 + 0.05),
     speed: 6500,
     owner: owner,
@@ -383,6 +388,11 @@ function spawnAllyProjectile(a, e, owner, damage) {
 function updateProjectiles(dt) {
   for (var i = projectiles.length - 1; i >= 0; i--) {
     var p = projectiles[i];
+    if (p.resolved) {
+      p.visualAge += dt;
+      if (p.rendered && p.visualAge >= 0.08) projectiles.splice(i, 1);
+      continue;
+    }
     p.life += dt;
     var dx = p.tx - p.x,
       dy = p.ty - p.y,
@@ -404,7 +414,7 @@ function updateProjectiles(dt) {
           coverHit.piece,
         );
         notifyShotImpact(p, coverHit.piece || coverHit.cover, { hitCover: true });
-        projectiles.splice(i, 1);
+        p.resolved = true;
         continue;
       }
     }
@@ -420,14 +430,14 @@ function updateProjectiles(dt) {
         notifyShotImpact(p, p.target, { hitArmor: true });
       }
       // Player/ally damage is applied once, at fire time. Their projectiles are visual.
-      projectiles.splice(i, 1);
+      p.resolved = true;
     }
   }
 }
 function drawProjectiles() {
   projectiles.forEach(function (p) {
     var xy = iso(p.x, p.y),
-      txy = iso(p.tx, p.ty),
+      txy = iso(p.x + p.directionX, p.y + p.directionY),
       x = xy[0],
       y = xy[1],
       tx = txy[0],
@@ -439,7 +449,7 @@ function drawProjectiles() {
       tracer = "#ffd400";
     ctx.save();
     ctx.globalAlpha = Math.max(
-      isPlayerShot ? 0.88 : 0.62,
+      0.88,
       1 - p.life / p.maxLife,
     );
     ctx.strokeStyle = tracer;
@@ -454,6 +464,7 @@ function drawProjectiles() {
     );
     ctx.lineTo(x, y);
     ctx.stroke();
+    p.rendered = true;
     ctx.shadowBlur = 0;
     ctx.restore();
   });
