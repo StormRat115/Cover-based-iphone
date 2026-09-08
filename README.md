@@ -52,6 +52,12 @@ node scripts/version.mjs YYYYMMDD-N
 
 When replacing an image, also bump that image's source URL in the relevant asset module. Do not create separate query versions of a stateful module: browsers treat them as separate instances.
 
+## Doc slate atlas: 20260908-131
+
+Doc draws the official Phone Art `doc-atlas` from `chore/doc-slate-atlas` (`71f7c72`) under `assets/generated/soldier/`. Preferred sheet is `doc-atlas.webp`, with `doc-atlas.png` as the decode fallback. 4×6, cell 192, facing right, hard alpha. States: idle, run, standShoot, crouchShoot, reload, death. Kit locked: slate-blue plate, full helmet dark visor, assault rifle, medic pouches. No baked cover.
+
+Rook, Viper, Leo, and the player stay on their current sheets. Stem shot knobs and targeting (revive first, else lowest HP) are unchanged.
+
 ## Squadmate Leo (tactical knight): 20260908-126
 
 Fourth named ally beside Rook / Viper / Doc. Default **defense 200**, sword melee preference, infinite personal sidearm while closing. Rebased onto BUILD 124 exclusive-slot repath + façade street flow.

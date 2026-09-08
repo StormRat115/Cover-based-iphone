@@ -2,13 +2,13 @@ import {
   createBandits,
   createSurroundSpawnPoints,
   updateBandits as updateBanditsCore,
-} from "./enemyCore.js?v=20260908-130";
+} from "./enemyCore.js?v=20260908-131";
 import {
   drawEnemyMonster,
   drawSoldier,
-} from "./soldierAssets.js?v=20260908-130";
-import { updateChargers, drawCharger } from "./chargerEnemy.js?v=20260908-130";
-import { drawCombatMarks } from "./engaged.js?v=20260908-130";
+} from "./soldierAssets.js?v=20260908-131";
+import { updateChargers, drawCharger } from "./chargerEnemy.js?v=20260908-131";
+import { drawCombatMarks } from "./engaged.js?v=20260908-131";
 export { createBandits, createSurroundSpawnPoints };
 var ENEMY_LINES = {
   contact: ["CONTACT!", "THERE!", "I SEE THEM!", "MOVE! MOVE!"],

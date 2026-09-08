@@ -3,14 +3,14 @@ import {
   applyCoverChoice,
   moveTowardTarget,
   faceThreat,
-} from "./combatAI.js?v=20260908-130";
-import { occupiesCoverSlot } from "./coverSlots.js?v=20260908-130";
+} from "./combatAI.js?v=20260908-131";
+import { occupiesCoverSlot } from "./coverSlots.js?v=20260908-131";
 import {
   mitigateDamage,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-130";
-import { isLeo } from "./leoKit.js?v=20260908-130";
+} from "./combatStats.js?v=20260908-131";
+import { isLeo } from "./leoKit.js?v=20260908-131";
 
 // Independent squad abilities. Each character fires their own kit on cooldown.
 // StormRat knobs — bump these instead of rewriting the brains.

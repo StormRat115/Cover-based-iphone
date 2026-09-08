@@ -1,7 +1,7 @@
-import { CHARACTER_STATS } from "./combatStats.js?v=20260908-130";
-import { getSkillMods } from "./skillTree.js?v=20260908-130";
-import { applyArmorMods, selectedArmorId, PLAYER_BASE_SPEED } from "./armor.js?v=20260908-130";
-import { createMarineAt } from "./marines.js?v=20260908-130";
+import { CHARACTER_STATS } from "./combatStats.js?v=20260908-131";
+import { getSkillMods } from "./skillTree.js?v=20260908-131";
+import { applyArmorMods, selectedArmorId, PLAYER_BASE_SPEED } from "./armor.js?v=20260908-131";
+import { createMarineAt } from "./marines.js?v=20260908-131";
 
 export function applyRunModifiers(player, allies, marines) {
   var mods = getSkillMods();

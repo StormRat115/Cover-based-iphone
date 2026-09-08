@@ -1,0 +1,36 @@
+{
+  "cols": 4,
+  "rows": 6,
+  "cell": 192,
+  "frameWidth": 192,
+  "frameHeight": 192,
+  "facing": "right",
+  "opaque": true,
+  "alphaHardened": true,
+  "character": "Doc",
+  "role": "medic-rifle",
+  "kit": [
+    "slate-blue-plate",
+    "full-helmet",
+    "assault-rifle",
+    "medic-pouches"
+  ],
+  "states": [
+    "idle",
+    "run",
+    "standShoot",
+    "crouchShoot",
+    "reload",
+    "death"
+  ],
+  "fps": {
+    "idle": 3.2,
+    "run": 9,
+    "standShoot": 10,
+    "crouchShoot": 10,
+    "reload": 8,
+    "death": 7
+  },
+  "file": "doc-atlas.webp",
+  "note": "kit-locked A: slate-blue plate, dark visor helmet, assault rifle, medic pouches. No baked cover."
+}

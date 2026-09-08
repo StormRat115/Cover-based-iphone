@@ -3,49 +3,49 @@ import {
   SIDEARMS,
   weaponCopy,
   weaponWithAttachments,
-} from "./weapons.js?v=20260908-130";
+} from "./weapons.js?v=20260908-131";
 import {
   soldierSource,
   drawSoldier,
   leoAtlasReady,
-} from "./soldierAssets.js?v=20260908-130";
+} from "./soldierAssets.js?v=20260908-131";
 import {
   CHARACTER_STATS,
   damageReductionPercent,
   GENERAL_ACCURACY_PENALTY,
-} from "./combatStats.js?v=20260908-130";
+} from "./combatStats.js?v=20260908-131";
 import {
   ATTACHMENT_SLOTS,
   ATTACHMENT_SLOT_LABELS,
   attachmentsForSlot,
   emptyAttachmentIds,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260908-130";
+} from "./attachments.js?v=20260908-131";
 import {
   getTeamProgress,
   xpIntoLevel,
   xpForLevel,
-} from "./teamProgress.js?v=20260908-130";
+} from "./teamProgress.js?v=20260908-131";
 import {
   SKILL_BRANCHES,
   canBuySkill,
   buySkill,
   getSkillMods,
-} from "./skillTree.js?v=20260908-130";
+} from "./skillTree.js?v=20260908-131";
 import {
   ARMOR_OPTIONS,
   describeArmorStats,
   selectArmor,
   selectedArmorId,
   signed,
-} from "./armor.js?v=20260908-130";
+} from "./armor.js?v=20260908-131";
 import {
   isLeo,
   leoSword,
   leoSidearmFromLoadout,
   LEO_TEMP_FILTER,
   drawLeoGear,
-} from "./leoKit.js?v=20260908-130";
+} from "./leoKit.js?v=20260908-131";
 
 var DEFAULT_WEAPONS = {
     player: "rifle",
@@ -472,6 +472,29 @@ function drawPreview(key) {
       );
       if (!leoAtlasReady())
         drawLeoGear(g, { name: "Leo", knight: true, blocking: true, combatState: "idle" });
+      g.restore();
+      return;
+    }
+    if (previewKey === "Doc") {
+      g.save();
+      g.translate(100, 198);
+      drawSoldier(
+        g,
+        {
+          x: 0,
+          y: 0,
+          hp: 130,
+          maxHp: 130,
+          facingX: 1,
+          facingY: 0,
+          name: "Doc",
+          role: "marksman",
+        },
+        {
+          team: "ally",
+          scale: 0.72,
+        },
+      );
       g.restore();
       return;
     }
