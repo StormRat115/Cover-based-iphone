@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260908-125";
+import { loadImage } from "./assets.js?v=20260908-126";
 
 var ROAD = 980;
 var WALK = 260;

@@ -1,5 +1,5 @@
-import { weaponCopy } from "./weapons.js?v=20260908-125";
-import { orderDefense } from "./squadDialog.js?v=20260908-125";
+import { weaponCopy } from "./weapons.js?v=20260908-126";
+import { orderDefense } from "./squadDialog.js?v=20260908-126";
 
 // Tunable knight brain. StormRat can replace this with per-squadmate AI later.
 export const LEO_AGGRO = {
@@ -17,9 +17,8 @@ export const LEO_AGGRO = {
   desiredCoverRange: 170,
 };
 
-// TEMP: Phone Art `leo-atlas` / chore/leo-heavy-knight is not on development yet.
-// Swap LEO_ART_STATUS to "official" when that sheet lands under assets/generated/soldier/.
-export const LEO_ART_STATUS = "temp-recolor";
+// Official Phone Art kit-locked v4 from chore/leo-heavy-knight (523fd40).
+export const LEO_ART_STATUS = "official";
 export const LEO_TEMP_FILTER =
   "sepia(.28) saturate(.62) hue-rotate(196deg) brightness(.84) contrast(1.18)";
 

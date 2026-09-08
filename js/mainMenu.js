@@ -3,47 +3,49 @@ import {
   SIDEARMS,
   weaponCopy,
   weaponWithAttachments,
-} from "./weapons.js?v=20260908-125";
-import { soldierSource } from "./soldierAssets.js?v=20260908-125";
+} from "./weapons.js?v=20260908-126";
+import {
+  soldierSource,
+  drawSoldier,
+  leoAtlasReady,
+} from "./soldierAssets.js?v=20260908-126";
 import {
   CHARACTER_STATS,
   damageReductionPercent,
   GENERAL_ACCURACY_PENALTY,
-} from "./combatStats.js?v=20260908-125";
+} from "./combatStats.js?v=20260908-126";
 import {
   ATTACHMENT_SLOTS,
   ATTACHMENT_SLOT_LABELS,
   attachmentsForSlot,
   emptyAttachmentIds,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260908-125";
+} from "./attachments.js?v=20260908-126";
 import {
   getTeamProgress,
   xpIntoLevel,
   xpForLevel,
-} from "./teamProgress.js?v=20260908-125";
+} from "./teamProgress.js?v=20260908-126";
 import {
   SKILL_BRANCHES,
   canBuySkill,
   buySkill,
   getSkillMods,
-} from "./skillTree.js?v=20260908-125";
+} from "./skillTree.js?v=20260908-126";
 import {
   ARMOR_OPTIONS,
   describeArmorStats,
   selectArmor,
   selectedArmorId,
   signed,
-} from "./armor.js?v=20260908-125";
+} from "./armor.js?v=20260908-126";
 import {
   isLeo,
   leoSword,
   leoSidearmFromLoadout,
-  LEO_ART_STATUS,
   LEO_TEMP_FILTER,
   drawLeoGear,
-} from "./leoKit.js?v=20260908-125";
-import { drawSoldier } from "./soldierAssets.js?v=20260908-125";
+} from "./leoKit.js?v=20260908-126";
 
 var DEFAULT_WEAPONS = {
     player: "rifle",
@@ -191,11 +193,7 @@ function roleName(k) {
   if (k === "Rook") return "ASSAULT";
   if (k === "Viper") return "FLANKER";
   if (k === "Doc") return "MARKSMAN";
-  if (k === "Leo")
-    return (
-      "TACTICAL KNIGHT" +
-      (LEO_ART_STATUS === "temp-recolor" ? " · TEMP RECOLOR" : "")
-    );
+  if (k === "Leo") return "TACTICAL KNIGHT";
   return "OPERATOR";
 }
 
@@ -469,10 +467,11 @@ function drawPreview(key) {
         {
           team: "ally",
           scale: 0.72,
-          recolorFilter: LEO_ART_STATUS === "temp-recolor" ? LEO_TEMP_FILTER : "",
+          recolorFilter: leoAtlasReady() ? "" : LEO_TEMP_FILTER,
         },
       );
-      drawLeoGear(g, { name: "Leo", knight: true, blocking: true, combatState: "idle" });
+      if (!leoAtlasReady())
+        drawLeoGear(g, { name: "Leo", knight: true, blocking: true, combatState: "idle" });
       g.restore();
       return;
     }

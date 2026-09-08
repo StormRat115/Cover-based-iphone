@@ -1,28 +1,28 @@
-import { isSightBlocked, getHitChance } from "./cover.js?v=20260908-125";
-import { AudioBus } from "./audio.js?v=20260908-125";
+import { isSightBlocked, getHitChance } from "./cover.js?v=20260908-126";
+import { AudioBus } from "./audio.js?v=20260908-126";
 import {
   pickTacticalCover,
   applyCoverChoice,
   moveTowardTarget,
   faceThreat,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-125";
+} from "./combatAI.js?v=20260908-126";
 import {
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-125";
-import { occupiesCoverSlot } from "./coverSlots.js?v=20260908-125";
+} from "./combatStats.js?v=20260908-126";
+import { occupiesCoverSlot } from "./coverSlots.js?v=20260908-126";
 import {
   spraySuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-125";
-import { orderAccuracy } from "./squadDialog.js?v=20260908-125";
+} from "./suppression.js?v=20260908-126";
+import { orderAccuracy } from "./squadDialog.js?v=20260908-126";
 import {
   LEO_AGGRO,
   isLeo,
-} from "./leoKit.js?v=20260908-125";
+} from "./leoKit.js?v=20260908-126";
 
 export {
   LEO_AGGRO,
@@ -35,7 +35,7 @@ export {
   incomingDefense,
   isLeoBlocking,
   drawLeoGear,
-} from "./leoKit.js?v=20260908-125";
+} from "./leoKit.js?v=20260908-126";
 
 function swingSword(a, e) {
   if (!e || a.dead || a.downed) return false;

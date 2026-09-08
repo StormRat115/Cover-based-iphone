@@ -4,7 +4,7 @@ import {
   findBlockAtPiece,
   livingBlocks,
   syncCoverGeometry,
-} from "./coverBlocks.js?v=20260908-125";
+} from "./coverBlocks.js?v=20260908-126";
 
 export const COVER_HP = {
   sandbags: 78,

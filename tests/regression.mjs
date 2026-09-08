@@ -1324,8 +1324,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    101,
-    "soldier/vault/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn facade plates",
+    102,
+    "soldier/vault/leo/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn facade plates",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
@@ -1481,6 +1481,63 @@ test("living friendlies stay fully opaque every animation frame", async () => {
     ]),
   );
   assert.equal(sprites.getSoldierAtlasInfo().coverRows, "mapped");
+  assert.equal(sprites.getSoldierAtlasInfo().leoAtlas, "leo-atlas.webp");
+  assert.equal(
+    sprites.getSoldierState({
+      name: "Leo",
+      knight: true,
+      hp: 170,
+      dead: false,
+      downed: false,
+      blocking: true,
+      combatState: "melee",
+      meleeTimer: 0.4,
+    }),
+    "meleeSwing",
+  );
+  assert.equal(
+    sprites.getSoldierState({
+      name: "Leo",
+      knight: true,
+      hp: 170,
+      dead: false,
+      downed: false,
+      cover: { type: "tall", x: 0, y: 0, w: 40, h: 40 },
+    }),
+    "shieldBlock",
+    "Leo holds the tower shield in cover instead of a baked barrier pose",
+  );
+});
+
+test("Phone Art leo-atlas is the wired 8-state kit-locked knight sheet", () => {
+  const meta = JSON.parse(
+    readFileSync("assets/generated/soldier/leo-atlas.json", "utf8"),
+  );
+  assert.equal(meta.cols, 4);
+  assert.equal(meta.rows, 8);
+  assert.equal(meta.cell, 192);
+  assert.equal(meta.character, "Leo");
+  assert.equal(meta.opaque, true);
+  assert.deepEqual(meta.states, [
+    "idle",
+    "run",
+    "standShoot",
+    "shieldRaise",
+    "meleeSwing",
+    "shieldBlock",
+    "reload",
+    "death",
+  ]);
+  const png = readFileSync("assets/generated/soldier/leo-atlas.png");
+  assert.equal(png[25], 6, "leo-atlas.png must be an RGBA PNG");
+  assert.ok(png.length > 400000);
+  const webp = readFileSync("assets/generated/soldier/leo-atlas.webp");
+  assert.ok(webp.length > 200000);
+  assert.ok(webp.length < 900000, "keep the official Leo sheet mobile-sized");
+  assert.match(
+    readFileSync("js/soldierAssets.js", "utf8"),
+    /leo-atlas\.webp/,
+  );
 });
 
 test("Phone Art player-solid-atlas is the wired 6-state opaque sheet", () => {
@@ -2847,7 +2904,7 @@ test("Leo is a 200 DEF knight who prefers melee and uses a private sidearm", asy
   assert.ok(stats.CHARACTER_STATS.Leo.defense > stats.CHARACTER_STATS.Rook.defense);
   assert.equal(leo.LEO_AGGRO.meleeRange, 82);
   assert.equal(leo.LEO_AGGRO.engageDistance, 520);
-  assert.equal(leo.LEO_ART_STATUS, "temp-recolor");
+  assert.equal(leo.LEO_ART_STATUS, "official");
 
   const allies = alliesModule.createAllies();
   const knight = allies.find((a) => a.name === "Leo");

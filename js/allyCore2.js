@@ -2,9 +2,9 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260908-125";
-import { weaponCopy } from "./weapons.js?v=20260908-125";
-import { AudioBus } from "./audio.js?v=20260908-125";
+} from "./cover.js?v=20260908-126";
+import { weaponCopy } from "./weapons.js?v=20260908-126";
+import { AudioBus } from "./audio.js?v=20260908-126";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -13,39 +13,39 @@ import {
   coverStillUseful,
   peekPoint,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-125";
+} from "./combatAI.js?v=20260908-126";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-125";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260908-125";
+} from "./combatStats.js?v=20260908-126";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260908-126";
 import {
   isCoverFull,
   occupancyPenalty,
   occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260908-125";
+} from "./coverSlots.js?v=20260908-126";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-125";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-125";
+} from "./suppression.js?v=20260908-126";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-126";
 import {
   currentPushGoal,
   pushGoalKey,
-} from "./streetObjectives.js?v=20260908-125";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-125";
+} from "./streetObjectives.js?v=20260908-126";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-126";
 import {
   isLeo,
   leoSword,
   leoSidearmFromLoadout,
   tickLeoTimers,
   updateLeoKnight,
-} from "./leoKnight.js?v=20260908-125";
+} from "./leoKnight.js?v=20260908-126";
 export const MARINE_AGGRO = {
   engageRangeFactor: 0.4,
   engageRangeCap: 700,

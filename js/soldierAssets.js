@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260908-125";
+import { loadImage } from "./assets.js?v=20260908-126";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
   "./assets/generated/soldier/player-solid-atlas.png?v=20260906-102";
@@ -13,6 +13,9 @@ deathSource.src = "./assets/soldier_death_sheet.png?v=20260906-88";
 export const vaultSheetSource = new Image();
 vaultSheetSource.src =
   "./assets/generated/soldier/vault-sheet.png?v=20260906-99";
+export const leoAtlasSource = new Image();
+leoAtlasSource.src =
+  "./assets/generated/soldier/leo-atlas.webp?v=20260908-126";
 
 const ENEMY_MONSTER_SHEET_WIDTH = 1536,
   ENEMY_MONSTER_SHEET_HEIGHT = 1022,
@@ -209,10 +212,49 @@ export const FRIENDLY_ATLAS_STATES = [
   "reload",
   "death",
 ];
+const LEO_ROWS_COUNT = 8;
+const LEO_ROWS = {
+  idle: 0,
+  run: 1,
+  standShoot: 2,
+  shoot: 2,
+  shieldRaise: 3,
+  meleeSwing: 4,
+  shieldBlock: 5,
+  reload: 6,
+  death: 7,
+  crouchShoot: 5,
+  tallCover: 5,
+  lowCover: 5,
+  vault: 1,
+};
+const LEO_FPS = {
+  idle: 3,
+  run: 9,
+  standShoot: 10,
+  shoot: 10,
+  shieldRaise: 8,
+  meleeSwing: 12,
+  shieldBlock: 4,
+  reload: 8,
+  death: 7,
+};
+export const LEO_ATLAS_STATES = [
+  "idle",
+  "run",
+  "standShoot",
+  "shieldRaise",
+  "meleeSwing",
+  "shieldBlock",
+  "reload",
+  "death",
+];
 const VAULT_COLS = 4;
 const VAULT_CELL = 168;
 let runtimeFriendlyAtlas = null,
-  runtimeFriendlyFrames = null;
+  runtimeFriendlyFrames = null,
+  runtimeLeoAtlas = null,
+  runtimeLeoFrames = null;
 const ROWS = {
   idle: 0,
   run: 1,
@@ -251,6 +293,9 @@ const STATE_HOLD_MS = {
   standShoot: 110,
   vault: 70,
   reload: 220,
+  meleeSwing: 90,
+  shieldRaise: 140,
+  shieldBlock: 180,
   death: 99999,
 };
 function nowMs() {
@@ -368,30 +413,30 @@ export function hardenSheetAlpha(source, cut) {
   }
 }
 
-function buildFriendlyFrameCache(source) {
+function buildCellFrameCache(source, rowCount, cols, cell) {
   if (!source) return null;
   var frames = [];
   try {
-    for (var row = 0; row < FRIENDLY_ROWS_COUNT; row++) {
+    for (var row = 0; row < rowCount; row++) {
       frames[row] = [];
-      for (var col = 0; col < FRIENDLY_COLS; col++) {
+      for (var col = 0; col < cols; col++) {
         var frame = document.createElement("canvas");
-        frame.width = FRIENDLY_CELL;
-        frame.height = FRIENDLY_CELL;
+        frame.width = cell;
+        frame.height = cell;
         var g = frame.getContext("2d", { willReadFrequently: true });
         if (!g || typeof g.drawImage !== "function") return null;
-        g.clearRect(0, 0, FRIENDLY_CELL, FRIENDLY_CELL);
+        g.clearRect(0, 0, cell, cell);
         g.imageSmoothingEnabled = false;
         g.drawImage(
           source,
-          col * FRIENDLY_CELL,
-          row * FRIENDLY_CELL,
-          FRIENDLY_CELL,
-          FRIENDLY_CELL,
+          col * cell,
+          row * cell,
+          cell,
+          cell,
           0,
           0,
-          FRIENDLY_CELL,
-          FRIENDLY_CELL,
+          cell,
+          cell,
         );
         // Keep every visible armor pixel fully opaque. A separate frame canvas
         // also prevents mobile GPU atlas sampling from bleeding between cells.
@@ -404,9 +449,38 @@ function buildFriendlyFrameCache(source) {
   return frames;
 }
 
+function buildFriendlyFrameCache(source) {
+  return buildCellFrameCache(
+    source,
+    FRIENDLY_ROWS_COUNT,
+    FRIENDLY_COLS,
+    FRIENDLY_CELL,
+  );
+}
+
+function buildLeoFrameCache(source) {
+  return buildCellFrameCache(source, LEO_ROWS_COUNT, FRIENDLY_COLS, FRIENDLY_CELL);
+}
+
 function friendlyFrame(row, col) {
   if (!runtimeFriendlyFrames || !runtimeFriendlyFrames[row]) return null;
   return runtimeFriendlyFrames[row][col] || null;
+}
+
+function leoFrame(row, col) {
+  if (!runtimeLeoFrames || !runtimeLeoFrames[row]) return null;
+  return runtimeLeoFrames[row][col] || null;
+}
+
+export function isLeoActor(actor) {
+  return !!(actor && (actor.knight || actor.role === "knight" || actor.name === "Leo"));
+}
+
+export function leoAtlasReady() {
+  return !!(
+    runtimeLeoAtlas &&
+    (runtimeLeoAtlas.naturalWidth > 0 || runtimeLeoAtlas.width > 0)
+  );
 }
 
 export function isLiveFriendly(actor, team) {
@@ -451,6 +525,7 @@ export function preloadSoldierAssets(onProgress) {
   onProgress(0.1, "LOADING CHARACTER ANIMATION ATLASES");
   return Promise.all([
     loadImage(friendlyAtlasSource),
+    loadImage(leoAtlasSource),
     loadImage(soldierSource),
     loadImage(enemySource),
     loadImage(deathSource),
@@ -464,6 +539,8 @@ export function preloadSoldierAssets(onProgress) {
       throw new Error("Character images are not ready");
     runtimeFriendlyAtlas = hardenSheetAlpha(friendlyAtlasSource) || friendlyAtlasSource;
     runtimeFriendlyFrames = buildFriendlyFrameCache(runtimeFriendlyAtlas);
+    runtimeLeoAtlas = hardenSheetAlpha(leoAtlasSource) || leoAtlasSource;
+    runtimeLeoFrames = buildLeoFrameCache(runtimeLeoAtlas);
     runtimeVaultSheet = hardenSheetAlpha(vaultSheetSource) || vaultSheetSource;
     // Legacy crop atlas kept as fallback; enemies still use monster atlas path.
     const soldierAtlas = buildAtlas(soldierSource, FRAME_BOXES);
@@ -548,8 +625,25 @@ export function coverPlantOffset(actor) {
 function zeroHealth(actor) {
   return !!(actor && (actor.hp <= 0 || actor.dead));
 }
+function desiredLeoState(actor) {
+  if (zeroHealth(actor)) return "death";
+  if (actor.vaulting || actor.state === "vault") return "run";
+  if (actor.downed) return "shieldBlock";
+  if (actor.reloading || actor.state === "reload") return "reload";
+  if ((actor.meleeTimer || 0) > 0.2) return "meleeSwing";
+  if (actor.combatState === "melee") return "shieldBlock";
+  if (shooting(actor)) return "standShoot";
+  if (actor.blocking && moving(actor)) return "shieldRaise";
+  if (actor.blocking) return "shieldBlock";
+  if (actor.cover) {
+    return peekingFromCover(actor) ? "standShoot" : "shieldBlock";
+  }
+  if (moving(actor)) return "run";
+  return "idle";
+}
 function desiredSoldierState(actor) {
   if (!actor) return "idle";
+  if (isLeoActor(actor)) return desiredLeoState(actor);
   if (zeroHealth(actor)) return "death";
   if (actor.vaulting || actor.state === "vault") return "vault";
   if (actor.downed) return "crouchShoot";
@@ -583,7 +677,12 @@ export function getSoldierState(actor) {
   }
   if (desired === actor.__visualAnimState) {
     // Refresh shoot locks while still firing so the cycle does not snap early.
-    if (desired === "shoot" || desired === "crouchShoot" || desired === "standShoot")
+    if (
+      desired === "shoot" ||
+      desired === "crouchShoot" ||
+      desired === "standShoot" ||
+      desired === "meleeSwing"
+    )
       actor.__animLockUntil = Math.max(
         actor.__animLockUntil || 0,
         now + (STATE_HOLD_MS[desired] || 140),
@@ -596,6 +695,7 @@ export function getSoldierState(actor) {
     desired === "shoot" ||
     desired === "crouchShoot" ||
     desired === "standShoot" ||
+    desired === "meleeSwing" ||
     desired === "reload" ||
     actor.__visualAnimState === "death";
   if (urgent || now >= (actor.__animLockUntil || 0)) {
@@ -614,7 +714,11 @@ function stableFacing(actor, state) {
     mag = Math.abs(screenDir),
     desired = screenDir < 0 ? -1 : 1,
     isShot =
-      state === "shoot" || state === "crouchShoot" || state === "standShoot";
+      state === "shoot" ||
+      state === "crouchShoot" ||
+      state === "standShoot" ||
+      state === "meleeSwing" ||
+      state === "shieldRaise";
   if (actor.__visualFacing !== -1 && actor.__visualFacing !== 1)
     actor.__visualFacing = mag > 0.12 ? desired : 1;
   if (state === "death") return actor.__visualFacing;
@@ -651,6 +755,48 @@ function stableFacing(actor, state) {
 }
 
 /** Snap-ish frames: only a tiny ~15% crossfade near the end of each frame. */
+
+function frameForLeo(actor, state) {
+  var rowKey = state === "shoot" ? "standShoot" : state;
+  if (LEO_ROWS[rowKey] == null) rowKey = "idle";
+  var row = LEO_ROWS[rowKey];
+  var now = nowMs();
+  if (actor.__lastSoldierState !== state) {
+    actor.__lastSoldierState = state;
+    actor.__soldierStateStart = now;
+  }
+  var elapsed = Math.max(0, (now - (actor.__soldierStateStart || now)) / 1000);
+  var fps = LEO_FPS[rowKey] || 4;
+  if (rowKey === "run" && actor) {
+    var spd = 0;
+    if (typeof actor.vx === "number" && typeof actor.vy === "number")
+      spd = Math.hypot(actor.vx, actor.vy);
+    fps = Math.max(6, Math.min(11, fps * (0.75 + 0.4 * Math.min(1, spd / 90 || spd || 0.5))));
+  }
+  var count = FRIENDLY_COLS;
+  var phase = elapsed * fps;
+  var col, next, blend;
+  if (rowKey === "death" || rowKey === "meleeSwing") {
+    phase = Math.min(count - 1.001, phase);
+    col = Math.min(count - 1, Math.floor(phase));
+    next = Math.min(count - 1, col + 1);
+    blend = softenBlend(phase - col);
+  } else {
+    col = Math.floor(phase) % count;
+    next = (col + 1) % count;
+    var frac = phase - Math.floor(phase);
+    blend = frac < 0.18 ? 0 : frac > 0.82 ? 1 : softenBlend((frac - 0.18) / 0.64);
+  }
+  return {
+    col: col,
+    nextCol: next,
+    blend: blend,
+    row: row,
+    w: FRIENDLY_CELL,
+    h: FRIENDLY_CELL,
+    state: rowKey,
+  };
+}
 
 function frameForFriendly(actor, state) {
   var rowKey = state === "shoot" ? "standShoot" : state;
@@ -1022,7 +1168,8 @@ export function drawSoldier(ctx, actor, options) {
     (options.x || 0) + plant.x,
     (options.y || 0) + bob + plant.y - vaultLift,
   );
-  var solidFriendly = !isEnemy && !!runtimeFriendlyAtlas;
+  var useLeo = !isEnemy && isLeoActor(actor) && !!runtimeLeoAtlas;
+  var solidFriendly = !isEnemy && !!(useLeo ? runtimeLeoAtlas : runtimeFriendlyAtlas);
   var recolor = options.recolorFilter || "";
   ctx.globalCompositeOperation = "source-over";
   ctx.filter = solidFriendly ? recolor || "none" : teamFilter(team);
@@ -1031,10 +1178,14 @@ export function drawSoldier(ctx, actor, options) {
     if (isEnemy) {
       state = "lowCover";
       enemyCorpse = true;
-    } else if (!runtimeFriendlyAtlas && drawDeath(ctx, actor, options, scale, flip)) {
+    } else if (
+      !runtimeFriendlyAtlas &&
+      !useLeo &&
+      drawDeath(ctx, actor, options, scale, flip)
+    ) {
       ctx.restore();
       return;
-    } else if (!runtimeFriendlyAtlas) state = "lowCover";
+    } else if (!runtimeFriendlyAtlas && !useLeo) state = "lowCover";
   }
   var vaultSrc = vaultSheet();
   var useVault =
@@ -1042,16 +1193,18 @@ export function drawSoldier(ctx, actor, options) {
       vaultSrc &&
       (vaultSrc.complete !== false) &&
       (vaultSrc.naturalWidth > 0 || vaultSrc.width > 0);
-  var useFriendly = !isEnemy && runtimeFriendlyAtlas;
+  var useFriendly = !isEnemy && runtimeFriendlyAtlas && !useLeo;
   // Atlas cells include padding so the figure is smaller than the cell.
-  if (useFriendly) scale *= 1.15;
+  if (useFriendly || useLeo) scale *= 1.15;
   var r = useVault
       ? vaultFrame(actor)
-      : useFriendly
-        ? frameForFriendly(actor, state === "vault" ? "run" : state)
-        : frameFor(actor, state === "vault" ? "run" : state, boxes);
-  var cellW = useVault ? r.w : useFriendly ? FRIENDLY_CELL : CELL;
-  var cellH = useVault ? r.h : useFriendly ? FRIENDLY_CELL : r.h;
+      : useLeo
+        ? frameForLeo(actor, state === "vault" ? "run" : state)
+        : useFriendly
+          ? frameForFriendly(actor, state === "vault" ? "run" : state)
+          : frameFor(actor, state === "vault" ? "run" : state, boxes);
+  var cellW = useVault ? r.w : useFriendly || useLeo ? FRIENDLY_CELL : CELL;
+  var cellH = useVault ? r.h : useFriendly || useLeo ? FRIENDLY_CELL : r.h;
   var dw = cellW * scale * (useVault ? 1.08 : 1);
   var dh = cellH * scale * (useVault ? 1.08 : 1);
   ctx.fillStyle = "#0007";
@@ -1075,13 +1228,17 @@ export function drawSoldier(ctx, actor, options) {
   // Live friendlies: one opaque blit. No filter, no crossfade, no ghost plate.
   var isolatedFriendlyFrame =
     useFriendly && !useVault ? friendlyFrame(r.row, r.col) : null;
+  var isolatedLeoFrame = useLeo && !useVault ? leoFrame(r.row, r.col) : null;
+  var isolatedCell = isolatedLeoFrame || isolatedFriendlyFrame;
   ctx.filter = solidFriendly ? "none" : teamFilter(team);
   ctx.imageSmoothingEnabled = true;
   var drawAtlas = useVault
     ? vaultSrc
-    : useFriendly
-      ? isolatedFriendlyFrame || runtimeFriendlyAtlas
-      : atlas;
+    : useLeo
+      ? isolatedLeoFrame || runtimeLeoAtlas
+      : useFriendly
+        ? isolatedFriendlyFrame || runtimeFriendlyAtlas
+        : atlas;
   if (drawAtlas) {
     var baseAlpha = solidFriendly ? 1 : options.alpha == null ? 1 : options.alpha;
     if (enemyCorpse) baseAlpha *= 0.82;
@@ -1094,8 +1251,8 @@ export function drawSoldier(ctx, actor, options) {
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(
         drawAtlas,
-        isolatedFriendlyFrame ? 0 : r.col * cellW,
-        isolatedFriendlyFrame ? 0 : (useVault ? 0 : r.row) * cellH,
+        isolatedCell ? 0 : r.col * cellW,
+        isolatedCell ? 0 : (useVault ? 0 : r.row) * cellH,
         cellW,
         cellH,
         -dw * 0.5,
@@ -1115,7 +1272,7 @@ export function drawSoldier(ctx, actor, options) {
         r.col,
         r.nextCol,
         r.blend || 0,
-        useVault ? 0 : useFriendly ? r.row : ROWS[r.state] || 0,
+        useVault ? 0 : useFriendly || useLeo ? r.row : ROWS[r.state] || 0,
         cellW,
         cellH,
         -dw * 0.5,
@@ -1172,12 +1329,18 @@ export function getSoldierAtlasInfo() {
       standShoot: FRIENDLY_COLS,
       reload: FRIENDLY_COLS,
       death: FRIENDLY_COLS,
+      meleeSwing: FRIENDLY_COLS,
+      shieldRaise: FRIENDLY_COLS,
+      shieldBlock: FRIENDLY_COLS,
       vault: VAULT_COLS,
     },
     friendlyAtlas: "player-solid-atlas.png",
     friendlyCell: FRIENDLY_CELL,
     friendlyCols: FRIENDLY_COLS,
     friendlyStates: FRIENDLY_ATLAS_STATES.slice(),
+    leoAtlas: "leo-atlas.webp",
+    leoStates: LEO_ATLAS_STATES.slice(),
+    leoRows: LEO_ROWS_COUNT,
     coverRows: "mapped",
     vaultSheet: "vault-sheet.png",
     vaultCell: VAULT_CELL,

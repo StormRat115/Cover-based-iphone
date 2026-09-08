@@ -2,16 +2,15 @@ import {
   createAllies,
   updateAllies as updateAlliesCore,
   SQUAD_MODES,
-} from "./allyCore2.js?v=20260908-125";
-import { drawSoldier } from "./soldierAssets.js?v=20260908-125";
-import { drawCoverShield } from "./coverSlots.js?v=20260908-125";
-import { speak } from "./squadDialog.js?v=20260908-125";
+} from "./allyCore2.js?v=20260908-126";
+import { drawSoldier, leoAtlasReady } from "./soldierAssets.js?v=20260908-126";
+import { drawCoverShield } from "./coverSlots.js?v=20260908-126";
+import { speak } from "./squadDialog.js?v=20260908-126";
 import {
   isLeo,
   LEO_TEMP_FILTER,
-  LEO_ART_STATUS,
   drawLeoGear,
-} from "./leoKit.js?v=20260908-125";
+} from "./leoKit.js?v=20260908-126";
 export { createAllies, SQUAD_MODES };
 var ALLY_LINES = {
   contact: ["CONTACT!", "ENEMY SPOTTED!", "I SEE THEM!", "EYES UP!"],
@@ -107,9 +106,9 @@ export function drawAlly(ctx, a, iso) {
     team: "ally",
     scale: 0.3,
     alpha: a.dead ? 0.94 : a.downed ? 0.74 : 1,
-    recolorFilter: isLeo(a) && LEO_ART_STATUS === "temp-recolor" ? LEO_TEMP_FILTER : "",
+    recolorFilter: isLeo(a) && !leoAtlasReady() ? LEO_TEMP_FILTER : "",
   });
-  if (isLeo(a) && !a.dead) drawLeoGear(ctx, a);
+  if (isLeo(a) && !a.dead && !leoAtlasReady()) drawLeoGear(ctx, a);
   ctx.fillStyle = "#fff";
   ctx.font = "800 8px system-ui";
   ctx.textAlign = "center";
