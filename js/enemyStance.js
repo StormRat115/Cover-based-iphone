@@ -1,3 +1,5 @@
+import { ignoresCover } from "./melee.js?v=20260908-128";
+
 export function stanceForEnemy(index, type) {
   if (type === "charger" || type === "melee") return "rush";
   if (type === "sniper" || type === "marksman") return "cover";
@@ -28,6 +30,7 @@ export function tagWaveStances(enemies) {
 
 export function seeksCover(enemy) {
   if (!enemy) return false;
+  if (ignoresCover(enemy)) return false;
   if (enemy.type === "charger" || enemy.meleeCharge) return false;
   if (enemy.coverBehavior === "rush") return false;
   return enemy.coverBehavior !== "exposed";

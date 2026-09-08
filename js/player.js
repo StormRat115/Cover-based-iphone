@@ -1,36 +1,39 @@
-import { getHitChance } from "./cover.js?v=20260908-127";
+import { getHitChance } from "./cover.js?v=20260908-128";
 import {
   resolveSolidMove,
   updateVault,
   planRoute,
   continueRoute,
-} from "./coverCollision.js?v=20260908-127";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260908-127";
-import { weaponCopy } from "./weapons.js?v=20260908-127";
-import { AudioBus } from "./audio.js?v=20260908-127";
-import { drawSoldier } from "./soldierAssets.js?v=20260908-127";
-import { drawCoverShield, nextCoverSlotClaim } from "./coverSlots.js?v=20260908-127";
+} from "./coverCollision.js?v=20260908-128";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260908-128";
+import { weaponCopy } from "./weapons.js?v=20260908-128";
+import { knifeWeapon, swingMelee, tickMeleeTimer, ensureMeleeWeapon } from "./melee.js?v=20260908-128";
+import { canRegen, drawCombatMarks, updateEngagedFight } from "./engaged.js?v=20260908-128";
+import { hasPerfectHit } from "./squadAbilities.js?v=20260908-128";
+import { AudioBus } from "./audio.js?v=20260908-128";
+import { drawSoldier } from "./soldierAssets.js?v=20260908-128";
+import { drawCoverShield, nextCoverSlotClaim } from "./coverSlots.js?v=20260908-128";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-127";
+} from "./combatStats.js?v=20260908-128";
 import {
   finishReload,
   canReloadFromReserve,
   isPrimaryDry,
   getSidearm,
   shouldSwapToSidearm,
-} from "./ammoEconomy.js?v=20260908-127";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-127";
+} from "./ammoEconomy.js?v=20260908-128";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-128";
 import {
   tickSuppression,
   suppressionAccuracyDelta,
   isHardSuppressed,
-} from "./suppression.js?v=20260908-127";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-127";
+} from "./suppression.js?v=20260908-128";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-128";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,
@@ -150,6 +153,8 @@ export function createPlayer() {
     timeSinceDamage: 99,
     primary: weaponCopy(parts.weapon, parts.attachments),
     sidearm: weaponCopy(parts.sidearm || "pistol"),
+    melee: knifeWeapon(),
+    meleeTimer: 0,
     weaponSlot: "primary",
     weapon: null,
     keyboardMove: null,
@@ -253,13 +258,16 @@ export function createPlayer() {
       AudioBus.playReload();
     },
     fireAt: function (enemy) {
-      if (
-        this.dead ||
-        this.downed ||
-        this.reloading ||
-        this.weapon.fireCooldown > 0
-      )
-        return false;
+      if (this.dead || this.downed || this.reloading) return false;
+      if (this.engaged) {
+        ensureMeleeWeapon(this);
+        this.lastAttackMelee = true;
+        var swung = swingMelee(this, enemy);
+        this.lastShotHit = swung;
+        if (swung) showShotFeedback(true);
+        return swung;
+      }
+      if (this.weapon.fireCooldown > 0) return false;
       this.maybeAutoSidearm();
       if (this.weapon.ammo <= 0) {
         AudioBus.playEmpty();
@@ -270,12 +278,22 @@ export function createPlayer() {
         d = Math.hypot(dx, dy) || 1;
       this.facingX = dx / d;
       this.facingY = dy / d;
-      var chance = combatAccuracy(
-        getHitChance(this, enemy, window.__battleCovers || []),
-        this.weapon.accuracy,
-        this.accuracy,
-        suppressionAccuracyDelta(this) + orderAccuracy(this),
-      );
+      var chance = hasPerfectHit(this)
+        ? 100
+        : combatAccuracy(
+            getHitChance(this, enemy, window.__battleCovers || []),
+            this.weapon.accuracy,
+            this.accuracy,
+            suppressionAccuracyDelta(this) + orderAccuracy(this),
+          );
+      if (this.engaged) {
+        ensureMeleeWeapon(this);
+        this.lastAttackMelee = true;
+        var swung = swingMelee(this, enemy);
+        this.lastShotHit = swung;
+        if (swung) showShotFeedback(true);
+        return swung;
+      }
       enemy.lastHitChance = chance;
       this.weapon.ammo--;
       this.weapon.fireCooldown = this.weapon.cooldown;
@@ -410,6 +428,8 @@ export function createPlayer() {
         deathTimer: 0,
         primary: weaponCopy(parts.weapon, parts.attachments),
         sidearm: weaponCopy(parts.sidearm || "pistol"),
+        melee: knifeWeapon(),
+        meleeTimer: 0,
         weaponSlot: "primary",
         crawlSettled: false,
         hardPinSwap: false,
@@ -441,7 +461,22 @@ export function createPlayer() {
         return;
       }
       tickSuppression(this, dt);
-      if (this.hp < this.maxHp && this.timeSinceDamage > this.regenDelay)
+      tickMeleeTimer(this, dt);
+      if (this.engaged) {
+        var roster =
+          (typeof window !== "undefined" &&
+            [this]
+              .concat(window.__battleAllies || [])
+              .concat(window.__battleMarines || [])
+              .concat(window.__battleEnemies || [])) ||
+          [];
+        updateEngagedFight(this, dt, roster);
+      }
+      if (
+        canRegen(this) &&
+        this.hp < this.maxHp &&
+        this.timeSinceDamage > this.regenDelay
+      )
         this.hp = Math.min(this.maxHp, this.hp + this.regenRate * dt);
       if (this.reloading) {
         this.reloadTimer -= dt;
@@ -534,5 +569,6 @@ export function drawPlayer(ctx, p, iso) {
     alpha: p.dead ? 0.94 : p.downed ? 0.74 : 1,
   });
   drawCoverShield(ctx, p, -56);
+  drawCombatMarks(ctx, p);
   ctx.restore();
 }

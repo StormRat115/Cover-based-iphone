@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260908-127";
+import { loadImage } from "./assets.js?v=20260908-128";
 
 var ROAD = 980;
 var WALK = 260;
@@ -562,6 +562,29 @@ function clipOffStreet(ctx, iso, world, side) {
   return clipWorldPoly(ctx, iso, pts);
 }
 
+// Façades and curb walls sit behind the sidewalk band so the concrete walk
+// stays visible along both street edges. Props still use clipOffStreet.
+function clipBehindSidewalk(ctx, iso, world, side) {
+  if (!world || !iso) return false;
+  var b = worldBounds(world);
+  var edge = side < 0 ? TOP_EDGE : ROAD + WALK;
+  var pts =
+    side < 0
+      ? [
+          [b.minX, b.minY],
+          [edge, b.minY],
+          [edge, b.maxY],
+          [b.minX, b.maxY],
+        ]
+      : [
+          [edge, b.minY],
+          [b.maxX, b.minY],
+          [b.maxX, b.maxY],
+          [edge, b.maxY],
+        ];
+  return clipWorldPoly(ctx, iso, pts);
+}
+
 function worldPattern(ctx, image, iso, world) {
   if (!ready(image) || !ctx.createPattern) return null;
   var pattern = ctx.createPattern(image, "repeat");
@@ -1013,12 +1036,12 @@ function drawIsoCurbWall(ctx, iso, world, side) {
   if (!tiles.length || !iso || !world) return;
   shear = streetIsoShear(iso);
   bounds = worldBounds(world);
-  curbX = side < 0 ? -ROAD - 8 : ROAD + 8;
+  curbX = side < 0 ? TOP_EDGE : ROAD + WALK;
   along = streetAlong(world);
   h = 200;
   preSheared = !!(tiles[0] && tiles[0].__isoEdge);
   ctx.save();
-  clipOffStreet(ctx, iso, world, side);
+  clipBehindSidewalk(ctx, iso, world, side);
   i = 0;
   y = bounds.maxY + 60;
   while (y > bounds.minY - 80) {
@@ -1044,7 +1067,7 @@ function drawSideBuildings(ctx, iso, world, onScreen) {
     item = SIDE_DRESSING[i];
     if (onScreen && !onScreen(item.x, item.y, 360)) continue;
     ctx.save();
-    clipOffStreet(ctx, iso, world, item.x < 0 ? -1 : 1);
+    clipBehindSidewalk(ctx, iso, world, item.x < 0 ? -1 : 1);
     q = iso(item.x, item.y);
     img = spriteForBuilding(item.kind, item.side);
     size = buildingSize(item.kind, item.s);
@@ -1134,6 +1157,10 @@ export function playableStreetHalfWidth() {
 
 export function sidewalkWidth() {
   return WALK;
+}
+
+export function sidewalkOuterX(side) {
+  return side < 0 ? TOP_EDGE : ROAD + WALK;
 }
 
 export function topFacadeEdgeX() {

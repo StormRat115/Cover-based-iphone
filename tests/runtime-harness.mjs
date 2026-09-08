@@ -167,7 +167,7 @@ export function createHarness({
   document.createElement = (tag) => new Element(tag);
   document.getElementById = (id) => nodes.get(id) || null;
   document.querySelector = (selector) => nodes.get(selector.slice(1)) || null;
-  const commands = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"].map((command) => {
+  const commands = ["AGGRESSIVE", "FOLLOW", "HOLD"].map((command) => {
     const button = new Element("button");
     button.dataset.command = command;
     return button;

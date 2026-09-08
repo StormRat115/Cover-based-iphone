@@ -94,13 +94,13 @@ button {
 }
 #squadCommands button {
   height: 38px;
-  min-width: 78px;
-  padding: 0 8px;
+  min-width: 88px;
+  padding: 0 6px;
   border: 1px solid #ffffff55;
   border-radius: 8px;
   background: #202a30ee;
   color: #fff;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 900;
 }
 #squadCommands button.active {

@@ -1,7 +1,8 @@
-import { loadImage } from "./assets.js?v=20260908-127";
-import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260908-127";
-import { faceThreat } from "./combatAI.js?v=20260908-127";
-import { incomingDefense } from "./leoKit.js?v=20260908-127";
+import { loadImage } from "./assets.js?v=20260908-128";
+import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260908-128";
+import { faceThreat } from "./combatAI.js?v=20260908-128";
+import { incomingDefense } from "./leoKit.js?v=20260908-128";
+import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-128";
 
 export const CHARGER_SHEET = {
   file: "enemy-charger-melee-sheet.png",
@@ -55,6 +56,8 @@ export function chargerWeapon() {
     spread: 0,
     pellets: 1,
     role: "breach",
+    melee: true,
+    meleeFocus: true,
     pressure: 9,
     ammo: 99,
     fireCooldown: 0,
@@ -143,6 +146,7 @@ export function updateChargers(enemies, dt, player, covers, spawnProjectile) {
     e.meleeCharge = true;
     e.cover = null;
     e.exposed = true;
+    if (!e.melee) e.melee = e.weapon;
     e.meleeTimer = Math.max(0, (e.meleeTimer || 0) - dt);
     e.chargeLock = Math.max(0, (e.chargeLock || 0) - dt);
     e.targetTimer = Math.max(0, (e.targetTimer || 0) - dt);
@@ -170,11 +174,8 @@ export function updateChargers(enemies, dt, player, covers, spawnProjectile) {
     }
     e.charging = false;
     e.combatState = "melee";
-    if (e.meleeTimer <= 0) {
-      e.meleeTimer = e.weapon.cooldown;
-      e.muzzle = 0.16;
-      slam(threat, attackDamage(e.weapon.damage, e.damageBonus || 0));
-    }
+    coupleEngaged(e, threat);
+    updateEngagedFight(e, dt, [threat]);
   });
 }
 

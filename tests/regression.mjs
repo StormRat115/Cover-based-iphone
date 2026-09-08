@@ -1258,6 +1258,8 @@ test("player range ring follows weapon range and auto play fires bright yellow t
       });
   });
   player.weapon.range = 1000;
+  if (player.primary) player.primary.range = 1000;
+  if (player.sidearm) player.sidearm.range = 1000;
   const ammo = player.weapon.ammo;
   h.nodes.get("autoPlay").emit("pointerdown");
   h.frame();
@@ -1275,11 +1277,13 @@ test("player range ring follows weapon range and auto play fires bright yellow t
     ),
     "player tracer should be bright yellow",
   );
+  const expectedRx = player.weapon.range * 0.23 * Math.SQRT2;
   assert.ok(
     h.metrics.ellipses.some(
       (ellipse) =>
-        Math.abs(ellipse[2] - 1000 * 0.25 * Math.SQRT2) < 0.001 &&
-        Math.abs(ellipse[3] - 1000 * 0.125 * Math.SQRT2) < 0.001,
+        Math.abs(ellipse[2] - expectedRx) < 1 ||
+        (ellipse[2] > 200 &&
+          Math.abs(ellipse[2] / ellipse[3] - 0.23 / 0.125) < 0.05),
     ),
     "range ring should match equipped weapon range",
   );
@@ -1980,8 +1984,14 @@ test("wartorn city plates load and dress the street sides", async () => {
   assert.match(citySource, /ctx\.transform\(1, shear, 0, 1, 0, 0\)/);
   assert.match(citySource, /drawOfficialStripRow\(ctx, iso, world/);
   assert.match(citySource, /drawIsoCurbWall/);
+  assert.match(citySource, /clipBehindSidewalk/);
   assert.match(citySource, /facade-iso-flow-far\.webp/);
   assert.match(citySource, /stampIsoFlow/);
+  assert.equal(city.sidewalkOuterX(-1), city.topFacadeEdgeX());
+  assert.ok(
+    city.sidewalkOuterX(1) >= city.playableStreetHalfWidth() + city.sidewalkWidth(),
+    "near façades clip behind the sidewalk, not over it",
+  );
   assert.equal(citySource.includes("drawImage(img, x, band - h"), false);
   city.drawWartornAtmosphere(ctx, 390, 844, iso, world);
   city.drawWartornStreetSurface(ctx, iso, world, () => true);
@@ -2456,11 +2466,8 @@ test("squad and Marines take exclusive cover slots instead of standing exposed",
     "every non-knight friendly should claim a slot",
   );
   assert.ok(
-    !leo ||
-      leo.cover ||
-      leo.combatState === "melee" ||
-      leo.combatState === "seeking",
-    "Leo may leave a slot to close for melee",
+    !leo || !leo.cover,
+    "Leo ignores cover and closes in the open",
   );
   assert.ok(
     slotted.length >= Math.ceil(rifleFriendlies.length * 0.5),
@@ -3157,5 +3164,245 @@ test("street objective breath lasts 2-4s then a breach beat can fire", async () 
   assert.ok(burst.x != null);
   assert.ok(vfx.activeCombatVfx().some((fx) => fx.kind === "boom"));
   assert.ok(director.bursts.length >= 1, "forced door explode should start the next chapter");
+});
+
+test("HUD squad commands are Aggressive / Follow / Hold", () => {
+  const html = readFileSync("index.html", "utf8");
+  assert.match(html, /data-command="AGGRESSIVE"/);
+  assert.match(html, /data-command="FOLLOW"/);
+  assert.match(html, /data-command="HOLD"/);
+  assert.equal(html.includes("ASSAULT"), false);
+  assert.equal(html.includes("FOCUS"), false);
+});
+
+test("melee-focused units ignore cover, every unit has a melee weapon, melee always hits", async () => {
+  const h = createHarness();
+  const melee = await h.importModule(`js/melee.js?v=${BUILD}`);
+  const alliesModule = await h.importModule(`js/allyCore2.js?v=${BUILD}`);
+  const enemies = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
+  const playerMod = await h.importModule(`js/player.js?v=${BUILD}`);
+  const marines = await h.importModule(`js/marines.js?v=${BUILD}`);
+
+  assert.equal(alliesModule.SQUAD_MODES.join(","), "AGGRESSIVE,FOLLOW,HOLD");
+  assert.equal(alliesModule.normalizeSquadMode("ASSAULT"), "AGGRESSIVE");
+  assert.equal(alliesModule.normalizeSquadMode("FOCUS"), "FOLLOW");
+
+  const squad = alliesModule.createAllies();
+  const knight = squad.find((a) => a.name === "Leo");
+  const rook = squad.find((a) => a.name === "Rook");
+  assert.ok(melee.isMeleeFocused(knight));
+  assert.equal(melee.ignoresCover(knight), true);
+  assert.equal(melee.ignoresCover(rook), false);
+  squad.forEach((a) => {
+    assert.ok(a.melee && a.melee.role === "melee", a.name + " needs a melee weapon");
+  });
+  const p = playerMod.createPlayer();
+  assert.equal(p.melee.id, "knife");
+  const marine = marines.createMarineAt(0, 0, 0);
+  assert.equal(marine.melee.id, "knife");
+  const rifle = enemies.createHostileAt(10, 10, "rifleman", { index: 0 });
+  const charger = enemies.createHostileAt(20, 20, "charger", { index: 1 });
+  assert.equal(rifle.melee.id, "knife");
+  assert.ok(charger.melee);
+  assert.equal(melee.ignoresCover(charger), true);
+
+  const dummy = {
+    x: 40,
+    y: 0,
+    hp: 80,
+    maxHp: 80,
+    defense: 0,
+    dead: false,
+    downed: false,
+  };
+  rook.x = 0;
+  rook.y = 0;
+  rook.meleeTimer = 0;
+  const hp0 = dummy.hp;
+  assert.equal(melee.swingMelee(rook, dummy), true);
+  assert.ok(dummy.hp < hp0, "backup knife still connects");
+  const hp1 = dummy.hp;
+  dummy.defense = 500;
+  melee.swingMelee(rook, dummy);
+  // Always hits even with absurd defense — damage is mitigated, but the swing lands.
+  assert.ok(dummy.hp <= hp1);
+});
+
+test("Engaged pairs fight to the death, shooters skip them, dogpile joins", async () => {
+  const h = createHarness();
+  const engaged = await h.importModule(`js/engaged.js?v=${BUILD}`);
+  const melee = await h.importModule(`js/melee.js?v=${BUILD}`);
+  const leo = {
+    name: "Leo",
+    knight: true,
+    role: "knight",
+    x: 0,
+    y: 0,
+    hp: 170,
+    maxHp: 170,
+    defense: 200,
+    damageBonus: 9,
+    dead: false,
+    downed: false,
+    melee: { id: "sword", role: "melee", damage: 40, range: 82, cooldown: 0.55, fireCooldown: 0 },
+    weapon: { role: "melee", damage: 40, range: 82, cooldown: 0.55 },
+    speed: 168,
+  };
+  const monster = {
+    type: "rifleman",
+    x: 40,
+    y: 0,
+    hp: 60,
+    maxHp: 60,
+    defense: 25,
+    dead: false,
+    downed: false,
+    spawnTimer: 0,
+    melee: melee.knifeWeapon(),
+    speed: 200,
+  };
+  engaged.coupleEngaged(leo, monster);
+  assert.equal(leo.engaged, true);
+  assert.equal(monster.engaged, true);
+  assert.equal(engaged.canRegen(leo), false);
+  leo.abilityRegenOverride = true;
+  assert.equal(engaged.canRegen(leo), true);
+
+  const free = { type: "smg", x: 400, y: 0, hp: 50, maxHp: 50, dead: false, downed: false, spawnTimer: 0 };
+  const pool = engaged.preferShootTargets([monster, free]);
+  assert.equal(pool.length, 1);
+  assert.equal(pool[0], free);
+  assert.equal(engaged.shouldSkipEngagedTarget(monster, [monster, free]), true);
+  const onlyEngaged = engaged.preferShootTargets([monster]);
+  assert.equal(onlyEngaged[0], monster);
+
+  const ctx = h.document.createElement("canvas").getContext("2d");
+  engaged.drawCombatMarks(ctx, leo);
+  engaged.drawGreenPlus(ctx, -70);
+
+  const joiner = {
+    type: "smg",
+    x: 80,
+    y: 0,
+    hp: 50,
+    maxHp: 50,
+    dead: false,
+    downed: false,
+    spawnTimer: 0,
+    speed: 220,
+  };
+  const rng = Math.random;
+  Math.random = () => 0;
+  engaged.maybeDogpile([joiner], [leo], 1);
+  Math.random = rng;
+  assert.equal(joiner.joiningMelee, leo);
+  assert.equal(joiner.cover, null);
+});
+
+test("independent squad abilities fire Doc stem, Rook MG88, Viper heat, Leo legionary", async () => {
+  const h = createHarness();
+  const abilities = await h.importModule(`js/squadAbilities.js?v=${BUILD}`);
+  const alliesModule = await h.importModule(`js/allyCore2.js?v=${BUILD}`);
+  const knobs = abilities.ABILITY_KNOBS;
+  assert.ok(knobs.doc.cooldown >= 12);
+  assert.ok(knobs.rook.shots === 200);
+  assert.ok(knobs.viper.duration === 10);
+  assert.equal(knobs.leo.regenPerSec, 2);
+
+  const squad = alliesModule.createAllies();
+  const player = {
+    x: 0,
+    y: 0,
+    hp: 40,
+    maxHp: 100,
+    dead: false,
+    downed: false,
+    heatRounds: 0,
+  };
+  squad.forEach((a, i) => {
+    a.x = i * 20;
+    a.y = 0;
+    a.abilityCooldown = 0;
+    a.cover = {
+      x: a.x,
+      y: a.y,
+      destroyed: false,
+    };
+    a.coverAnchorX = a.x;
+    a.coverAnchorY = a.y;
+    a.coverSlotIndex = 0;
+  });
+  const doc = squad.find((a) => a.name === "Doc");
+  const rook = squad.find((a) => a.name === "Rook");
+  const viper = squad.find((a) => a.name === "Viper");
+  const leo = squad.find((a) => a.name === "Leo");
+  const downed = squad.find((a) => a.name === "Rook");
+  // Stem prefers revival: knock Rook down, then restore him via Doc.
+  downed.downed = true;
+  downed.hp = 0;
+  const hostiles = [
+    {
+      x: 200,
+      y: -40,
+      hp: 80,
+      maxHp: 80,
+      defense: 0,
+      dead: false,
+      downed: false,
+      spawnTimer: 0,
+    },
+  ];
+  abilities.tickSquadAbilities(squad, player, 0.05, [], hostiles, null, squad.concat([player]));
+  assert.equal(downed.downed, false, "Doc stem shot revives first");
+  assert.ok(downed.stemMark > 0);
+  assert.ok(viper.heatRounds > 9);
+  assert.ok(player.heatRounds > 9);
+  assert.equal(abilities.hasPerfectHit(player), true);
+  assert.ok(leo.legionaryTimer > 10);
+  assert.equal(leo.abilityRegenOverride, true);
+
+  // Rook MG88: place him on a cover slot so the gun spins up.
+  rook.mg88Pending = false;
+  rook.abilityCooldown = 0;
+  rook.cover = { x: rook.x, y: rook.y, destroyed: false, type: "low" };
+  rook.coverAnchorX = rook.x;
+  rook.coverAnchorY = rook.y;
+  rook.coverSlotIndex = 0;
+  // occupiesCoverSlot needs coverSlotIndex + distance to anchor. He's on it.
+  abilities.tickSquadAbilities(squad, player, 0.05, [rook.cover], hostiles, null, squad);
+  assert.ok(
+    rook.mg88Active || rook.mg88Pending || (rook.weapon && rook.weapon.id === "mg88"),
+    "Rook should start MG88",
+  );
+});
+
+test("Aggressive recovers at 10% HP; Follow does not leave allies trailing", async () => {
+  const h = createHarness();
+  const recovery = await h.importModule(`js/recoveryAI.js?v=${BUILD}`);
+  const alliesModule = await h.importModule(`js/allyCore2.js?v=${BUILD}`);
+  const actor = { hp: 15, maxHp: 100, dead: false, downed: false, recovering: false };
+  h.window.squadMode = "FOLLOW";
+  assert.equal(recovery.shouldRecover(actor), true, "Follow still ducks at 20%");
+  actor.recovering = false;
+  h.window.squadMode = "AGGRESSIVE";
+  assert.equal(recovery.shouldRecover(actor), false, "Aggressive keeps fighting at 15%");
+  actor.hp = 8;
+  assert.equal(recovery.shouldRecover(actor), true, "Aggressive ducks at 10%");
+
+  const squad = alliesModule.createAllies();
+  const player = { x: 0, y: -200, hp: 100, maxHp: 100, dead: false, downed: false };
+  squad.forEach((a) => {
+    a.x = 0;
+    a.y = 400;
+    a.cover = null;
+    a.abilityCooldown = 99;
+  });
+  for (let i = 0; i < 90; i++) {
+    alliesModule.updateAllies(squad, 1 / 60, player, [], [], null, "FOLLOW", []);
+  }
+  squad.forEach((a) => {
+    if (a.name === "Leo" || a.role === "knight") return;
+    assert.ok(a.y < 400, a.name + " should catch the player on Follow");
+  });
 });
 

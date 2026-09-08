@@ -3,49 +3,49 @@ import {
   SIDEARMS,
   weaponCopy,
   weaponWithAttachments,
-} from "./weapons.js?v=20260908-127";
+} from "./weapons.js?v=20260908-128";
 import {
   soldierSource,
   drawSoldier,
   leoAtlasReady,
-} from "./soldierAssets.js?v=20260908-127";
+} from "./soldierAssets.js?v=20260908-128";
 import {
   CHARACTER_STATS,
   damageReductionPercent,
   GENERAL_ACCURACY_PENALTY,
-} from "./combatStats.js?v=20260908-127";
+} from "./combatStats.js?v=20260908-128";
 import {
   ATTACHMENT_SLOTS,
   ATTACHMENT_SLOT_LABELS,
   attachmentsForSlot,
   emptyAttachmentIds,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260908-127";
+} from "./attachments.js?v=20260908-128";
 import {
   getTeamProgress,
   xpIntoLevel,
   xpForLevel,
-} from "./teamProgress.js?v=20260908-127";
+} from "./teamProgress.js?v=20260908-128";
 import {
   SKILL_BRANCHES,
   canBuySkill,
   buySkill,
   getSkillMods,
-} from "./skillTree.js?v=20260908-127";
+} from "./skillTree.js?v=20260908-128";
 import {
   ARMOR_OPTIONS,
   describeArmorStats,
   selectArmor,
   selectedArmorId,
   signed,
-} from "./armor.js?v=20260908-127";
+} from "./armor.js?v=20260908-128";
 import {
   isLeo,
   leoSword,
   leoSidearmFromLoadout,
   LEO_TEMP_FILTER,
   drawLeoGear,
-} from "./leoKit.js?v=20260908-127";
+} from "./leoKit.js?v=20260908-128";
 
 var DEFAULT_WEAPONS = {
     player: "rifle",
