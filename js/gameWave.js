@@ -1,2 +1,2 @@
 // Compatibility entrypoint for older bookmarks. Boot owns the game lifecycle.
-export * from "./game.js?v=20260908-132";
+export * from "./game.js?v=20260908-133";

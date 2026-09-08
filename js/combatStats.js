@@ -18,6 +18,9 @@ export const ENEMY_STATS = {
   smg: { defense: 25, accuracy: -3, damage: 0 },
   pistol: { defense: 0, accuracy: 1, damage: 0 },
   charger: { defense: 40, accuracy: 0, damage: 8 },
+  ripper: { defense: 12, accuracy: 0, damage: 2 },
+  shield: { defense: 55, accuracy: 0, damage: 3 },
+  medic: { defense: 18, accuracy: 0, damage: 0 },
 };
 
 export function damageMultiplier(defense) {

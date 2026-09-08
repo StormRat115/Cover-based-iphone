@@ -12,13 +12,48 @@
     "transparent": true
   },
   "animations": {
-    "idle": { "row": 0, "frames": 6, "fps": 6, "loop": true },
-    "run": { "row": 1, "frames": 6, "fps": 10, "loop": true },
-    "lowCover": { "row": 2, "frames": 6, "fps": 6, "loop": true },
-    "tallCover": { "row": 3, "frames": 6, "fps": 6, "loop": true },
-    "shoot": { "row": 4, "frames": 6, "fps": 12, "loop": false },
-    "hit": { "row": 5, "frames": 6, "fps": 10, "loop": false },
-    "death": { "row": 6, "frames": 6, "fps": 8, "loop": false }
+    "idle": {
+      "row": 0,
+      "frames": 6,
+      "fps": 6,
+      "loop": true
+    },
+    "run": {
+      "row": 1,
+      "frames": 6,
+      "fps": 10,
+      "loop": true
+    },
+    "lowCover": {
+      "row": 2,
+      "frames": 6,
+      "fps": 6,
+      "loop": true
+    },
+    "tallCover": {
+      "row": 3,
+      "frames": 6,
+      "fps": 6,
+      "loop": true
+    },
+    "shoot": {
+      "row": 4,
+      "frames": 6,
+      "fps": 12,
+      "loop": false
+    },
+    "hit": {
+      "row": 5,
+      "frames": 6,
+      "fps": 10,
+      "loop": false
+    },
+    "death": {
+      "row": 6,
+      "frames": 6,
+      "fps": 8,
+      "loop": false
+    }
   },
   "characters": {
     "rifleman": {
@@ -36,6 +71,118 @@
     "sniper": {
       "name": "Paleeye Stalker",
       "file": "enemy-paleeye-stalker-sheet.png"
+    },
+    "charger": {
+      "name": "Rushblade Charger",
+      "file": "enemy-charger-melee-sheet.png"
+    },
+    "ripper": {
+      "name": "Ripper",
+      "file": "enemy-ripper-sheet.png"
+    },
+    "shieldedThrall": {
+      "name": "Shielded Thrall",
+      "file": "enemy-shielded-thrall-sheet.png"
+    },
+    "medicThrall": {
+      "name": "Medic Thrall",
+      "file": "enemy-medic-thrall-sheet.png"
     }
+  },
+  "chargerSheet": {
+    "width": 640,
+    "height": 800,
+    "columns": 4,
+    "rows": 5,
+    "frameWidth": 160,
+    "frameHeight": 160,
+    "facing": "right",
+    "transparent": true,
+    "states": [
+      "idle",
+      "run",
+      "charge",
+      "melee",
+      "death"
+    ],
+    "fps": {
+      "idle": 4,
+      "run": 10,
+      "charge": 12,
+      "melee": 12,
+      "death": 8
+    },
+    "file": "enemy-charger-melee-sheet.png"
+  },
+  "ripperSheet": {
+    "width": 640,
+    "height": 640,
+    "columns": 4,
+    "rows": 4,
+    "frameWidth": 160,
+    "frameHeight": 160,
+    "facing": "right",
+    "transparent": true,
+    "states": [
+      "idle",
+      "run",
+      "meleeSwing",
+      "death"
+    ],
+    "fps": {
+      "idle": 6,
+      "run": 12,
+      "meleeSwing": 12,
+      "death": 8
+    },
+    "file": "enemy-ripper-sheet.png"
+  },
+  "shieldedThrallSheet": {
+    "width": 640,
+    "height": 800,
+    "columns": 4,
+    "rows": 5,
+    "frameWidth": 160,
+    "frameHeight": 160,
+    "facing": "right",
+    "transparent": true,
+    "states": [
+      "idle",
+      "run",
+      "shieldBlock",
+      "meleeSwing",
+      "death"
+    ],
+    "fps": {
+      "idle": 4,
+      "run": 10,
+      "shieldBlock": 6,
+      "meleeSwing": 12,
+      "death": 8
+    },
+    "file": "enemy-shielded-thrall-sheet.png"
+  },
+  "medicThrallSheet": {
+    "width": 640,
+    "height": 640,
+    "columns": 4,
+    "rows": 4,
+    "frameWidth": 160,
+    "frameHeight": 160,
+    "facing": "right",
+    "transparent": true,
+    "states": [
+      "idle",
+      "run",
+      "heal",
+      "death"
+    ],
+    "fps": {
+      "idle": 4,
+      "run": 10,
+      "heal": 8,
+      "death": 8
+    },
+    "file": "enemy-medic-thrall-sheet.png"
   }
 }

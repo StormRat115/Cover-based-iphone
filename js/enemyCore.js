@@ -2,33 +2,33 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260908-132";
-import { weaponCopy, scaledWeaponRange } from "./weapons.js?v=20260908-132";
+} from "./cover.js?v=20260908-133";
+import { weaponCopy, scaledWeaponRange } from "./weapons.js?v=20260908-133";
 import {
   moveTowardTarget,
   faceThreat,
   coverStillUseful,
   peekPoint,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-132";
+} from "./combatAI.js?v=20260908-133";
 import {
   ENEMY_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260908-132";
-import { AudioBus } from "./audio.js?v=20260908-132";
+} from "./combatStats.js?v=20260908-133";
+import { AudioBus } from "./audio.js?v=20260908-133";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-132";
-import { orderDefense } from "./squadDialog.js?v=20260908-132";
-import { leoShieldBonus } from "./leoKit.js?v=20260908-132";
-import { assignEnemyCover } from "./enemyCoverAI.js?v=20260908-132";
-import { chargerWeapon } from "./chargerEnemy.js?v=20260908-132";
-import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260908-132";
-import { knifeWeapon, tickMeleeTimer } from "./melee.js?v=20260908-132";
+} from "./suppression.js?v=20260908-133";
+import { orderDefense } from "./squadDialog.js?v=20260908-133";
+import { leoShieldBonus } from "./leoKit.js?v=20260908-133";
+import { assignEnemyCover } from "./enemyCoverAI.js?v=20260908-133";
+import { chargerWeapon } from "./chargerEnemy.js?v=20260908-133";
+import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260908-133";
+import { knifeWeapon, tickMeleeTimer } from "./melee.js?v=20260908-133";
 import {
   preferShootTargets,
   engagedTargetPenalty,
@@ -38,7 +38,15 @@ import {
   tickEngaged,
   maybeDogpile,
   ignoresCover,
-} from "./engaged.js?v=20260908-132";
+} from "./engaged.js?v=20260908-133";
+import {
+  isVariantType,
+  pickVariantType,
+  pickDoorVariant,
+  variantWeapon,
+  variantWorldLabel,
+  variantStats,
+} from "./enemyVariants.js?v=20260908-133";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -49,13 +57,16 @@ var TYPES = {
   smg: { weapon: "smg", hp: 52, speed: 235, scale: 0.98 },
   pistol: { weapon: "pistol", hp: 45, speed: 220, scale: 0.95 },
   charger: { weapon: "melee", hp: 120, speed: 255, scale: 1.12 },
+  ripper: { weapon: "melee", hp: 42, speed: 318, scale: 0.86 },
+  shield: { weapon: "melee", hp: 118, speed: 172, scale: 1.16 },
+  medic: { weapon: "melee", hp: 50, speed: 228, scale: 0.98 },
 };
 var PACE = 0.86;
 function rand(a, b) {
   return a + Math.random() * (b - a);
 }
 export function rollEnemyAttackRange(type, random) {
-  if (type === "sniper" || type === "charger") return null;
+  if (type === "sniper" || type === "charger" || isVariantType(type)) return null;
   random = random || Math.random;
   return scaledWeaponRange(Math.min(980, 630 + Math.floor(random() * 351)));
 }
@@ -134,6 +145,8 @@ export function enemyCountForWave(wave, random, extraCount) {
 }
 export function doorHostileType(wave, index, random) {
   random = random || Math.random;
+  var variant = pickDoorVariant(wave, index, random);
+  if (variant) return variant;
   if (wave <= 1) return "rifleman";
   if (wave <= 2) return index === 1 && random() > 0.45 ? "shotgunner" : "rifleman";
   if (index === 2 && wave >= 4 && random() > 0.7) return "charger";
@@ -146,8 +159,11 @@ export function createHostileAt(x, y, type, options) {
   options = options || {};
   var i = options.index || 0;
   var s = TYPES[type] || TYPES.rifleman,
-    w = type === "charger" ? chargerWeapon() : weaponCopy(s.weapon),
-    stats = ENEMY_STATS[type] || ENEMY_STATS.rifleman;
+    kind = variantStats(type),
+    w = variantWeapon(type) || (type === "charger" ? chargerWeapon() : weaponCopy(s.weapon)),
+    stats = ENEMY_STATS[type] || (kind
+      ? { defense: kind.defense, accuracy: kind.accuracy, damage: kind.damage }
+      : ENEMY_STATS.rifleman);
   var random = options.random || Math.random;
   var attackRange = rollEnemyAttackRange(type, random);
   if (attackRange != null) w.range = attackRange;
@@ -182,7 +198,7 @@ export function createHostileAt(x, y, type, options) {
       speed: s.speed,
       facingX: x < 0 ? 1 : -1,
       facingY: 0,
-      scale: s.scale,
+      scale: kind && kind.scale ? kind.scale : s.scale,
       reloadTimer: 0,
       combatState: "seeking",
       combatTimer: 0,
@@ -196,11 +212,17 @@ export function createHostileAt(x, y, type, options) {
       repositionCooldown: 0,
       combatTarget: null,
       targetTimer: 0,
-      meleeCharge: type === "charger",
+      meleeCharge: type === "charger" || !!(kind && kind.meleeCharge),
       charging: false,
       meleeTimer: 0,
-      melee: type === "charger" ? w : knifeWeapon(),
+      melee: kind || type === "charger" ? w : knifeWeapon(),
       engaged: false,
+      worldLabel: variantWorldLabel(type),
+      role: kind ? kind.role : undefined,
+      shieldUp: type === "shield",
+      healing: false,
+      healTarget: null,
+      lastHp: s.hp,
       fromDoor: !!options.fromDoor,
       doorEgress: !!options.fromDoor,
       doorApproachX: options.doorApproachX,
@@ -228,6 +250,8 @@ export function createBandits(wave, options) {
     if (wave >= 4 && i % 6 === 1) type = "smg";
     if (wave >= 4 && i % 8 === 6) type = "pistol";
     if (i === 2 || i % 6 === 5) type = "charger";
+    var variant = pickVariantType(wave, i, random);
+    if (variant) type = variant;
     return createHostileAt(pos.x, pos.y, type, {
       index: i,
       random: random,
@@ -418,7 +442,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       faceThreat(e, player);
       continue;
     }
-    if (e.type === "charger") continue;
+    if (e.type === "charger" || isVariantType(e.type)) continue;
     if (e.engaged && updateEngagedFight(e, dt, friendlies.concat(enemies)))
       continue;
     if (e.joiningMelee && validTarget(e.joiningMelee)) {

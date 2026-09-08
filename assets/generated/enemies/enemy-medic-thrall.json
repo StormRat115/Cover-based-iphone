@@ -1,0 +1,31 @@
+{
+  "cols": 4,
+  "rows": 4,
+  "cell": 160,
+  "frameWidth": 160,
+  "frameHeight": 160,
+  "facing": "right",
+  "character": "Medic Thrall",
+  "role": "medic",
+  "kit": [
+    "satchel",
+    "bone-needle"
+  ],
+  "states": [
+    "idle",
+    "run",
+    "heal",
+    "death"
+  ],
+  "fps": {
+    "idle": 4,
+    "run": 10,
+    "heal": 8,
+    "death": 8
+  },
+  "transparent": true,
+  "opaque": true,
+  "alphaHardened": true,
+  "note": "kit-locked painted: same satchel and bone-needle every frame; no shield",
+  "file": "enemy-medic-thrall-sheet.png"
+}

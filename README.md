@@ -122,6 +122,34 @@ Rebased onto latest `development` (BUILD 129 player scale 0.275). Sidewalks, eng
 5. **Squad fights harder** — Doc / Rook / Viper / Leo accuracy and damage up; longer peeks and more shots (`SQUAD_AGGRO`). HP/DEF unchanged. Leo sword 40 → 46. Aggressive / Follow / Hold stay.
 6. **Bare squad guns get random attachments** — If a squadmate’s loadout left all four slots empty, combat start rolls one attachment per slot. Assigned loadouts are kept. The player’s gun is not auto-filled.
 
+## Enemy variants (Ripper / Shield / Medic): 20260908-133
+
+Three monster-thrall cousins mixed into later waves and doorway bursts. Rebased onto latest `development` after PR #21 (BUILD 132 Doc slate + Viper forest-green atlases). Those kits stay. Logic lives in `js/enemyVariants.js`. Engaged lock, always-hit melee, sword marks, and shooter deprioritize come from `js/engaged.js` + `js/melee.js`.
+
+**Art:** Phone Art kit-locked sheets from `chore/enemy-variants-ripper-shield-medic` (`efd60f0`) are wired in `assets/generated/enemies/` (`enemy-ripper-sheet.png`, `enemy-shielded-thrall-sheet.png`, `enemy-medic-thrall-sheet.png`). Draw uses those sheets (charger-style 160px cells). TEMP TINT fallback stays if a sheet fails to decode. Heads, chest, weapon, and kit stay locked to the official frames.
+
+**Behaviors**
+
+- **Ripper** — small, fast claws. Ignores cover (same rush rule as Leo/charger). Prefers units that are already Engaged and dogpiles until death. Weak if caught alone by guns.
+- **Shield** — tower-shield thrall. Ignores cover, closes the gap, becomes Engaged in melee. Frontal ranged shots barely land; flank or Leo melee bypasses the shield.
+- **Medic** — satchel/syringe support. Paths in the open toward a wounded living monster and patches it unless shot or forced into melee. Weak syringe melee if engaged.
+
+**Spawn mix** (`VARIANT_SPAWN`)
+
+- Wave 1: none (no flood).
+- Wave 2: occasional Shield (`index % 11 === 3` and `random > 0.5`), rare Medic (`index % 13 === 6` and `random > 0.62`).
+- Wave 3: Ripper every 8th, Shield every 11th, Medic every 14th.
+- Wave 4+: Ripper every 5th (more common), Shield every 9th, Medic every 12th.
+- Door bursts: Shield from wave 2 at 18% on the first of a burst; Ripper from wave 3 at 22% on the second; Medic from wave 3 at 14% on the third.
+
+**Shield DR** (`SHIELD`): `frontReduction` **0.86** (keep 14% of frontal ranged damage before defense), `frontDot` **0.18**. Melee and flanking shots skip that reduction.
+
+**Medic knobs** (`MEDIC`): heal **16** HP every **1.1s** inside range **78**; interrupt lockout **1.8s** after being shot.
+
+World labels: **RIPPER** / **SHIELD** / **MEDIC**. Cover ignore is `ignoresCover` / `isMeleeFocused` from `js/melee.js`. Engaged lock, sword marks, and pack dogpile (`joiningMelee` from `maybeDogpile`) come from `js/engaged.js`. Ripper still prefers already-Engaged friendlies. Melee swings go through `updateEngagedFight` / `swingMelee`.
+
+Pages verify: `#demo-variants` plants one of each near the spawn so you can read the labels without waiting for wave 5.
+
 ## Player street scale: 20260908-129
 
 Player character draw scale **0.31 → 0.275** (~11% smaller). Squad (Doc/Rook/Viper/Leo), marines, and enemies are unchanged. Atlas art and cover-slot / collision radii are unchanged.

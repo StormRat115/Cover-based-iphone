@@ -1,26 +1,27 @@
-import { isSightBlocked, getHitChance } from "./cover.js?v=20260908-132";
-import { AudioBus } from "./audio.js?v=20260908-132";
+import { isSightBlocked, getHitChance } from "./cover.js?v=20260908-133";
+import { AudioBus } from "./audio.js?v=20260908-133";
 import {
   moveTowardTarget,
   faceThreat,
-} from "./combatAI.js?v=20260908-132";
+} from "./combatAI.js?v=20260908-133";
 import {
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-132";
+} from "./combatStats.js?v=20260908-133";
 import {
   spraySuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-132";
-import { orderAccuracy } from "./squadDialog.js?v=20260908-132";
+} from "./suppression.js?v=20260908-133";
+import { orderAccuracy } from "./squadDialog.js?v=20260908-133";
 import {
   LEO_AGGRO,
   isLeo,
-} from "./leoKit.js?v=20260908-132";
-import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-132";
-import { hasPerfectHit } from "./squadAbilities.js?v=20260908-132";
+} from "./leoKit.js?v=20260908-133";
+import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-133";
+import { applyIncomingHostileDamage } from "./enemyVariants.js?v=20260908-133";
+import { hasPerfectHit } from "./squadAbilities.js?v=20260908-133";
 
 export {
   LEO_AGGRO,
@@ -33,7 +34,7 @@ export {
   incomingDefense,
   isLeoBlocking,
   drawLeoGear,
-} from "./leoKit.js?v=20260908-132";
+} from "./leoKit.js?v=20260908-133";
 
 function fireLeoSidearm(a, e, spawnProjectile, covers, accuracyModifier) {
   var gun = a.sidearm;
@@ -69,7 +70,12 @@ function fireLeoSidearm(a, e, spawnProjectile, covers, accuracyModifier) {
     true,
   );
   if (hit) {
-    var dealt = mitigateDamage(attackDamage(gun.damage, a.damageBonus), e.defense);
+    var dealt = applyIncomingHostileDamage(
+      e,
+      attackDamage(gun.damage, a.damageBonus),
+      a,
+      { melee: false },
+    );
     e.hp = Math.max(0, e.hp - dealt);
     e.lastDamageTaken = dealt;
     e.hit = 0.16;
