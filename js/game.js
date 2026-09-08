@@ -368,6 +368,12 @@ function spawnProjectile(from, to, owner, damage) {
     life: 0,
     resolved: false,
     visualAge: 0,
+    visualStartX: from.x + (dx / d) * Math.min(22, d),
+    visualStartY: from.y + (dy / d) * Math.min(22, d),
+    visualX: from.x + (dx / d) * Math.min(22, d),
+    visualY: from.y + (dy / d) * Math.min(22, d),
+    // Visual flight is independent of the original damage/collision clock.
+    visualDuration: Math.max(0.12, Math.hypot(tx - from.x, ty - from.y) / 4800),
     rendered: false,
     directionX: tx - from.x,
     directionY: ty - from.y,
@@ -388,9 +394,12 @@ function spawnAllyProjectile(a, e, owner, damage) {
 function updateProjectiles(dt) {
   for (var i = projectiles.length - 1; i >= 0; i--) {
     var p = projectiles[i];
+    p.visualAge += dt;
+    var progress = Math.min(1, p.visualAge / p.visualDuration);
+    p.visualX = p.visualStartX + (p.tx - p.visualStartX) * progress;
+    p.visualY = p.visualStartY + (p.ty - p.visualStartY) * progress;
     if (p.resolved) {
-      p.visualAge += dt;
-      if (p.rendered && p.visualAge >= 0.08) projectiles.splice(i, 1);
+      if (p.rendered && progress >= 1) projectiles.splice(i, 1);
       continue;
     }
     p.life += dt;
@@ -436,8 +445,8 @@ function updateProjectiles(dt) {
 }
 function drawProjectiles() {
   projectiles.forEach(function (p) {
-    var xy = iso(p.x, p.y),
-      txy = iso(p.x + p.directionX, p.y + p.directionY),
+    var xy = iso(p.visualX, p.visualY),
+      txy = iso(p.visualX + p.directionX, p.visualY + p.directionY),
       x = xy[0],
       y = xy[1],
       tx = txy[0],
