@@ -6,6 +6,8 @@ import {
   streetBreathRemaining,
 } from "./streetBeat.js?v=20260908-137";
 
+// Keep event definitions for later polish, but run only the main fort objective.
+export const STREET_EVENTS_ENABLED = false;
 export const OBJECTIVE_TYPES = [
   "hold_crosswalk",
   "clear_blockade",
@@ -131,6 +133,7 @@ function nestAlive(obj) {
 }
 
 export function spawnStreetObjective(state, opts) {
+  if (!STREET_EVENTS_ENABLED) return null;
   opts = opts || {};
   var random = opts.random || Math.random;
   var type = opts.type || nextType(state, random);
@@ -200,7 +203,7 @@ export function defaultForwardGoal(mission) {
 }
 
 export function currentPushGoal(mission, streetState) {
-  var obj = streetState && streetState.current;
+  var obj = STREET_EVENTS_ENABLED && streetState && streetState.current;
   if (obj && !obj.done) {
     return {
       x: obj.x,
@@ -263,6 +266,17 @@ function completeStreetObjective(state, obj, opts) {
 export function updateStreetObjectives(state, dt, opts) {
   opts = opts || {};
   if (!state) return null;
+  if (!STREET_EVENTS_ENABLED) {
+    if (state.current || state.breath) {
+      releaseStreetObjectiveHold(
+        [].concat(opts.player || [], opts.squad || [], opts.marines || []),
+      );
+    }
+    state.current = null;
+    state.breath = null;
+    state.resumeForward = false;
+    return null;
+  }
   var actors = []
     .concat(opts.player ? [opts.player] : [])
     .concat(opts.squad || [])
