@@ -1,0 +1,36 @@
+{
+  "cols": 4,
+  "rows": 6,
+  "cell": 192,
+  "frameWidth": 192,
+  "frameHeight": 192,
+  "facing": "right",
+  "opaque": true,
+  "alphaHardened": true,
+  "character": "Viper",
+  "role": "recon-rifle",
+  "kit": [
+    "forest-green-plate",
+    "coat-of-plates",
+    "helmet-binoculars",
+    "assault-rifle"
+  ],
+  "states": [
+    "idle",
+    "run",
+    "standShoot",
+    "crouchShoot",
+    "reload",
+    "death"
+  ],
+  "fps": {
+    "idle": 3.2,
+    "run": 9,
+    "standShoot": 10,
+    "crouchShoot": 10,
+    "reload": 8,
+    "death": 7
+  },
+  "file": "viper-atlas.webp",
+  "note": "kit-locked B: darker forest-green plate, coat-of-plates skirt, helmet binoculars flipped up, assault rifle. No baked cover."
+}

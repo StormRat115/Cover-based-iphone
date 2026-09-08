@@ -3,49 +3,49 @@ import {
   SIDEARMS,
   weaponCopy,
   weaponWithAttachments,
-} from "./weapons.js?v=20260908-131";
+} from "./weapons.js?v=20260908-132";
 import {
   soldierSource,
   drawSoldier,
   leoAtlasReady,
-} from "./soldierAssets.js?v=20260908-131";
+} from "./soldierAssets.js?v=20260908-132";
 import {
   CHARACTER_STATS,
   damageReductionPercent,
   GENERAL_ACCURACY_PENALTY,
-} from "./combatStats.js?v=20260908-131";
+} from "./combatStats.js?v=20260908-132";
 import {
   ATTACHMENT_SLOTS,
   ATTACHMENT_SLOT_LABELS,
   attachmentsForSlot,
   emptyAttachmentIds,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260908-131";
+} from "./attachments.js?v=20260908-132";
 import {
   getTeamProgress,
   xpIntoLevel,
   xpForLevel,
-} from "./teamProgress.js?v=20260908-131";
+} from "./teamProgress.js?v=20260908-132";
 import {
   SKILL_BRANCHES,
   canBuySkill,
   buySkill,
   getSkillMods,
-} from "./skillTree.js?v=20260908-131";
+} from "./skillTree.js?v=20260908-132";
 import {
   ARMOR_OPTIONS,
   describeArmorStats,
   selectArmor,
   selectedArmorId,
   signed,
-} from "./armor.js?v=20260908-131";
+} from "./armor.js?v=20260908-132";
 import {
   isLeo,
   leoSword,
   leoSidearmFromLoadout,
   LEO_TEMP_FILTER,
   drawLeoGear,
-} from "./leoKit.js?v=20260908-131";
+} from "./leoKit.js?v=20260908-132";
 
 var DEFAULT_WEAPONS = {
     player: "rifle",
@@ -489,6 +489,29 @@ function drawPreview(key) {
           facingY: 0,
           name: "Doc",
           role: "marksman",
+        },
+        {
+          team: "ally",
+          scale: 0.72,
+        },
+      );
+      g.restore();
+      return;
+    }
+    if (previewKey === "Viper") {
+      g.save();
+      g.translate(100, 198);
+      drawSoldier(
+        g,
+        {
+          x: 0,
+          y: 0,
+          hp: 115,
+          maxHp: 115,
+          facingX: 1,
+          facingY: 0,
+          name: "Viper",
+          role: "flanker",
         },
         {
           team: "ally",

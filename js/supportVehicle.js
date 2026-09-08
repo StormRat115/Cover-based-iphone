@@ -1,7 +1,7 @@
-import { isSightBlocked } from "./cover.js?v=20260908-131";
-import { drawSoldier } from "./soldierAssets.js?v=20260908-131";
-import { mitigateDamage } from "./combatStats.js?v=20260908-131";
-import { scaledWeaponRange } from "./weapons.js?v=20260908-131";
+import { isSightBlocked } from "./cover.js?v=20260908-132";
+import { drawSoldier } from "./soldierAssets.js?v=20260908-132";
+import { mitigateDamage } from "./combatStats.js?v=20260908-132";
+import { scaledWeaponRange } from "./weapons.js?v=20260908-132";
 
 export function createSupportVehicle(objective) {
   const vehicle = {

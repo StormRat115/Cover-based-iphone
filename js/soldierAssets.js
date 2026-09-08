@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260908-131";
+import { loadImage } from "./assets.js?v=20260908-132";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
   "./assets/generated/soldier/player-solid-atlas.png?v=20260906-102";
@@ -18,10 +18,16 @@ leoAtlasSource.src =
   "./assets/generated/soldier/leo-atlas.webp?v=20260908-126";
 export const docAtlasSource = new Image();
 const DOC_ATLAS_WEBP =
-  "./assets/generated/soldier/doc-atlas.webp?v=20260908-131";
+  "./assets/generated/soldier/doc-atlas.webp?v=20260908-132";
 const DOC_ATLAS_PNG =
-  "./assets/generated/soldier/doc-atlas.png?v=20260908-131";
+  "./assets/generated/soldier/doc-atlas.png?v=20260908-132";
 docAtlasSource.src = DOC_ATLAS_WEBP;
+export const viperAtlasSource = new Image();
+const VIPER_ATLAS_WEBP =
+  "./assets/generated/soldier/viper-atlas.webp?v=20260908-132";
+const VIPER_ATLAS_PNG =
+  "./assets/generated/soldier/viper-atlas.png?v=20260908-132";
+viperAtlasSource.src = VIPER_ATLAS_WEBP;
 
 const ENEMY_MONSTER_SHEET_WIDTH = 1536,
   ENEMY_MONSTER_SHEET_HEIGHT = 1022,
@@ -263,6 +269,14 @@ export const DOC_ATLAS_STATES = [
   "reload",
   "death",
 ];
+export const VIPER_ATLAS_STATES = [
+  "idle",
+  "run",
+  "standShoot",
+  "crouchShoot",
+  "reload",
+  "death",
+];
 const VAULT_COLS = 4;
 const VAULT_CELL = 168;
 let runtimeFriendlyAtlas = null,
@@ -270,7 +284,9 @@ let runtimeFriendlyAtlas = null,
   runtimeLeoAtlas = null,
   runtimeLeoFrames = null,
   runtimeDocAtlas = null,
-  runtimeDocFrames = null;
+  runtimeDocFrames = null,
+  runtimeViperAtlas = null,
+  runtimeViperFrames = null;
 const ROWS = {
   idle: 0,
   run: 1,
@@ -488,9 +504,9 @@ function leoFrame(row, col) {
   return runtimeLeoFrames[row][col] || null;
 }
 
-function docFrame(row, col) {
-  if (!runtimeDocFrames || !runtimeDocFrames[row]) return null;
-  return runtimeDocFrames[row][col] || null;
+function kitFrame(frames, row, col) {
+  if (!frames || !frames[row]) return null;
+  return frames[row][col] || null;
 }
 
 export function isLeoActor(actor) {
@@ -499,6 +515,10 @@ export function isLeoActor(actor) {
 
 export function isDocActor(actor) {
   return !!(actor && actor.name === "Doc");
+}
+
+export function isViperActor(actor) {
+  return !!(actor && actor.name === "Viper");
 }
 
 export function leoAtlasReady() {
@@ -515,12 +535,28 @@ export function docAtlasReady() {
   );
 }
 
-function loadDocAtlas() {
-  return loadImage(docAtlasSource).catch(function () {
-    if (docAtlasSource.src.indexOf("doc-atlas.png") >= 0) throw new Error("Doc atlas missing");
-    docAtlasSource.src = DOC_ATLAS_PNG;
-    return loadImage(docAtlasSource);
+export function viperAtlasReady() {
+  return !!(
+    runtimeViperAtlas &&
+    (runtimeViperAtlas.naturalWidth > 0 || runtimeViperAtlas.width > 0)
+  );
+}
+
+function loadPreferredAtlas(image, pngSrc, label) {
+  return loadImage(image).catch(function () {
+    if (image.src.indexOf(pngSrc.split("?")[0]) >= 0)
+      throw new Error(label + " atlas missing");
+    image.src = pngSrc;
+    return loadImage(image);
   });
+}
+
+function namedSixStateKit(actor) {
+  if (isDocActor(actor) && runtimeDocAtlas)
+    return { atlas: runtimeDocAtlas, frames: runtimeDocFrames };
+  if (isViperActor(actor) && runtimeViperAtlas)
+    return { atlas: runtimeViperAtlas, frames: runtimeViperFrames };
+  return null;
 }
 
 export function isLiveFriendly(actor, team) {
@@ -566,7 +602,8 @@ export function preloadSoldierAssets(onProgress) {
   return Promise.all([
     loadImage(friendlyAtlasSource),
     loadImage(leoAtlasSource),
-    loadDocAtlas(),
+    loadPreferredAtlas(docAtlasSource, DOC_ATLAS_PNG, "Doc"),
+    loadPreferredAtlas(viperAtlasSource, VIPER_ATLAS_PNG, "Viper"),
     loadImage(soldierSource),
     loadImage(enemySource),
     loadImage(deathSource),
@@ -584,6 +621,8 @@ export function preloadSoldierAssets(onProgress) {
     runtimeLeoFrames = buildLeoFrameCache(runtimeLeoAtlas);
     runtimeDocAtlas = hardenSheetAlpha(docAtlasSource) || docAtlasSource;
     runtimeDocFrames = buildFriendlyFrameCache(runtimeDocAtlas);
+    runtimeViperAtlas = hardenSheetAlpha(viperAtlasSource) || viperAtlasSource;
+    runtimeViperFrames = buildFriendlyFrameCache(runtimeViperAtlas);
     runtimeVaultSheet = hardenSheetAlpha(vaultSheetSource) || vaultSheetSource;
     // Legacy crop atlas kept as fallback; enemies still use monster atlas path.
     const soldierAtlas = buildAtlas(soldierSource, FRAME_BOXES);
@@ -1226,10 +1265,11 @@ export function drawSoldier(ctx, actor, options) {
     (options.y || 0) + bob + plant.y - vaultLift,
   );
   var useLeo = !isEnemy && isLeoActor(actor) && !!runtimeLeoAtlas;
-  var useDoc = !isEnemy && !useLeo && isDocActor(actor) && !!runtimeDocAtlas;
+  var namedKit = !isEnemy && !useLeo ? namedSixStateKit(actor) : null;
+  var useNamedKit = !!namedKit;
   var solidFriendly =
     !isEnemy &&
-    !!(useLeo ? runtimeLeoAtlas : useDoc ? runtimeDocAtlas : runtimeFriendlyAtlas);
+    !!(useLeo ? runtimeLeoAtlas : namedKit ? namedKit.atlas : runtimeFriendlyAtlas);
   var recolor = options.recolorFilter || "";
   ctx.globalCompositeOperation = "source-over";
   ctx.filter = solidFriendly ? recolor || "none" : teamFilter(team);
@@ -1241,12 +1281,12 @@ export function drawSoldier(ctx, actor, options) {
     } else if (
       !runtimeFriendlyAtlas &&
       !useLeo &&
-      !useDoc &&
+      !useNamedKit &&
       drawDeath(ctx, actor, options, scale, flip)
     ) {
       ctx.restore();
       return;
-    } else if (!runtimeFriendlyAtlas && !useLeo && !useDoc) state = "lowCover";
+    } else if (!runtimeFriendlyAtlas && !useLeo && !useNamedKit) state = "lowCover";
   }
   var vaultSrc = vaultSheet();
   var useVault =
@@ -1254,18 +1294,18 @@ export function drawSoldier(ctx, actor, options) {
       vaultSrc &&
       (vaultSrc.complete !== false) &&
       (vaultSrc.naturalWidth > 0 || vaultSrc.width > 0);
-  var useFriendly = !isEnemy && runtimeFriendlyAtlas && !useLeo && !useDoc;
+  var useFriendly = !isEnemy && runtimeFriendlyAtlas && !useLeo && !useNamedKit;
   // Atlas cells include padding so the figure is smaller than the cell.
-  if (useFriendly || useLeo || useDoc) scale *= 1.15;
+  if (useFriendly || useLeo || useNamedKit) scale *= 1.15;
   var r = useVault
       ? vaultFrame(actor)
       : useLeo
         ? frameForLeo(actor, state === "vault" ? "run" : state)
-        : useFriendly || useDoc
+        : useFriendly || useNamedKit
           ? frameForFriendly(actor, state === "vault" ? "run" : state)
           : frameFor(actor, state === "vault" ? "run" : state, boxes);
-  var cellW = useVault ? r.w : useFriendly || useLeo || useDoc ? FRIENDLY_CELL : CELL;
-  var cellH = useVault ? r.h : useFriendly || useLeo || useDoc ? FRIENDLY_CELL : r.h;
+  var cellW = useVault ? r.w : useFriendly || useLeo || useNamedKit ? FRIENDLY_CELL : CELL;
+  var cellH = useVault ? r.h : useFriendly || useLeo || useNamedKit ? FRIENDLY_CELL : r.h;
   var dw = cellW * scale * (useVault ? 1.08 : 1);
   var dh = cellH * scale * (useVault ? 1.08 : 1);
   ctx.fillStyle = "#0007";
@@ -1290,16 +1330,17 @@ export function drawSoldier(ctx, actor, options) {
   var isolatedFriendlyFrame =
     useFriendly && !useVault ? friendlyFrame(r.row, r.col) : null;
   var isolatedLeoFrame = useLeo && !useVault ? leoFrame(r.row, r.col) : null;
-  var isolatedDocFrame = useDoc && !useVault ? docFrame(r.row, r.col) : null;
-  var isolatedCell = isolatedLeoFrame || isolatedDocFrame || isolatedFriendlyFrame;
+  var isolatedNamedFrame =
+    useNamedKit && !useVault ? kitFrame(namedKit.frames, r.row, r.col) : null;
+  var isolatedCell = isolatedLeoFrame || isolatedNamedFrame || isolatedFriendlyFrame;
   ctx.filter = solidFriendly ? "none" : teamFilter(team);
   ctx.imageSmoothingEnabled = true;
   var drawAtlas = useVault
     ? vaultSrc
     : useLeo
       ? isolatedLeoFrame || runtimeLeoAtlas
-      : useDoc
-        ? isolatedDocFrame || runtimeDocAtlas
+      : useNamedKit
+        ? isolatedNamedFrame || namedKit.atlas
         : useFriendly
           ? isolatedFriendlyFrame || runtimeFriendlyAtlas
           : atlas;
@@ -1336,7 +1377,7 @@ export function drawSoldier(ctx, actor, options) {
         r.col,
         r.nextCol,
         r.blend || 0,
-        useVault ? 0 : useFriendly || useLeo || useDoc ? r.row : ROWS[r.state] || 0,
+        useVault ? 0 : useFriendly || useLeo || useNamedKit ? r.row : ROWS[r.state] || 0,
         cellW,
         cellH,
         -dw * 0.5,
@@ -1408,6 +1449,9 @@ export function getSoldierAtlasInfo() {
     docAtlas: "doc-atlas.webp",
     docAtlasPng: "doc-atlas.png",
     docStates: DOC_ATLAS_STATES.slice(),
+    viperAtlas: "viper-atlas.webp",
+    viperAtlasPng: "viper-atlas.png",
+    viperStates: VIPER_ATLAS_STATES.slice(),
     coverRows: "mapped",
     vaultSheet: "vault-sheet.png",
     vaultCell: VAULT_CELL,

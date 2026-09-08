@@ -1328,8 +1328,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    103,
-    "soldier/vault/leo/doc/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn facade plates",
+    104,
+    "soldier/vault/leo/doc/viper/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn facade plates",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
@@ -1487,10 +1487,16 @@ test("living friendlies stay fully opaque every animation frame", async () => {
   assert.equal(sprites.getSoldierAtlasInfo().coverRows, "mapped");
   assert.equal(sprites.getSoldierAtlasInfo().leoAtlas, "leo-atlas.webp");
   assert.equal(sprites.getSoldierAtlasInfo().docAtlas, "doc-atlas.webp");
+  assert.equal(sprites.getSoldierAtlasInfo().viperAtlas, "viper-atlas.webp");
   assert.equal(sprites.isDocActor({ name: "Doc" }), true);
   assert.equal(sprites.isDocActor({ name: "Rook" }), false);
   assert.equal(sprites.isDocActor({ name: "Leo", knight: true }), false);
+  assert.equal(sprites.isDocActor({ name: "Viper" }), false);
+  assert.equal(sprites.isViperActor({ name: "Viper" }), true);
+  assert.equal(sprites.isViperActor({ name: "Doc" }), false);
+  assert.equal(sprites.isViperActor({ name: "Rook" }), false);
   assert.equal(sprites.docAtlasReady(), true);
+  assert.equal(sprites.viperAtlasReady(), true);
   assert.equal(
     sprites.getSoldierState({
       name: "Doc",
@@ -1501,6 +1507,17 @@ test("living friendlies stay fully opaque every animation frame", async () => {
     }),
     "crouchShoot",
     "Doc keeps the shared 6-state cover mapping on the slate atlas",
+  );
+  assert.equal(
+    sprites.getSoldierState({
+      name: "Viper",
+      hp: 115,
+      dead: false,
+      downed: false,
+      cover: { type: "low", x: 0, y: 0, w: 40, h: 20 },
+    }),
+    "crouchShoot",
+    "Viper keeps the shared 6-state cover mapping on the green atlas",
   );
   assert.equal(
     sprites.getSoldierState({
@@ -1602,8 +1619,52 @@ test("Phone Art doc-atlas is the wired 6-state kit-locked slate medic sheet", ()
   assert.match(
     source,
     /player-solid-atlas\.png/,
-    "Rook/Viper/player stay on the shared friendly sheet",
+    "Rook and the player stay on the shared friendly sheet",
   );
+});
+
+test("Phone Art viper-atlas is the wired 6-state kit-locked forest-green sheet", () => {
+  const meta = JSON.parse(
+    readFileSync("assets/generated/soldier/viper-atlas.json", "utf8"),
+  );
+  assert.equal(meta.cols, 4);
+  assert.equal(meta.rows, 6);
+  assert.equal(meta.cell, 192);
+  assert.equal(meta.facing, "right");
+  assert.equal(meta.character, "Viper");
+  assert.equal(meta.opaque, true);
+  assert.equal(meta.alphaHardened, true);
+  assert.deepEqual(meta.kit, [
+    "forest-green-plate",
+    "coat-of-plates",
+    "helmet-binoculars",
+    "assault-rifle",
+  ]);
+  assert.deepEqual(meta.states, [
+    "idle",
+    "run",
+    "standShoot",
+    "crouchShoot",
+    "reload",
+    "death",
+  ]);
+  assert.ok(!meta.states.includes("tallCover"));
+  assert.ok(!meta.states.includes("lowCover"));
+  const png = readFileSync("assets/generated/soldier/viper-atlas.png");
+  assert.equal(png.readUInt32BE(16), 768);
+  assert.equal(png.readUInt32BE(20), 1152);
+  assert.equal(png[25], 6, "viper-atlas.png must be an RGBA PNG");
+  assert.ok(png.length > 400000);
+  const webp = readFileSync("assets/generated/soldier/viper-atlas.webp");
+  assert.ok(webp.length > 40000);
+  assert.ok(webp.length < 400000, "keep the official Viper sheet mobile-sized");
+  const source = readFileSync("js/soldierAssets.js", "utf8");
+  assert.match(source, /viper-atlas\.webp/);
+  assert.match(source, /viper-atlas\.png/);
+  assert.match(source, /isViperActor/);
+  assert.match(source, /doc-atlas\.webp/);
+  assert.match(source, /leo-atlas\.webp/);
+  assert.match(source, /player-solid-atlas\.png/);
 });
 
 test("Phone Art player-solid-atlas is the wired 6-state opaque sheet", () => {
@@ -3382,7 +3443,9 @@ test("independent squad abilities fire Doc stem, Rook MG88, Viper heat, Leo legi
   assert.equal(knobs.doc.reviveHp, 0.45);
   assert.equal(knobs.doc.mark, 1.6);
   assert.ok(knobs.rook.shots === 200);
-  assert.ok(knobs.viper.duration === 10);
+  assert.equal(knobs.viper.id, "heat");
+  assert.equal(knobs.viper.cooldown, 20);
+  assert.equal(knobs.viper.duration, 10);
   assert.equal(knobs.leo.regenPerSec, 2);
 
   const squad = alliesModule.createAllies();
@@ -3534,6 +3597,13 @@ test("player street draw scale shrinks ~11% without changing squad, marines, or 
       iso,
     ),
   );
+  const viperW = destWidth(() =>
+    allyMod.drawAlly(
+      ctx,
+      { ...base, name: "Viper", weapon: { short: "SMG" } },
+      iso,
+    ),
+  );
   const leoW = destWidth(() =>
     allyMod.drawAlly(
       ctx,
@@ -3547,9 +3617,10 @@ test("player street draw scale shrinks ~11% without changing squad, marines, or 
   const enemyW = destWidth(() =>
     enemyMod.drawBandit(ctx, { ...base, type: "rifleman", scale: 1 }, iso),
   );
-  assert.ok(playerW > 0 && allyW > 0 && docW > 0 && leoW > 0 && marineW > 0 && enemyW > 0);
+  assert.ok(playerW > 0 && allyW > 0 && docW > 0 && viperW > 0 && leoW > 0 && marineW > 0 && enemyW > 0);
   assert.ok(playerW < allyW, "player dest width should be smaller than squad");
   assert.equal(docW, allyW, "Doc keeps squad draw scale on the slate atlas");
+  assert.equal(viperW, allyW, "Viper keeps squad draw scale on the green atlas");
   assert.ok(Math.abs(playerW / allyW - 0.275 / 0.3) < 0.02);
   const col = await h.importModule(`js/unitCollision.js?v=${BUILD}`);
   const created = playerMod.createPlayer();

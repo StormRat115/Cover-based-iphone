@@ -52,11 +52,14 @@ node scripts/version.mjs YYYYMMDD-N
 
 When replacing an image, also bump that image's source URL in the relevant asset module. Do not create separate query versions of a stateful module: browsers treat them as separate instances.
 
-## Doc slate atlas: 20260908-131
+## Doc + Viper Phone Art kits: 20260908-132
 
-Doc draws the official Phone Art `doc-atlas` from `chore/doc-slate-atlas` (`71f7c72`) under `assets/generated/soldier/`. Preferred sheet is `doc-atlas.webp`, with `doc-atlas.png` as the decode fallback. 4×6, cell 192, facing right, hard alpha. States: idle, run, standShoot, crouchShoot, reload, death. Kit locked: slate-blue plate, full helmet dark visor, assault rifle, medic pouches. No baked cover.
+Doc draws the official Phone Art `doc-atlas` from `chore/doc-slate-atlas` (`71f7c72`). Viper draws `viper-atlas` from `chore/viper-green-atlas` (`6c6eb61`). Both live under `assets/generated/soldier/`, prefer WebP, and fall back to PNG. 4×6, cell 192, facing right, hard alpha. States: idle, run, standShoot, crouchShoot, reload, death.
 
-Rook, Viper, Leo, and the player stay on their current sheets. Stem shot knobs and targeting (revive first, else lowest HP) are unchanged.
+- Doc kit: slate-blue plate, full helmet dark visor, assault rifle, medic pouches. No baked cover.
+- Viper kit: darker forest-green plate, coat-of-plates skirt, helmet binoculars flipped up, assault rifle. No baked cover.
+
+Rook, Leo, and the player stay on their current sheets. Stem shot and Viper heat knobs are unchanged.
 
 ## Squadmate Leo (tactical knight): 20260908-126
 
