@@ -1327,7 +1327,10 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   );
   assert.equal(h.frames.length, 0);
   assert.equal(
-  assert.equal(h.metrics.images, 103, "soldier/vault/leo/doc/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn facade plates");
+    h.metrics.images,
+    103,
+    "soldier/vault/leo/doc/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn facade plates",
+  );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
   assert.equal(h.frames.length, 0);
