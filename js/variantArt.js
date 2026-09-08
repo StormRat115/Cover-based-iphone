@@ -1,4 +1,8 @@
-import { loadImage } from "./assets.js?v=20260908-133";
+import { loadImage } from "./assets.js?v=20260908-134";
+import {
+  cleanPackedSheet,
+  drawClampedSheetFrame,
+} from "./soldierAssets.js?v=20260908-134";
 
 // Kit-locked Phone Art sheets from chore/enemy-variants-ripper-shield-medic.
 // Isolated from combat imports so boot can preload without the VM graph.
@@ -47,6 +51,7 @@ export const VARIANT_SHEETS = {
 };
 
 const variantSources = {};
+const variantSheets = {};
 Object.keys(VARIANT_SHEETS).forEach(function (type) {
   var image = new Image();
   image.src =
@@ -69,6 +74,14 @@ export function preloadVariantAssets(onProgress) {
       })
     )
       throw new Error("Variant thrall sheets are not ready");
+    Object.keys(variantSources).forEach(function (type) {
+      var spec = VARIANT_SHEETS[type];
+      variantSheets[type] = cleanPackedSheet(
+        variantSources[type],
+        spec.frameWidth,
+        spec.frameHeight,
+      );
+    });
     return variantSources;
   });
 }
@@ -96,8 +109,16 @@ function variantAnimState(e) {
 
 export function drawOfficialVariant(ctx, e, options) {
   var spec = VARIANT_SHEETS[e.type];
-  var source = variantSources[e.type];
-  if (!spec || !source || !source.complete || !source.naturalWidth) return false;
+  var source =
+    variantSheets[e.type] ||
+    (spec &&
+      cleanPackedSheet(
+        variantSources[e.type],
+        spec.frameWidth,
+        spec.frameHeight,
+      ));
+  if (!spec || !source || !(source.complete !== false) || !(source.naturalWidth || source.width))
+    return false;
   options = options || {};
   var state = variantAnimState(e);
   var anim = spec.animations[state] || spec.animations.idle;
@@ -130,12 +151,14 @@ export function drawOfficialVariant(ctx, e, options) {
   ctx.ellipse(0, 3, dw * 0.22, dh * 0.05, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.scale(flip, 1);
-  ctx.drawImage(
+  var pad = 2;
+  drawClampedSheetFrame(
+    ctx,
     source,
-    frame * fw,
-    anim.row * fh,
-    fw,
-    fh,
+    frame * fw + pad,
+    anim.row * fh + pad,
+    fw - pad * 2,
+    fh - pad * 2,
     -dw * 0.5,
     -dh * 0.88,
     dw,

@@ -4057,3 +4057,162 @@ test("Phone Art ripper, shielded thrall, and medic sheets are kit-locked 160px c
   });
 });
 
+test("sprite draws clamp source rects so gun tips never wrap behind the body", async () => {
+  const h = createHarness();
+  const sprites = await h.importModule(`js/soldierAssets.js?v=${BUILD}`);
+  const variants = await h.importModule(`js/variantArt.js?v=${BUILD}`);
+  const charger = await h.importModule(`js/chargerEnemy.js?v=${BUILD}`);
+  await sprites.preloadSoldierAssets();
+  await variants.preloadVariantAssets();
+  await charger.preloadChargerAssets();
+  assert.equal(sprites.CELL_GUTTER, 8);
+  assert.equal(typeof sprites.drawClampedSheetFrame, "function");
+  assert.equal(typeof sprites.stripWrappedOverflow, "function");
+  assert.equal(typeof sprites.cleanPackedSheet, "function");
+  assert.equal(sprites.getSoldierAtlasInfo().cellGutter, 8);
+  assert.equal(
+    sprites.getSoldierAtlasInfo().wrapFix,
+    "clamp-source-strip-left-overflow",
+  );
+  const source = readFileSync("js/soldierAssets.js", "utf8");
+  assert.match(source, /drawClampedSheetFrame/);
+  assert.match(source, /stripWrappedOverflow/);
+  assert.match(source, /CELL_GUTTER/);
+  assert.equal(
+    readFileSync("js/variantArt.js", "utf8").includes("drawClampedSheetFrame"),
+    true,
+  );
+  assert.equal(
+    readFileSync("js/chargerEnemy.js", "utf8").includes("drawClampedSheetFrame"),
+    true,
+  );
+
+  const ctx = h.document.createElement("canvas").getContext("2d");
+  sprites.drawClampedSheetFrame(
+    ctx,
+    { naturalWidth: 100, naturalHeight: 50, width: 100, height: 50 },
+    -10,
+    0,
+    40,
+    20,
+    0,
+    0,
+    40,
+    20,
+  );
+  const clamped = h.metrics.drawImages.at(-1);
+  assert.equal(clamped[1], 0, "negative source x must clamp, not wrap");
+  assert.equal(clamped[3], 30);
+  assert.ok(clamped[5] > 0, "dest shifts with the clip instead of wrapping");
+
+  sprites.drawClampedSheetFrame(
+    ctx,
+    { naturalWidth: 80, naturalHeight: 40, width: 80, height: 40 },
+    70,
+    0,
+    40,
+    20,
+    0,
+    0,
+    40,
+    20,
+  );
+  const pastEnd = h.metrics.drawImages.at(-1);
+  assert.equal(pastEnd[1], 70);
+  assert.equal(pastEnd[3], 10, "source width must clip to the bitmap");
+  assert.ok(pastEnd[7] < 40, "dest width shrinks with the clipped source");
+
+  const extreme = {
+    x: 0,
+    y: 0,
+    hp: 100,
+    maxHp: 100,
+    state: "shoot",
+    muzzle: 0.2,
+    facingX: 12,
+    facingY: -12,
+    dead: false,
+    downed: false,
+  };
+  const casts = [
+    { actor: { ...extreme, isPlayer: true }, team: "player", label: "player" },
+    { actor: { ...extreme, name: "Doc" }, team: "ally", label: "Doc" },
+    { actor: { ...extreme, name: "Viper" }, team: "ally", label: "Viper" },
+    { actor: { ...extreme, name: "Rook" }, team: "ally", label: "Rook" },
+    {
+      actor: { ...extreme, name: "Leo", knight: true },
+      team: "ally",
+      label: "Leo",
+    },
+    { actor: { ...extreme, isMarine: true }, team: "marine", label: "marine" },
+  ];
+  for (const cast of casts) {
+    const before = h.metrics.drawImages.length;
+    sprites.drawSoldier(ctx, cast.actor, { team: cast.team, scale: 0.3 });
+    const drawn = h.metrics.drawImages
+      .slice(before)
+      .filter((args) => args.length >= 9);
+    assert.equal(drawn.length, 1, cast.label + " must stay one opaque blit");
+    const blit = drawn[0];
+    assert.ok(blit[1] >= 0, cast.label + " sx");
+    assert.ok(blit[2] >= 0, cast.label + " sy");
+    const srcW = blit[0].width || blit[0].naturalWidth || 768;
+    const srcH = blit[0].height || blit[0].naturalHeight || 1152;
+    assert.ok(blit[1] + blit[3] <= srcW + 1e-6, cast.label + " source stays in atlas");
+    assert.ok(blit[2] + blit[4] <= srcH + 1e-6, cast.label + " source stays in atlas");
+  }
+
+  const enemy = {
+    type: "rifleman",
+    x: 0,
+    y: 0,
+    targetX: 0,
+    targetY: 0,
+    hp: 60,
+    maxHp: 60,
+    scale: 1,
+    facingX: -6,
+    facingY: 6,
+    muzzle: 0.13,
+    hit: 0,
+    dead: false,
+  };
+  const beforeEnemy = h.metrics.drawImages.length;
+  assert.equal(sprites.drawEnemyMonster(ctx, enemy), true);
+  const enemyDrawn = h.metrics.drawImages
+    .slice(beforeEnemy)
+    .filter((args) => args.length >= 9);
+  assert.ok(enemyDrawn.length >= 1);
+  enemyDrawn.forEach((blit) => {
+    assert.ok(blit[1] >= 0);
+    const srcW = blit[0].width || blit[0].naturalWidth || 1536;
+    assert.ok(blit[1] + blit[3] <= srcW + 1e-6);
+  });
+
+  assert.equal(
+    variants.drawOfficialVariant(ctx, {
+      type: "ripper",
+      x: 0,
+      y: 0,
+      hp: 40,
+      facingX: -5,
+      facingY: 2,
+      scale: 1,
+    }),
+    true,
+  );
+  assert.equal(
+    charger.drawCharger(ctx, {
+      type: "charger",
+      x: 0,
+      y: 0,
+      hp: 80,
+      facingX: 9,
+      facingY: -4,
+      scale: 1,
+      weapon: charger.chargerWeapon(),
+    }),
+    true,
+  );
+});
+
