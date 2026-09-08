@@ -4,7 +4,15 @@ import {
   moveTowardTarget,
   coverStillUseful,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-127";
+} from "./combatAI.js?v=20260908-128";
+
+export function recoverThreshold(actor) {
+  if (!actor || actor.isPlayer || actor.isMarine) return 0.2;
+  var mode =
+    (typeof window !== "undefined" && window.squadMode) || "";
+  if (mode === "AGGRESSIVE" || mode === "ASSAULT") return 0.1;
+  return 0.2;
+}
 
 export function shouldRecover(actor) {
   if (!actor || actor.dead || actor.downed) return false;
@@ -17,7 +25,7 @@ export function shouldRecover(actor) {
     }
     return true;
   }
-  if (pct <= 0.2) {
+  if (pct <= recoverThreshold(actor)) {
     actor.recovering = true;
     actor.recoveryCoverChosen = false;
     actor.exposed = false;

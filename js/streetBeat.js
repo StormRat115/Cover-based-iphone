@@ -1,8 +1,8 @@
 /* Post-objective breath, then a directed breach beat. */
 
-import { tryFacadeDoorBurst } from "./facadeDoors.js?v=20260908-127";
-import { spawnWreckDetonation } from "./combatVfx.js?v=20260908-127";
-import { damageCover, isSoftCover } from "./destructibleCover.js?v=20260908-127";
+import { tryFacadeDoorBurst } from "./facadeDoors.js?v=20260908-128";
+import { spawnWreckDetonation } from "./combatVfx.js?v=20260908-128";
+import { damageCover, isSoftCover } from "./destructibleCover.js?v=20260908-128";
 
 export const STREET_BREATH = {
   min: 2.15,

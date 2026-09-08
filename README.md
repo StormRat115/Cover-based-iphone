@@ -61,6 +61,31 @@ Fourth named ally beside Rook / Viper / Doc. Default **defense 200**, sword mele
 - When Leo hop-closes through a slot he uses `repathIfSlotContested` so leapfrog occupancy stays exclusive.
 - Art: kit-locked Phone Art `leo-atlas` from `chore/leo-heavy-knight` (`523fd40`) under `assets/generated/soldier/`. States: idle, run, standShoot, shieldRaise, meleeSwing, shieldBlock, reload, death. Temp recolor + drawn props only if that sheet fails to decode.
 
+## Combat / command pack: 20260908-128
+
+Sidewalks restored along both street edges; iso-flow façades stay **behind** the walk (`clipBehindSidewalk` at `sidewalkOuterX`). Buildings are backdrop only. Road fill is unchanged.
+
+Melee-focused units (Leo, chargers, `role: melee`) **ignore cover** and close in the open. Every actor carries a melee weapon (`actor.melee`): Leo sword / charger rushblade, otherwise a weak combat knife (`MELEE` in `js/melee.js`). Melee **always hits**.
+
+**Engaged** (`js/engaged.js`, knobs on `ENGAGED`): when a melee unit enters melee range, both units lock, show a sword mark, cannot use normal regen, and melee until one drops. Shooters skip engaged targets unless no one else is viable. Nearby monsters may **dogpile** (`dogpileRange` 240, `dogpileChance` 0.42 / `dogpileInterval` 0.85s).
+
+Squad HUD is **Aggressive / Follow / Hold** (`SQUAD_MODES`). Old ASSAULT maps to Aggressive, FOCUS maps to Follow.
+
+- Aggressive (`SQUAD_AGGRO`): longer peeks, 10% HP recovery, keep bounding forward. Melee still ignore cover.
+- Follow: routine AI, catch up if they lag (`followLag` 56 world units).
+- Hold: sit in cover and fire with unchanged peek timing. Melee still ignore cover.
+
+Independent abilities (`js/squadAbilities.js`, `ABILITY_KNOBS`):
+
+| Ally | Ability | Default knobs |
+| --- | --- | --- |
+| Doc | Stem shot (revive first, else lowest HP). Green + on target. | cooldown 16s, range 560, heal 48, revive 45% |
+| Rook | MG88: take cover, 200 ultra-fast unlimited-range shots, then cooldown. | cooldown 26s, fire 0.048s, damage 14 |
+| Viper | Heat rounds: Viper + player 100% hit for 10s. | cooldown 20s, duration 10s |
+| Leo | Legionary: 2 HP/s and green +; overrides engaged regen lock. | cooldown 22s, duration 12s, 2 HP/s |
+
+Rebased onto BUILD 127 (leapfrog fireteams, suppression VFX, MAG CHECK breath → door/wreck breach). Those systems stay.
+
 ## Optimization pass: 20260905-59
 
 - Replaced the global animation-frame override and competing autoplay/effect clocks with explicit startup and one loop.

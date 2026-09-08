@@ -2,9 +2,9 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260908-127";
-import { weaponCopy } from "./weapons.js?v=20260908-127";
-import { AudioBus } from "./audio.js?v=20260908-127";
+} from "./cover.js?v=20260908-128";
+import { weaponCopy } from "./weapons.js?v=20260908-128";
+import { AudioBus } from "./audio.js?v=20260908-128";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -13,32 +13,32 @@ import {
   coverStillUseful,
   peekPoint,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-127";
+} from "./combatAI.js?v=20260908-128";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-127";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260908-127";
+} from "./combatStats.js?v=20260908-128";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260908-128";
 import {
   isCoverFull,
   occupancyPenalty,
   occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260908-127";
+} from "./coverSlots.js?v=20260908-128";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-127";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-127";
+} from "./suppression.js?v=20260908-128";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-128";
 import {
   currentPushGoal,
   pushGoalKey,
-} from "./streetObjectives.js?v=20260908-127";
-import { isStreetBreathing } from "./streetBeat.js?v=20260908-127";
+} from "./streetObjectives.js?v=20260908-128";
+import { isStreetBreathing } from "./streetBeat.js?v=20260908-128";
 import {
   tagSquadFireteams,
   updateFireteams,
@@ -46,15 +46,30 @@ import {
   isFireteamBounding,
   boundSpeedScale,
   hopCoversAhead,
-} from "./fireteams.js?v=20260908-127";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-127";
+} from "./fireteams.js?v=20260908-128";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-128";
 import {
   isLeo,
   leoSword,
   leoSidearmFromLoadout,
   tickLeoTimers,
   updateLeoKnight,
-} from "./leoKnight.js?v=20260908-127";
+} from "./leoKnight.js?v=20260908-128";
+import { knifeWeapon, ignoresCover, tickMeleeTimer } from "./melee.js?v=20260908-128";
+import {
+  preferShootTargets,
+  engagedTargetPenalty,
+  updateEngagedFight,
+  tryStartMelee,
+  closeForMelee,
+  tickEngaged,
+  canRegen,
+} from "./engaged.js?v=20260908-128";
+import {
+  tickSquadAbilities,
+  abilityBusy,
+  hasPerfectHit,
+} from "./squadAbilities.js?v=20260908-128";
 export const MARINE_AGGRO = {
   engageRangeFactor: 0.4,
   engageRangeCap: 700,
@@ -76,10 +91,35 @@ export const MARINE_AGGRO = {
   pushRangeFactor: 0.78,
   behindFront: 120,
 };
+export const SQUAD_AGGRO = {
+  recoverPct: 0.1,
+  coveredDwell: 0.14,
+  peekMin: 2.05,
+  peekMax: 3.25,
+  peekShotsMin: 11,
+  peekShotsExtra: 7,
+  reposition: 0.22,
+  engageRangeFactor: 0.42,
+  advanceSpeed: 1.22,
+  followLag: 56,
+  followCatch: 1.28,
+};
 function marineTuned(a) {
   return a && a.isMarine ? MARINE_AGGRO : null;
 }
-export const SQUAD_MODES = ["FOLLOW", "HOLD", "ASSAULT", "FOCUS"];
+export const SQUAD_MODES = ["AGGRESSIVE", "FOLLOW", "HOLD"];
+export function normalizeSquadMode(mode) {
+  if (mode === "ASSAULT" || mode === "PUSH") return "AGGRESSIVE";
+  if (mode === "FOCUS") return "FOLLOW";
+  if (SQUAD_MODES.indexOf(mode) >= 0) return mode;
+  return "FOLLOW";
+}
+function isAggressiveMode(mode) {
+  return normalizeSquadMode(mode) === "AGGRESSIVE";
+}
+function isHoldMode(mode) {
+  return normalizeSquadMode(mode) === "HOLD";
+}
 var squadMode = "FOLLOW";
 var SQUAD = [
   {
@@ -145,10 +185,10 @@ function wireSquadCommands() {
   document
     .querySelectorAll("#squadCommands [data-command]")
     .forEach(function (b, i) {
-      b.classList.toggle("active", i === 0);
+      b.classList.toggle("active", normalizeSquadMode(b.dataset.command) === "FOLLOW");
       b.addEventListener("pointerdown", function (e) {
         e.preventDefault();
-        squadMode = b.dataset.command || "FOLLOW";
+        squadMode = normalizeSquadMode(b.dataset.command || "FOLLOW");
         window.squadMode = squadMode;
         syncCommandButtons();
       });
@@ -188,6 +228,10 @@ export function createAllies() {
       sidearm: knight ? leoSidearmFromLoadout(entry) : null,
       weaponSlot: knight ? "melee" : "primary",
       blocking: false,
+      melee: knight ? leoSword() : knifeWeapon(),
+      meleeTimer: 0,
+      abilityCooldown: 2.4 + i * 1.15,
+      engaged: false,
       x: pos[0],
       y: pos[1],
       hp: s.hp,
@@ -239,15 +283,12 @@ function activeEnemy(e) {
   return !!e && !e.dead && !e.downed && e.hp > 0 && !(e.spawnTimer > 0);
 }
 function chooseCombatEnemy(a, enemies, covers, friendlies, player, mode) {
-  if (mode === "FOCUS" && activeEnemy(player.aimTarget))
-    return {
-      target: player.aimTarget,
-      dist: Math.hypot(a.x - player.aimTarget.x, a.y - player.aimTarget.y),
-    };
+  mode = normalizeSquadMode(mode);
+  var pool = preferShootTargets(enemies);
   var best = null,
     bestDistance = Infinity,
     bestScore = -Infinity;
-  enemies.forEach(function (e) {
+  pool.forEach(function (e) {
     if (!activeEnemy(e)) return;
     var d = Math.hypot(a.x - e.x, a.y - e.y),
       blocked = isSightBlocked(a, e, covers),
@@ -258,6 +299,7 @@ function chooseCombatEnemy(a, enemies, covers, friendlies, player, mode) {
       score = Math.max(0, 1700 - d) * 0.04 + healthPressure * 76;
     score += blocked ? -16 : 26;
     score += e.exposed ? 24 : -9;
+    score += engagedTargetPenalty(e);
     // Coordinate on wounded/high-value threats instead of constantly splitting fire.
     score += focusCount * (healthPressure > 0.55 ? 22 : -28);
     if (e.type === "sniper") score += 52;
@@ -293,12 +335,14 @@ function shoot(a, e, spawnProjectile, covers, accuracyModifier) {
     a.weapon.fireCooldown > 0
   )
     return;
-  var chance = combatAccuracy(
-      getHitChance(a, e, covers),
-      a.weapon.accuracy,
-      a.accuracy,
-      suppressionAccuracyDelta(a) + orderAccuracy(a) + (accuracyModifier || 0),
-    ),
+  var chance = hasPerfectHit(a)
+      ? 100
+      : combatAccuracy(
+          getHitChance(a, e, covers),
+          a.weapon.accuracy,
+          a.accuracy,
+          suppressionAccuracyDelta(a) + orderAccuracy(a) + (accuracyModifier || 0),
+        ),
     hit = Math.random() * 100 < chance;
   a.weapon.ammo--;
   a.weapon.fireCooldown = a.weapon.cooldown;
@@ -483,7 +527,7 @@ function advanceToMission(a, mission, covers, friendlies, dt, threats) {
 }
 function shouldPressStreetObjective(a, e, d, covers, goal) {
   if (!goal || goal.source !== "street") return false;
-  if (squadMode === "HOLD" && !a.isMarine) return false;
+  if (isHoldMode(squadMode) && !a.isMarine) return false;
   var tun = marineTuned(a);
   if (a.hp < a.maxHp * (tun ? tun.pushHp : 0.55)) return false;
   if ((a.suppressionTimer || 0) > (tun ? tun.pushSuppression : 0.2)) return false;
@@ -506,13 +550,26 @@ export function updateAllies(
   mode,
   otherFriendlies,
 ) {
-  squadMode = mode || window.squadMode || squadMode;
+  squadMode = normalizeSquadMode(mode || (typeof window !== "undefined" && window.squadMode) || squadMode);
+  if (typeof window !== "undefined") window.squadMode = squadMode;
   updateFireteams(allies, otherFriendlies, dt);
   var friendlyTeam = allies.concat(otherFriendlies || []);
   // The player owns cover slots too. Excluding them let AI friendlies reserve
   // the same slot and physically pin the player against the barricade.
   if (player && friendlyTeam.indexOf(player) < 0) friendlyTeam.push(player);
   var slotCrowd = friendlyTeam.concat(enemies || []);
+  var everyone = slotCrowd;
+  if (!allies.length || !allies[0].isMarine) {
+    tickSquadAbilities(
+      allies,
+      player,
+      dt,
+      covers,
+      enemies,
+      spawnProjectile,
+      friendlyTeam,
+    );
+  }
   allies.forEach(function (a) {
     a.hit = Math.max(0, a.hit - dt);
     a.muzzle = Math.max(0, a.muzzle - dt);
@@ -522,6 +579,8 @@ export function updateAllies(
     if (a.weapon.fireCooldown > 0)
       a.weapon.fireCooldown = Math.max(0, a.weapon.fireCooldown - dt);
     tickLeoTimers(a, dt);
+    tickMeleeTimer(a, dt);
+    tickEngaged(a, dt, everyone);
     if (a.dead) {
       a.deathTimer += dt;
       return;
@@ -559,8 +618,15 @@ export function updateAllies(
         }
       }
     }
-    if (a.regenRate > 0 && a.hp < a.maxHp && a.timeSinceDamage > a.regenDelay)
+    if (
+      canRegen(a) &&
+      a.regenRate > 0 &&
+      a.hp < a.maxHp &&
+      a.timeSinceDamage > a.regenDelay
+    )
       a.hp = Math.min(a.maxHp, a.hp + a.regenRate * dt);
+    if (abilityBusy(a)) return;
+    if (a.engaged && updateEngagedFight(a, dt, everyone)) return;
     var pick = chooseCombatEnemy(
         a,
         enemies,
@@ -573,10 +639,12 @@ export function updateAllies(
       d = pick.dist,
       tun = marineTuned(a),
       aggressiveAdvance =
-        !!a.aggressiveAdvance && (a.isMarine || squadMode === "ASSAULT"),
+        (!!a.aggressiveAdvance && a.isMarine) ||
+        (isAggressiveMode(squadMode) && !a.isMarine),
+      peekTun = tun || (aggressiveAdvance && !a.isMarine ? SQUAD_AGGRO : null),
       engagementRange = aggressiveAdvance
         ? Math.min(
-            a.weapon.range * (tun ? tun.engageRangeFactor : 0.48),
+            a.weapon.range * (tun ? tun.engageRangeFactor : SQUAD_AGGRO.engageRangeFactor),
             tun ? tun.engageRangeCap : 760,
           )
         : a.weapon.range * 0.82;
@@ -611,10 +679,43 @@ export function updateAllies(
         configurable: true,
       });
     else a.combatTarget = e;
-    if (a.canRecover !== false && shouldRecover(a)) {
+    if (e && tryStartMelee(a, e, everyone) && updateEngagedFight(a, dt, everyone))
+      return;
+    if (ignoresCover(a) && e) {
+      if (isLeo(a)) {
+        updateLeoKnight(a, dt, e, d, covers, slotCrowd, spawnProjectile, squadMode);
+        return;
+      }
+      closeForMelee(a, e, dt, 1.2);
+      if (d <= a.weapon.range && a.weapon.role !== "melee" && !isSightBlocked(a, e, covers))
+        shoot(a, e, spawnProjectile, covers, -10);
+      return;
+    }
+    if (
+      a.canRecover !== false &&
+      !ignoresCover(a) &&
+      shouldRecover(a)
+    ) {
       if (e) faceThreat(a, e);
       recoverInCover(a, e, covers, slotCrowd, dt);
       return;
+    }
+    if (
+      squadMode === "FOLLOW" &&
+      player &&
+      !player.dead &&
+      !player.downed &&
+      !a.isMarine &&
+      a.y > player.y + SQUAD_AGGRO.followLag
+    ) {
+      a.cover = null;
+      a.exposed = true;
+      a.targetX = player.x + ((a.coverSlotIndex || 0) - 1) * 72;
+      a.targetY = player.y + 36;
+      moveTowardTarget(a, dt, SQUAD_AGGRO.followCatch);
+      if (e && d <= a.weapon.range && !isSightBlocked(a, e, covers))
+        shoot(a, e, spawnProjectile, covers, -8);
+      if (a.y > player.y + SQUAD_AGGRO.followLag * 0.55) return;
     }
     var reviveSafe =
       !e ||
@@ -642,9 +743,9 @@ export function updateAllies(
     if (!e) {
       a.cover = null;
       a.blocking = false;
-      a.targetX = player.x + (a.coverSlotIndex - 1) * 90;
-      a.targetY = player.y + 100;
-      moveTowardTarget(a, dt);
+      a.targetX = player.x + ((a.coverSlotIndex || 0) - 1) * 72;
+      a.targetY = player.y + 36;
+      moveTowardTarget(a, dt, squadMode === "FOLLOW" ? 1.16 : 1);
       return;
     }
     if (
@@ -717,25 +818,30 @@ export function updateAllies(
     });
     var pinned =
       a.timeSinceDamage < 0.55 || (a.suppressionTimer || 0) > 0.35;
-    var behindFront = !!(tun && a.y > frontY + tun.behindFront);
+    var behindFront = !!(
+      (tun && a.y > frontY + tun.behindFront) ||
+      (aggressiveAdvance && a.y > frontY + 90)
+    );
+    var hold = isHoldMode(squadMode);
     var teamHold = isFireteamOverwatch(a);
     var teamBound = isFireteamBounding(a);
     var shouldLeap =
       inSlot &&
       !pinned &&
-      squadMode !== "HOLD" &&
+      !hold &&
       (teamBound ||
         (aggressiveAdvance &&
           !teamHold &&
-          (d > engagementRange * (tun ? tun.leapRangeFactor : 1.45) ||
+          (d > engagementRange * (tun ? tun.leapRangeFactor : 1.2) ||
             behindFront)));
     if (teamHold && useful && inSlot) shouldLeap = false;
     var seekPool =
       teamBound && shouldLeap ? hopCoversAhead(a, availableCovers) : availableCovers;
     if (
+      !ignoresCover(a) &&
       ((!inSlot && !headingToSlot) ||
         shouldLeap ||
-        (!useful && inSlot && squadMode !== "HOLD")) &&
+        (!useful && inSlot && !hold)) &&
       a.repositionCooldown <= 0
     ) {
       var choice = pickTacticalCover(a, e, seekPool, slotCrowd, {
@@ -765,7 +871,7 @@ export function updateAllies(
         a.repositionCooldown = aggressiveAdvance
           ? tun
             ? tun.reposition
-            : 0.55
+            : SQUAD_AGGRO.reposition
           : 0.85;
         inSlot = false;
       }
@@ -779,13 +885,17 @@ export function updateAllies(
         !isSightBlocked(a, e, covers)
       )
         shoot(a, e, spawnProjectile, covers, -12);
-      moveTowardTarget(a, dt, 1.18 * boundSpeedScale(a));
+      moveTowardTarget(
+        a,
+        dt,
+        (aggressiveAdvance ? SQUAD_AGGRO.advanceSpeed : 1.18) * boundSpeedScale(a),
+      );
       if (occupiesCoverSlot(a, 18)) {
         a.x = a.coverAnchorX;
         a.y = a.coverAnchorY;
         a.combatState = "covered";
         a.exposed = false;
-        a.combatTimer = tun ? tun.coveredDwell : 0.45;
+        a.combatTimer = peekTun ? peekTun.coveredDwell : 0.45;
       }
       return;
     }
@@ -797,20 +907,20 @@ export function updateAllies(
         }
         a.combatState = "covered";
         a.exposed = false;
-        a.combatTimer = tun ? tun.coveredDwell : 0.45;
+        a.combatTimer = peekTun ? peekTun.coveredDwell : 0.45;
       }
       a.combatTimer -= dt;
       if (a.combatState === "covered" && a.combatTimer <= 0) {
         a.combatState = "exposed";
         a.exposed = true;
-        a.combatTimer = tun
+        a.combatTimer = peekTun
           ? Math.max(
-              tun.peekMin,
-              Math.min(tun.peekMax, a.weapon.cooldown * 2.1 + 0.4),
+              peekTun.peekMin,
+              Math.min(peekTun.peekMax, a.weapon.cooldown * 2.1 + 0.4),
             )
           : Math.max(1.05, Math.min(1.7, a.weapon.cooldown * 2.35 + 0.45));
-        a.shotsLeft = tun
-          ? tun.peekShotsMin + Math.floor(Math.random() * tun.peekShotsExtra)
+        a.shotsLeft = peekTun
+          ? peekTun.peekShotsMin + Math.floor(Math.random() * peekTun.peekShotsExtra)
           : 5 + Math.floor(Math.random() * 4);
       } else if (a.combatState === "exposed") {
         var pp = peekPoint(a, e, 36);
@@ -823,8 +933,8 @@ export function updateAllies(
           a.exposed = false;
           a.targetX = a.coverAnchorX;
           a.targetY = a.coverAnchorY;
-          a.combatTimer = tun
-            ? tun.coveredDwell * 0.7 + Math.random() * 0.12
+          a.combatTimer = peekTun
+            ? peekTun.coveredDwell * 0.7 + Math.random() * 0.12
             : 0.32 + Math.random() * 0.18;
         }
       } else {

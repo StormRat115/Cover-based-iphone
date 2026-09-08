@@ -1,11 +1,13 @@
 import {
   updateAllies as updateFriendlyAI,
   MARINE_AGGRO,
-} from "./allyCore2.js?v=20260908-127";
-import { tagMarineFireteams } from "./fireteams.js?v=20260908-127";
-import { weaponCopy } from "./weapons.js?v=20260908-127";
-import { drawSoldier } from "./soldierAssets.js?v=20260908-127";
-import { drawCoverShield } from "./coverSlots.js?v=20260908-127";
+} from "./allyCore2.js?v=20260908-128";
+import { tagMarineFireteams } from "./fireteams.js?v=20260908-128";
+import { weaponCopy } from "./weapons.js?v=20260908-128";
+import { knifeWeapon } from "./melee.js?v=20260908-128";
+import { drawSoldier } from "./soldierAssets.js?v=20260908-128";
+import { drawCoverShield } from "./coverSlots.js?v=20260908-128";
+import { drawCombatMarks } from "./engaged.js?v=20260908-128";
 export { MARINE_AGGRO };
 
 const MARINE_STARTS = [
@@ -22,6 +24,8 @@ export function createMarineAt(x, y, index) {
     name: "Marine " + (index + 1),
     role: index % 5 === 4 ? "support" : "rifleman",
     weapon: weaponCopy(weaponId),
+    melee: knifeWeapon(),
+    meleeTimer: 0,
     x: x,
     y: y,
     hp: 90,
@@ -94,7 +98,7 @@ export function updateMarines(
     covers,
     enemies,
     spawnProjectile,
-    "ASSAULT",
+    "AGGRESSIVE",
     squad,
   );
 }
@@ -126,5 +130,6 @@ export function drawMarine(ctx, marine, iso) {
     -44,
   );
   drawCoverShield(ctx, marine, -62);
+  drawCombatMarks(ctx, marine);
   ctx.restore();
 }

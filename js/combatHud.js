@@ -1,13 +1,15 @@
 let elements = null;
-import { getHitChance } from "./cover.js?v=20260908-127";
-import { combatAccuracy } from "./combatStats.js?v=20260908-127";
-import { suppressionAccuracyDelta } from "./suppression.js?v=20260908-127";
-import { orderAccuracy } from "./squadDialog.js?v=20260908-127";
+import { getHitChance } from "./cover.js?v=20260908-128";
+import { combatAccuracy } from "./combatStats.js?v=20260908-128";
+import { suppressionAccuracyDelta } from "./suppression.js?v=20260908-128";
+import { orderAccuracy } from "./squadDialog.js?v=20260908-128";
+import { hasPerfectHit } from "./squadAbilities.js?v=20260908-128";
+import { preferShootTargets } from "./engaged.js?v=20260908-128";
 
 function nearestEnemy(p, enemies) {
   var best = null,
     bd = Infinity;
-  (enemies || []).forEach(function (e) {
+  preferShootTargets(enemies).forEach(function (e) {
     if (e && !e.dead) {
       var d = Math.hypot(p.x - e.x, p.y - e.y);
       if (d < bd) {
@@ -71,16 +73,23 @@ export function updateCombatHud() {
     remaining > 0 ? remaining.toFixed(1) + "s" : "REGEN";
   var chance = "--";
   if (target) {
-    chance = Math.round(
-      combatAccuracy(
-        getHitChance(p, target, covers),
-        p.weapon.accuracy,
-        p.accuracy,
-        suppressionAccuracyDelta(p) + orderAccuracy(p),
-      ),
-    );
+    chance = hasPerfectHit(p)
+      ? 100
+      : Math.round(
+          combatAccuracy(
+            getHitChance(p, target, covers),
+            p.weapon.accuracy,
+            p.accuracy,
+            suppressionAccuracyDelta(p) + orderAccuracy(p),
+          ),
+        );
   }
-  elements.hitChance.firstChild.nodeValue = chance + "%";
+  if ((p.heatRounds || 0) > 0) {
+    elements.hitChance.innerHTML =
+      "100%<small>HEAT " + Math.ceil(p.heatRounds) + "s</small>";
+  } else {
+    elements.hitChance.innerHTML = chance + "%<small>HIT CHANCE</small>";
+  }
   var reserveLabel = p.weapon.infinite ? "∞" : Math.round(p.weapon.reserve || 0);
   var ammoLabel =
     (p.weaponSlot === "sidearm" ? "SIDEARM · " : "") +

@@ -2,32 +2,43 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260908-127";
-import { weaponCopy } from "./weapons.js?v=20260908-127";
+} from "./cover.js?v=20260908-128";
+import { weaponCopy } from "./weapons.js?v=20260908-128";
 import {
   moveTowardTarget,
   faceThreat,
   coverStillUseful,
   peekPoint,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-127";
+} from "./combatAI.js?v=20260908-128";
 import {
   ENEMY_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260908-127";
-import { AudioBus } from "./audio.js?v=20260908-127";
+} from "./combatStats.js?v=20260908-128";
+import { AudioBus } from "./audio.js?v=20260908-128";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-127";
-import { orderDefense } from "./squadDialog.js?v=20260908-127";
-import { leoShieldBonus } from "./leoKit.js?v=20260908-127";
-import { assignEnemyCover } from "./enemyCoverAI.js?v=20260908-127";
-import { chargerWeapon } from "./chargerEnemy.js?v=20260908-127";
-import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260908-127";
+} from "./suppression.js?v=20260908-128";
+import { orderDefense } from "./squadDialog.js?v=20260908-128";
+import { leoShieldBonus } from "./leoKit.js?v=20260908-128";
+import { assignEnemyCover } from "./enemyCoverAI.js?v=20260908-128";
+import { chargerWeapon } from "./chargerEnemy.js?v=20260908-128";
+import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260908-128";
+import { knifeWeapon, tickMeleeTimer } from "./melee.js?v=20260908-128";
+import {
+  preferShootTargets,
+  engagedTargetPenalty,
+  updateEngagedFight,
+  tryStartMelee,
+  closeForMelee,
+  tickEngaged,
+  maybeDogpile,
+  ignoresCover,
+} from "./engaged.js?v=20260908-128";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -188,6 +199,8 @@ export function createHostileAt(x, y, type, options) {
       meleeCharge: type === "charger",
       charging: false,
       meleeTimer: 0,
+      melee: type === "charger" ? w : knifeWeapon(),
+      engaged: false,
       fromDoor: !!options.fromDoor,
       doorEgress: !!options.fromDoor,
       doorApproachX: options.doorApproachX,
@@ -259,6 +272,7 @@ function chooseCombatTarget(e, player, covers, enemies) {
         ? [supportVehicle]
         : fallback;
   if (!candidates.length) return player;
+  var pool = preferShootTargets(candidates);
   var allyFocus = {};
   enemies.forEach(function (o) {
     if (o === e || o.dead || !o.combatTarget || o.combatTarget === player)
@@ -268,13 +282,14 @@ function chooseCombatTarget(e, player, covers, enemies) {
   });
   var best = null,
     bestScore = -Infinity;
-  candidates.forEach(function (t) {
+  pool.forEach(function (t) {
     var d = Math.hypot(t.x - e.x, t.y - e.y),
       blocked = isSightBlocked(e, t, covers),
       score = 0;
     score += Math.max(0, 900 - d) * 0.025;
     score += blocked ? -32 : 22;
     score += t.exposed ? 10 : -16;
+    score += engagedTargetPenalty(t);
     if (t !== player) score -= (allyFocus[t.name] || 0) * 42;
     score += Math.random() * 20;
     if (score > bestScore) {
@@ -381,6 +396,8 @@ function applySquadHit(target, amount) {
 }
 export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
   if (typeof window !== "undefined") window.__battleEnemies = enemies;
+  var friendlies = playerRoster();
+  maybeDogpile(enemies, friendlies, dt);
   for (var i = 0; i < enemies.length; i++) {
     var e = enemies[i];
     if (e.dead) {
@@ -392,6 +409,8 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
     e.muzzle = Math.max(0, e.muzzle - dt);
     e.hit = Math.max(0, e.hit - dt);
     tickSuppression(e, dt);
+    tickMeleeTimer(e, dt);
+    tickEngaged(e, dt, friendlies.concat(enemies));
     e.repositionCooldown = Math.max(0, (e.repositionCooldown || 0) - dt);
     e.targetTimer = Math.max(0, (e.targetTimer || 0) - dt);
     if (e.spawnTimer > 0) {
@@ -400,12 +419,28 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       continue;
     }
     if (e.type === "charger") continue;
+    if (e.engaged && updateEngagedFight(e, dt, friendlies.concat(enemies)))
+      continue;
+    if (e.joiningMelee && validTarget(e.joiningMelee)) {
+      e.combatTarget = e.joiningMelee;
+      e.cover = null;
+      closeForMelee(e, e.joiningMelee, dt, 1.25);
+      if (tryStartMelee(e, e.joiningMelee, friendlies)) {
+        updateEngagedFight(e, dt, friendlies.concat(enemies));
+        e.joiningMelee = null;
+      }
+      continue;
+    }
     if (!validTarget(e.combatTarget) || e.targetTimer <= 0) {
       e.combatTarget = chooseCombatTarget(e, player, covers, enemies);
       e.targetTimer = rand(2.2, 4.2);
     }
     var threat = e.combatTarget || player,
       dist = Math.hypot(threat.x - e.x, threat.y - e.y);
+    if (ignoresCover(e)) {
+      closeForMelee(e, threat, dt, 1.2);
+      continue;
+    }
     if (!e.cover && e.repositionCooldown <= 0) {
       if (!chooseCover(e, threat, covers, enemies, false)) {
         var dx = threat.x - e.x,
