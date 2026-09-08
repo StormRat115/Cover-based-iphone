@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260908-136";
+import { loadImage } from "./assets.js?v=20260908-137";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
   "./assets/generated/soldier/player-solid-atlas.png?v=20260906-102";
@@ -200,6 +200,14 @@ export const SPRITE_BOX_PAD = 40;
 export const SPRITE_FIT = 0.86;
 export const UNWRAP_PAD = 48;
 const cleanedSheetCache = new WeakMap();
+const paddedSheetCache =
+  (typeof globalThis !== "undefined" && globalThis.__paddedSheetCache) ||
+  new Map();
+const unwrapInflight = new Map();
+let unwrapSeq = 0;
+if (typeof globalThis !== "undefined")
+  globalThis.__paddedSheetCache = paddedSheetCache;
+const UNWRAP_YIELD_MS = 8;
 const FRIENDLY_ROWS = {
   idle: 0,
   run: 1,
@@ -647,202 +655,390 @@ export function packedSpriteDest(layout, scale, yNudge) {
   };
 }
 
+function yieldToBrowser() {
+  return new Promise(function (resolve) {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(function () {
+        resolve();
+      });
+      return;
+    }
+    setTimeout(resolve, 0);
+  });
+}
+
+function yieldIfBusy(busy) {
+  if (!busy) return Promise.resolve();
+  if (nowMs() - busy.t < UNWRAP_YIELD_MS) return Promise.resolve();
+  return yieldToBrowser().then(function () {
+    busy.t = nowMs();
+  });
+}
+
+function sheetCacheKey(source, frameW, frameH) {
+  var src = (source && (source.src || source._src)) || "";
+  if (!src) return "";
+  return [src, frameW, frameH, UNWRAP_PAD, SPRITE_BOX_PAD, SPRITE_FIT].join("|");
+}
+
+function peekCachedSheet(source, frameW, frameH) {
+  if (!source) return null;
+  if (
+    source._fit === SPRITE_FIT &&
+    source._coreW === frameW &&
+    source._coreH === frameH
+  )
+    return source;
+  if (cleanedSheetCache.has(source)) return cleanedSheetCache.get(source);
+  var key = sheetCacheKey(source, frameW, frameH);
+  if (key && paddedSheetCache.has(key)) {
+    var hit = paddedSheetCache.get(key);
+    cleanedSheetCache.set(source, hit);
+    return hit;
+  }
+  return null;
+}
+
+function rememberSheet(source, result, frameW, frameH) {
+  if (!source || !result) return result;
+  cleanedSheetCache.set(source, result);
+  var key = sheetCacheKey(source, frameW, frameH);
+  if (key && result !== source && result._fit === SPRITE_FIT)
+    paddedSheetCache.set(key, result);
+  return result;
+}
+
+function stampFragIntoDest(dest, fromImg, frag, ox, oy, frameW, pad) {
+  var k, p, px, py, si, di;
+  for (k = 0; k < frag.pixels.length; k++) {
+    p = frag.pixels[k];
+    px = p % frameW;
+    py = (p - px) / frameW;
+    si = p * 4;
+    di = ((oy + py) * (frameW + pad) + (ox + px)) * 4;
+    if (fromImg.data[si + 3] < 40) continue;
+    dest.data[di] = fromImg.data[si];
+    dest.data[di + 1] = fromImg.data[si + 1];
+    dest.data[di + 2] = fromImg.data[si + 2];
+    dest.data[di + 3] = fromImg.data[si + 3];
+  }
+}
+
+function beginUnwrap(source, frameW, frameH) {
+  var cached = peekCachedSheet(source, frameW, frameH);
+  if (cached) return { cached: cached };
+  var iw = source.naturalWidth || source.width || 0,
+    ih = source.naturalHeight || source.height || 0;
+  if (!iw || !ih) return { bail: rememberSheet(source, source, frameW, frameH) };
+  var srcCanvas = document.createElement("canvas");
+  srcCanvas.width = iw;
+  srcCanvas.height = ih;
+  var sg = srcCanvas.getContext("2d", { willReadFrequently: true });
+  if (!sg || typeof sg.getImageData !== "function")
+    return { bail: rememberSheet(source, source, frameW, frameH) };
+  sg.clearRect(0, 0, iw, ih);
+  sg.drawImage(source, 0, 0);
+  return {
+    source: source,
+    sg: sg,
+    frameW: frameW,
+    frameH: frameH,
+    cols: Math.floor(iw / frameW),
+    rows: Math.floor(ih / frameH),
+    pad: UNWRAP_PAD,
+  };
+}
+
+function analyzeUnwrapRow(job, grid, row) {
+  var col, cellImg, info;
+  grid[row] = [];
+  for (col = 0; col < job.cols; col++) {
+    cellImg = job.sg.getImageData(
+      col * job.frameW,
+      row * job.frameH,
+      job.frameW,
+      job.frameH,
+    );
+    if (!cellImg || !cellImg.data) return false;
+    info = analyzeCellData(cellImg, 40);
+    grid[row][col] = { img: cellImg, info: info };
+  }
+  return true;
+}
+
+function stampUnwrapCell(job, grid, g, row, col) {
+  var slot = grid[row][col],
+    frameW = job.frameW,
+    frameH = job.frameH,
+    pad = job.pad,
+    cols = job.cols,
+    rows = job.rows,
+    core = new ImageData(
+      new Uint8ClampedArray(slot.img.data),
+      frameW,
+      frameH,
+    ),
+    dx = col * (frameW + pad),
+    dy = row * (frameH + pad),
+    nextCol = col + 1 < cols ? grid[row][col + 1] : null,
+    nextRow = row + 1 < rows ? grid[row + 1][col] : null,
+    k,
+    dest;
+  if (slot.info.main) {
+    for (k = 0; k < slot.info.frags.length; k++) {
+      if (k === slot.info.mainBest) continue;
+      if (isWrapFragment(slot.info.frags[k], slot.info.main, frameW, frameH))
+        clearFrag(core.data, slot.info.frags[k]);
+    }
+  }
+  g.putImageData(core, dx, dy);
+  dest = g.getImageData(dx, dy, frameW + pad, frameH + pad);
+  if (nextCol && nextCol.info.main) {
+    for (k = 0; k < nextCol.info.frags.length; k++) {
+      if (k === nextCol.info.mainBest) continue;
+      if (
+        isWrapFragment(
+          nextCol.info.frags[k],
+          nextCol.info.main,
+          frameW,
+          frameH,
+        ) &&
+        (nextCol.info.frags[k].touchL ||
+          nextCol.info.frags[k].maxx < nextCol.info.main.minx)
+      )
+        stampFragIntoDest(
+          dest,
+          nextCol.img,
+          nextCol.info.frags[k],
+          frameW,
+          0,
+          frameW,
+          pad,
+        );
+    }
+  }
+  if (nextRow && nextRow.info.main) {
+    for (k = 0; k < nextRow.info.frags.length; k++) {
+      if (k === nextRow.info.mainBest) continue;
+      if (
+        isWrapFragment(
+          nextRow.info.frags[k],
+          nextRow.info.main,
+          frameW,
+          frameH,
+        ) &&
+        (nextRow.info.frags[k].touchT ||
+          nextRow.info.frags[k].maxy < nextRow.info.main.miny)
+      )
+        stampFragIntoDest(
+          dest,
+          nextRow.img,
+          nextRow.info.frags[k],
+          0,
+          frameH,
+          frameW,
+          pad,
+        );
+    }
+  }
+  g.putImageData(dest, dx, dy);
+}
+
+function fitUnwrappedSheet(c, job) {
+  var frameW = job.frameW,
+    frameH = job.frameH,
+    pad = job.pad,
+    cols = job.cols,
+    rows = job.rows,
+    boxPad = SPRITE_BOX_PAD,
+    innerW = frameW + pad,
+    innerH = frameH + pad,
+    contentW = Math.max(1, Math.round(innerW * SPRITE_FIT)),
+    contentH = Math.max(1, Math.round(innerH * SPRITE_FIT)),
+    cellOutW = contentW + boxPad * 2,
+    cellOutH = contentH + boxPad * 2,
+    fitted = document.createElement("canvas"),
+    fg,
+    foot = 8,
+    row,
+    col;
+  c.naturalWidth = c.width;
+  c.naturalHeight = c.height;
+  c.complete = true;
+  c._unwrapPad = pad;
+  c._paddedFrameW = frameW + pad;
+  c._paddedFrameH = frameH + pad;
+  c._coreW = frameW;
+  c._coreH = frameH;
+  fitted.width = cols * cellOutW;
+  fitted.height = rows * cellOutH;
+  fg = fitted.getContext("2d", { willReadFrequently: true });
+  if (!fg || typeof fg.drawImage !== "function") return c;
+  fg.clearRect(0, 0, fitted.width, fitted.height);
+  fg.imageSmoothingEnabled = false;
+  for (row = 0; row < rows; row++) {
+    for (col = 0; col < cols; col++) {
+      fg.drawImage(
+        c,
+        col * innerW,
+        row * innerH,
+        innerW,
+        innerH,
+        col * cellOutW + Math.round((cellOutW - contentW) / 2),
+        row * cellOutH + (cellOutH - contentH - foot),
+        contentW,
+        contentH,
+      );
+    }
+  }
+  fitted.naturalWidth = fitted.width;
+  fitted.naturalHeight = fitted.height;
+  fitted.complete = true;
+  fitted._unwrapPad = pad;
+  fitted._boxPad = boxPad;
+  fitted._footGutter = foot;
+  fitted._paddedFrameW = cellOutW;
+  fitted._paddedFrameH = cellOutH;
+  fitted._coreW = frameW;
+  fitted._coreH = frameH;
+  fitted._fit = SPRITE_FIT;
+  return fitted;
+}
+
+function finishUnwrapGrid(job, grid) {
+  var outW = job.cols * (job.frameW + job.pad),
+    outH = job.rows * (job.frameH + job.pad),
+    c = document.createElement("canvas"),
+    g,
+    row,
+    col;
+  c.width = outW;
+  c.height = outH;
+  g = c.getContext("2d", { willReadFrequently: true });
+  if (!g || typeof g.putImageData !== "function") return null;
+  g.clearRect(0, 0, outW, outH);
+  for (row = 0; row < job.rows; row++) {
+    for (col = 0; col < job.cols; col++) stampUnwrapCell(job, grid, g, row, col);
+  }
+  return fitUnwrappedSheet(c, job);
+}
+
 /** Copy a packed sheet into padded cells: strip wrap chips, then put the
  *  next cell's leftover barrel/feet back on the right/bottom of this pose
  *  so the figure is not sitting on cut-off ankles. Official PNGs stay. */
 export function cleanPackedSheet(source, frameW, frameH) {
   if (!source || !frameW || !frameH) return source;
-  if (cleanedSheetCache.has(source)) return cleanedSheetCache.get(source);
-  var iw = source.naturalWidth || source.width || 0,
-    ih = source.naturalHeight || source.height || 0;
-  if (!iw || !ih) {
-    cleanedSheetCache.set(source, source);
-    return source;
-  }
+  var cached = peekCachedSheet(source, frameW, frameH);
+  if (cached) return cached;
   try {
-    var srcCanvas = document.createElement("canvas");
-    srcCanvas.width = iw;
-    srcCanvas.height = ih;
-    var sg = srcCanvas.getContext("2d", { willReadFrequently: true });
-    if (!sg || typeof sg.getImageData !== "function") {
-      cleanedSheetCache.set(source, source);
-      return source;
-    }
-    sg.clearRect(0, 0, iw, ih);
-    sg.drawImage(source, 0, 0);
-    var cols = Math.floor(iw / frameW),
-      rows = Math.floor(ih / frameH),
-      pad = UNWRAP_PAD,
+    var job = beginUnwrap(source, frameW, frameH),
       grid = [],
       row,
-      col,
-      cellImg,
-      info;
-    for (row = 0; row < rows; row++) {
-      grid[row] = [];
-      for (col = 0; col < cols; col++) {
-        cellImg = sg.getImageData(col * frameW, row * frameH, frameW, frameH);
-        if (!cellImg || !cellImg.data) {
-          cleanedSheetCache.set(source, source);
-          return source;
-        }
-        info = analyzeCellData(cellImg, 40);
-        grid[row][col] = { img: cellImg, info: info };
-      }
+      fitted;
+    if (job.cached) return job.cached;
+    if (job.bail) return job.bail;
+    for (row = 0; row < job.rows; row++) {
+      if (!analyzeUnwrapRow(job, grid, row))
+        return rememberSheet(source, source, frameW, frameH);
     }
-    var outW = cols * (frameW + pad),
-      outH = rows * (frameH + pad),
-      c = document.createElement("canvas");
-    c.width = outW;
-    c.height = outH;
-    var g = c.getContext("2d", { willReadFrequently: true });
-    if (!g || typeof g.putImageData !== "function") {
-      cleanedSheetCache.set(source, source);
-      return source;
-    }
-    g.clearRect(0, 0, outW, outH);
-    for (row = 0; row < rows; row++) {
-      for (col = 0; col < cols; col++) {
-        var slot = grid[row][col],
-          core = new ImageData(
-            new Uint8ClampedArray(slot.img.data),
-            frameW,
-            frameH,
-          ),
-          dx = col * (frameW + pad),
-          dy = row * (frameH + pad),
-          nextCol = col + 1 < cols ? grid[row][col + 1] : null,
-          nextRow = row + 1 < rows ? grid[row + 1][col] : null,
-          k,
-          p,
-          px,
-          py,
-          si,
-          di,
-          dest;
-        if (slot.info.main) {
-          for (k = 0; k < slot.info.frags.length; k++) {
-            if (k === slot.info.mainBest) continue;
-            if (
-              isWrapFragment(slot.info.frags[k], slot.info.main, frameW, frameH)
-            )
-              clearFrag(core.data, slot.info.frags[k]);
-          }
-        }
-        g.putImageData(core, dx, dy);
-        dest = g.getImageData(dx, dy, frameW + pad, frameH + pad);
-        function stampFrag(fromImg, frag, ox, oy) {
-          for (k = 0; k < frag.pixels.length; k++) {
-            p = frag.pixels[k];
-            px = p % frameW;
-            py = (p - px) / frameW;
-            si = p * 4;
-            di = ((oy + py) * (frameW + pad) + (ox + px)) * 4;
-            if (fromImg.data[si + 3] < 40) continue;
-            dest.data[di] = fromImg.data[si];
-            dest.data[di + 1] = fromImg.data[si + 1];
-            dest.data[di + 2] = fromImg.data[si + 2];
-            dest.data[di + 3] = fromImg.data[si + 3];
-          }
-        }
-        if (nextCol && nextCol.info.main) {
-          for (k = 0; k < nextCol.info.frags.length; k++) {
-            if (k === nextCol.info.mainBest) continue;
-            if (
-              isWrapFragment(
-                nextCol.info.frags[k],
-                nextCol.info.main,
-                frameW,
-                frameH,
-              ) &&
-              (nextCol.info.frags[k].touchL ||
-                nextCol.info.frags[k].maxx < nextCol.info.main.minx)
-            )
-              stampFrag(nextCol.img, nextCol.info.frags[k], frameW, 0);
-          }
-        }
-        if (nextRow && nextRow.info.main) {
-          for (k = 0; k < nextRow.info.frags.length; k++) {
-            if (k === nextRow.info.mainBest) continue;
-            if (
-              isWrapFragment(
-                nextRow.info.frags[k],
-                nextRow.info.main,
-                frameW,
-                frameH,
-              ) &&
-              (nextRow.info.frags[k].touchT ||
-                nextRow.info.frags[k].maxy < nextRow.info.main.miny)
-            )
-              stampFrag(nextRow.img, nextRow.info.frags[k], 0, frameH);
-          }
-        }
-        g.putImageData(dest, dx, dy);
-      }
-    }
-    c.naturalWidth = outW;
-    c.naturalHeight = outH;
-    c.complete = true;
-    c._unwrapPad = pad;
-    c._paddedFrameW = frameW + pad;
-    c._paddedFrameH = frameH + pad;
-    c._coreW = frameW;
-    c._coreH = frameH;
-    // Inset each unwrapped cell in a larger box so GPU REPEAT / packing
-    // neighbors cannot sample overflow sitting on the cell edge.
-    var boxPad = SPRITE_BOX_PAD,
-      innerW = frameW + pad,
-      innerH = frameH + pad,
-      contentW = Math.max(1, Math.round(innerW * SPRITE_FIT)),
-      contentH = Math.max(1, Math.round(innerH * SPRITE_FIT)),
-      cellOutW = contentW + boxPad * 2,
-      cellOutH = contentH + boxPad * 2,
-      fitted = document.createElement("canvas"),
-      fg,
-      foot = 8;
-    fitted.width = cols * cellOutW;
-    fitted.height = rows * cellOutH;
-    fg = fitted.getContext("2d", { willReadFrequently: true });
-    if (fg && typeof fg.drawImage === "function") {
-      fg.clearRect(0, 0, fitted.width, fitted.height);
-      fg.imageSmoothingEnabled = false;
-      for (row = 0; row < rows; row++) {
-        for (col = 0; col < cols; col++) {
-          var ox = col * cellOutW + Math.round((cellOutW - contentW) / 2),
-            oy = row * cellOutH + (cellOutH - contentH - foot);
-          fg.drawImage(
-            c,
-            col * innerW,
-            row * innerH,
-            innerW,
-            innerH,
-            ox,
-            oy,
-            contentW,
-            contentH,
-          );
-        }
-      }
-      fitted.naturalWidth = fitted.width;
-      fitted.naturalHeight = fitted.height;
-      fitted.complete = true;
-      fitted._unwrapPad = pad;
-      fitted._boxPad = boxPad;
-      fitted._footGutter = foot;
-      fitted._paddedFrameW = cellOutW;
-      fitted._paddedFrameH = cellOutH;
-      fitted._coreW = frameW;
-      fitted._coreH = frameH;
-      fitted._fit = SPRITE_FIT;
-      cleanedSheetCache.set(source, fitted);
-      return fitted;
-    }
-    cleanedSheetCache.set(source, c);
-    return c;
+    fitted = finishUnwrapGrid(job, grid);
+    if (!fitted) return rememberSheet(source, source, frameW, frameH);
+    return rememberSheet(source, fitted, frameW, frameH);
   } catch (_err) {
-    cleanedSheetCache.set(source, source);
-    return source;
+    return rememberSheet(source, source, frameW, frameH);
   }
+}
+
+/** Same rebuild as cleanPackedSheet, but yields so the loading bar can paint.
+ *  Chunks the getImageData pass when a row takes more than UNWRAP_YIELD_MS. */
+export function cleanPackedSheetAsync(source, frameW, frameH, onProgress) {
+  onProgress = onProgress || function () {};
+  if (!source || !frameW || !frameH) {
+    onProgress(1);
+    return Promise.resolve(source);
+  }
+  var cached = peekCachedSheet(source, frameW, frameH);
+  if (cached) {
+    onProgress(1);
+    return Promise.resolve(cached);
+  }
+  var key = sheetCacheKey(source, frameW, frameH) || "anon-" + ++unwrapSeq;
+  if (unwrapInflight.has(key)) {
+    return unwrapInflight.get(key).then(function (result) {
+      onProgress(1);
+      return result;
+    });
+  }
+  var jobPromise = (async function () {
+    var job,
+      grid = [],
+      row,
+      fitted,
+      busy,
+      outW,
+      outH,
+      c,
+      g;
+    onProgress(0.08);
+    await yieldToBrowser();
+    cached = peekCachedSheet(source, frameW, frameH);
+    if (cached) {
+      onProgress(1);
+      return cached;
+    }
+    try {
+      job = beginUnwrap(source, frameW, frameH);
+      if (job.cached) {
+        onProgress(1);
+        return job.cached;
+      }
+      if (job.bail) {
+        onProgress(1);
+        return job.bail;
+      }
+      busy = { t: nowMs() };
+      for (row = 0; row < job.rows; row++) {
+        if (!analyzeUnwrapRow(job, grid, row))
+          return rememberSheet(source, source, frameW, frameH);
+        onProgress(0.12 + 0.5 * ((row + 1) / Math.max(1, job.rows)));
+        await yieldIfBusy(busy);
+      }
+      outW = job.cols * (job.frameW + job.pad);
+      outH = job.rows * (job.frameH + job.pad);
+      c = document.createElement("canvas");
+      c.width = outW;
+      c.height = outH;
+      g = c.getContext("2d", { willReadFrequently: true });
+      if (!g || typeof g.putImageData !== "function")
+        return rememberSheet(source, source, frameW, frameH);
+      g.clearRect(0, 0, outW, outH);
+      for (row = 0; row < job.rows; row++) {
+        for (var col = 0; col < job.cols; col++)
+          stampUnwrapCell(job, grid, g, row, col);
+        onProgress(0.62 + 0.28 * ((row + 1) / Math.max(1, job.rows)));
+        await yieldIfBusy(busy);
+      }
+      await yieldToBrowser();
+      fitted = fitUnwrappedSheet(c, job);
+      rememberSheet(source, fitted, frameW, frameH);
+      onProgress(1);
+      return fitted;
+    } catch (_err) {
+      onProgress(1);
+      return rememberSheet(source, source, frameW, frameH);
+    }
+  })();
+  unwrapInflight.set(key, jobPromise);
+  return jobPromise.then(
+    function (result) {
+      unwrapInflight.delete(key);
+      return result;
+    },
+    function (err) {
+      unwrapInflight.delete(key);
+      throw err;
+    },
+  );
 }
 
 /** Draw a source rect clipped to the bitmap. Dest shrinks with the clip
@@ -1060,8 +1256,8 @@ function buildAtlas(source, boxes) {
 }
 export function preloadSoldierAssets(onProgress) {
   onProgress = onProgress || function () {};
-  onProgress(0.1, "LOADING CHARACTER ANIMATION ATLASES");
-  return Promise.all([
+  onProgress(0.06, "LOADING CHARACTER ANIMATION ATLASES");
+  var pending = [
     loadImage(friendlyAtlasSource),
     loadImage(leoAtlasSource),
     loadPreferredAtlas(docAtlasSource, DOC_ATLAS_PNG, "Doc"),
@@ -1073,26 +1269,54 @@ export function preloadSoldierAssets(onProgress) {
     ...Object.values(enemyMonsterSources).map(function (image) {
       return loadImage(image);
     }),
-  ]).then(function (imgs) {
-    onProgress(0.68, "BUILDING CHARACTER ANIMATIONS");
+  ];
+  var loaded = 0;
+  return Promise.all(
+    pending.map(function (promise) {
+      return promise.then(function (img) {
+        loaded++;
+        onProgress(
+          0.06 + 0.2 * (loaded / pending.length),
+          "LOADING CHARACTER ANIMATION ATLASES",
+        );
+        return img;
+      });
+    }),
+  ).then(async function (imgs) {
     if (imgs.some((image) => !image))
       throw new Error("Character images are not ready");
-    runtimeFriendlyAtlas = hardenSheetAlpha(friendlyAtlasSource) || friendlyAtlasSource;
+    onProgress(0.28, "BUILDING CHARACTER ANIMATIONS");
+    await yieldToBrowser();
+    runtimeFriendlyAtlas =
+      hardenSheetAlpha(friendlyAtlasSource) || friendlyAtlasSource;
     runtimeFriendlyFrames = buildFriendlyFrameCache(runtimeFriendlyAtlas);
+    onProgress(0.34, "BUILDING CHARACTER ANIMATIONS");
+    await yieldToBrowser();
     runtimeLeoAtlas = hardenSheetAlpha(leoAtlasSource) || leoAtlasSource;
     runtimeLeoFrames = buildLeoFrameCache(runtimeLeoAtlas);
+    onProgress(0.4, "BUILDING CHARACTER ANIMATIONS");
+    await yieldToBrowser();
     runtimeDocAtlas = hardenSheetAlpha(docAtlasSource) || docAtlasSource;
     runtimeDocFrames = buildFriendlyFrameCache(runtimeDocAtlas);
+    onProgress(0.46, "BUILDING CHARACTER ANIMATIONS");
+    await yieldToBrowser();
     runtimeViperAtlas = hardenSheetAlpha(viperAtlasSource) || viperAtlasSource;
     runtimeViperFrames = buildFriendlyFrameCache(runtimeViperAtlas);
+    onProgress(0.52, "BUILDING CHARACTER ANIMATIONS");
+    await yieldToBrowser();
     runtimeVaultSheet = hardenSheetAlpha(vaultSheetSource) || vaultSheetSource;
-    Object.keys(enemyMonsterSources).forEach(function (type) {
-      cleanPackedSheet(
-        enemyMonsterSources[type],
+    var types = Object.keys(enemyMonsterSources);
+    for (var i = 0; i < types.length; i++) {
+      onProgress(
+        0.56 + 0.36 * (i / Math.max(1, types.length)),
+        "UNWRAPPING " + types[i].toUpperCase() + " SHEET",
+      );
+      await cleanPackedSheetAsync(
+        enemyMonsterSources[types[i]],
         ENEMY_MONSTER_FRAME_WIDTH,
         ENEMY_MONSTER_FRAME_HEIGHT,
       );
-    });
+    }
     // Legacy crop atlas kept as fallback; enemies still use monster atlas path.
     const soldierAtlas = buildAtlas(soldierSource, FRAME_BOXES);
     const monsterAtlas = buildAtlas(enemySource, ENEMY_FRAME_BOXES);

@@ -2,10 +2,10 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260908-136";
-import { weaponCopy } from "./weapons.js?v=20260908-136";
-import { fillEmptySquadAttachments } from "./attachments.js?v=20260908-136";
-import { AudioBus } from "./audio.js?v=20260908-136";
+} from "./cover.js?v=20260908-137";
+import { weaponCopy } from "./weapons.js?v=20260908-137";
+import { fillEmptySquadAttachments } from "./attachments.js?v=20260908-137";
+import { AudioBus } from "./audio.js?v=20260908-137";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -14,32 +14,32 @@ import {
   coverStillUseful,
   peekPoint,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-136";
+} from "./combatAI.js?v=20260908-137";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-136";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260908-136";
+} from "./combatStats.js?v=20260908-137";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260908-137";
 import {
   isCoverFull,
   occupancyPenalty,
   occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260908-136";
+} from "./coverSlots.js?v=20260908-137";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-136";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-136";
+} from "./suppression.js?v=20260908-137";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-137";
 import {
   currentPushGoal,
   pushGoalKey,
-} from "./streetObjectives.js?v=20260908-136";
-import { isStreetBreathing } from "./streetBeat.js?v=20260908-136";
+} from "./streetObjectives.js?v=20260908-137";
+import { isStreetBreathing } from "./streetBeat.js?v=20260908-137";
 import {
   tagSquadFireteams,
   updateFireteams,
@@ -47,16 +47,16 @@ import {
   isFireteamBounding,
   boundSpeedScale,
   hopCoversAhead,
-} from "./fireteams.js?v=20260908-136";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-136";
+} from "./fireteams.js?v=20260908-137";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-137";
 import {
   isLeo,
   leoSword,
   leoSidearmFromLoadout,
   tickLeoTimers,
   updateLeoKnight,
-} from "./leoKnight.js?v=20260908-136";
-import { knifeWeapon, ignoresCover, tickMeleeTimer } from "./melee.js?v=20260908-136";
+} from "./leoKnight.js?v=20260908-137";
+import { knifeWeapon, ignoresCover, tickMeleeTimer } from "./melee.js?v=20260908-137";
 import {
   preferShootTargets,
   engagedTargetPenalty,
@@ -65,13 +65,13 @@ import {
   closeForMelee,
   tickEngaged,
   canRegen,
-} from "./engaged.js?v=20260908-136";
-import { applyIncomingHostileDamage } from "./enemyVariants.js?v=20260908-136";
+} from "./engaged.js?v=20260908-137";
+import { applyIncomingHostileDamage } from "./enemyVariants.js?v=20260908-137";
 import {
   tickSquadAbilities,
   abilityBusy,
   hasPerfectHit,
-} from "./squadAbilities.js?v=20260908-136";
+} from "./squadAbilities.js?v=20260908-137";
 export const MARINE_AGGRO = {
   engageRangeFactor: 0.4,
   engageRangeCap: 700,

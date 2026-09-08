@@ -52,6 +52,10 @@ node scripts/version.mjs YYYYMMDD-N
 
 When replacing an image, also bump that image's source URL in the relevant asset module. Do not create separate query versions of a stateful module: browsers treat them as separate instances.
 
+## Loading bar during sheet unwrap: 20260908-137
+
+Packed monster / charger / variant sheets still rebuild into the 86% fit + 40px pad boxes so barrels and feet do not wrap. That `getImageData` pass now yields between sheets (and mid-sheet if a row runs long) so the tab can paint. The PREPARING BATTLEFIELD bar is driven by soldier unwrap, city decode, charger, and variant prep together — it must not sit at 0% INITIALIZING until decode callbacks fire. Fitted canvases stay in a page-session memory cache so a second preload in the same visit skips the rebuild. Official PNGs are unchanged.
+
 ## Doc + Viper Phone Art kits: 20260908-132
 
 Doc draws the official Phone Art `doc-atlas` from `chore/doc-slate-atlas` (`71f7c72`). Viper draws `viper-atlas` from `chore/viper-green-atlas` (`6c6eb61`). Both live under `assets/generated/soldier/`, prefer WebP, and fall back to PNG. 4×6, cell 192, facing right, hard alpha. States: idle, run, standShoot, crouchShoot, reload, death.

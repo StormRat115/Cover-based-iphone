@@ -9,6 +9,54 @@ const BUILD = readFileSync("js/boot.js", "utf8").match(
   /const BUILD = ["']([^"']+)/,
 )[1];
 const entry = `js/game.js?v=${BUILD}`;
+
+async function drainWork(h, work, max = 800) {
+  const pending = work ? Promise.resolve(work) : Promise.resolve();
+  let done = false;
+  pending.then(() => { done = true; }, () => { done = true; });
+  for (let i = 0; i < max && !done; i++) {
+    if (h.frames.length) h.frame(0);
+    await Promise.resolve();
+  }
+  return pending;
+}
+
+function completePendingImages(h) {
+  let n = 0;
+  for (const image of h.images) {
+    if (image.complete && image.naturalWidth) continue;
+    image.complete = true;
+    image.naturalWidth = 1448;
+    image.naturalHeight = 1086;
+    image.emit("load");
+    n++;
+  }
+  return n;
+}
+
+async function settleBoot(h, { waitForReady = true, completeImages = false, max = 1000 } = {}) {
+  const seen = [];
+  let idle = 0;
+  for (let i = 0; i < max; i++) {
+    if (completeImages) completePendingImages(h);
+    const status = h.nodes.get("loadingStatus").textContent;
+    const pct = h.nodes.get("loadingPercent").textContent;
+    seen.push({ pct, status });
+    if (waitForReady && status === "READY") {
+      if (h.frames.length) h.frame(0);
+      return seen;
+    }
+    if (h.frames.length) {
+      h.frame(0);
+      idle = 0;
+    } else {
+      idle++;
+      if (!waitForReady && idle > 12) return seen;
+    }
+    await Promise.resolve();
+  }
+  return seen;
+}
 const gameplayState = (actor) => {
   const seen = new WeakSet();
   return JSON.stringify(actor, (key, value) => {
@@ -1222,22 +1270,25 @@ test("preloading waits for decode and rejects failed required art", async () => 
 test("boot cannot reach READY until every required image has decoded", async () => {
   const h = createHarness({ imagesReady: false });
   await h.importModule(`js/boot.js?v=${BUILD}`);
-  for (let i = 0; i < 100; i++) await Promise.resolve();
+  await settleBoot(h, { waitForReady: false, max: 80 });
   assert.notEqual(h.nodes.get("loadingStatus").textContent, "READY");
   assert.equal(h.nodes.get("startGame").classList.contains("ready"), false);
-  for (const image of h.images) {
-    image.complete = true;
-    image.naturalWidth = 1448;
-    image.naturalHeight = 1086;
-    image.emit("load");
-  }
-  for (let i = 0; i < 200; i++) await Promise.resolve();
+  assert.ok(
+    Number.parseInt(h.nodes.get("loadingPercent").textContent, 10) > 0,
+    "loading bar must leave 0% before images finish decoding",
+  );
+  const seen = await settleBoot(h, { waitForReady: true, completeImages: true });
   assert.equal(
     h.nodes.get("loadingStatus").textContent,
     "READY",
     h.nodes.get("runtimeError").textContent,
   );
   assert.equal(h.nodes.get("startGame").classList.contains("ready"), true);
+  const percents = seen.map((step) => Number.parseInt(step.pct, 10));
+  assert.ok(
+    percents.some((p) => p > 0 && p < 100),
+    "bar must tick through sheet prep, not jump 0% to READY",
+  );
 });
 
 test("player range ring follows weapon range and auto play fires bright yellow tracers", async () => {
@@ -1318,12 +1369,25 @@ test("player range ring follows weapon range and auto play fires bright yellow t
 test("complete boot reaches menu and PLAY without duplicate atlas modules or timers", async () => {
   const h = createHarness();
   await h.importModule(`js/boot.js?v=${BUILD}`);
-  // Flush the real dynamic-import/asset Promise chain, without a browser.
-  for (let i = 0; i < 150; i++) await Promise.resolve();
+  const seen = await settleBoot(h, { waitForReady: true });
   assert.equal(
     h.nodes.get("loadingStatus").textContent,
     "READY",
     h.nodes.get("runtimeError").textContent,
+  );
+  const percents = [...new Set(seen.map((step) => step.pct))];
+  const statuses = seen.map((step) => step.status);
+  assert.ok(
+    percents.some((pct) => Number.parseInt(pct, 10) > 0),
+    "PREPARING BATTLEFIELD must leave 0% during unwrap",
+  );
+  assert.ok(
+    percents.length >= 3,
+    "loading percent should advance across sheet prep, not sit on one value",
+  );
+  assert.ok(
+    statuses.some((status) => /UNWRAPPING|CHARGER|VARIANT|PREPARING|LOADING/.test(status)),
+    "unwrap, charger, and variant prep must drive the status line",
   );
   assert.equal(h.frames.length, 0);
   assert.equal(
@@ -1401,7 +1465,7 @@ test("solid cover blocks walks and vaults over jumpable pieces", async () => {
 test("living friendlies stay fully opaque every animation frame", async () => {
   const h = createHarness();
   const sprites = await h.importModule(`js/soldierAssets.js?v=${BUILD}`);
-  await sprites.preloadSoldierAssets();
+  await drainWork(h, sprites.preloadSoldierAssets());
   assert.equal(typeof sprites.hardenSheetAlpha, "function");
   assert.equal(sprites.isLiveFriendly({ hp: 80, dead: false, downed: false }, "ally"), true);
   assert.equal(sprites.isLiveFriendly({ hp: 0, dead: true }, "player"), false);
@@ -3552,7 +3616,7 @@ test("player street draw scale shrinks ~11% without changing squad, marines, or 
   const marineMod = await h.importModule(`js/marines.js?v=${BUILD}`);
   const enemyMod = await h.importModule(`js/enemy.js?v=${BUILD}`);
   const sprites = await h.importModule(`js/soldierAssets.js?v=${BUILD}`);
-  await sprites.preloadSoldierAssets();
+  await drainWork(h, sprites.preloadSoldierAssets());
   assert.equal(playerMod.PLAYER_DRAW_SCALE, 0.275);
   assert.ok(
     playerMod.PLAYER_DRAW_SCALE >= 0.31 * 0.88 - 1e-9 &&
@@ -4057,14 +4121,50 @@ test("Phone Art ripper, shielded thrall, and medic sheets are kit-locked 160px c
   });
 });
 
+test("packed sheet unwrap reports progress, yields, and reuses the padded canvas", async () => {
+  const h = createHarness();
+  const sprites = await h.importModule(`js/soldierAssets.js?v=${BUILD}`);
+  const charger = await h.importModule(`js/chargerEnemy.js?v=${BUILD}`);
+  const ticks = [];
+  await drainWork(
+    h,
+    sprites.preloadSoldierAssets((p, status) => {
+      ticks.push({ p, status });
+    }),
+  );
+  assert.ok(ticks.length >= 4, "soldier preload should tick more than decode start/end");
+  assert.ok(ticks.some((tick) => /UNWRAPPING/.test(tick.status || "")));
+  const values = ticks.map((tick) => tick.p);
+  assert.ok(values.some((p) => p > 0 && p < 1));
+  assert.equal(values[values.length - 1], 1);
+  const rifle = sprites.getEnemyMonsterSheet("rifleman");
+  assert.equal(
+    sprites.getEnemyMonsterSheet("rifleman").source,
+    rifle.source,
+    "memory cache must skip a second unwrap of the same sheet",
+  );
+  await drainWork(h, charger.preloadChargerAssets());
+  const charged = charger.getChargerSheet().source;
+  const beforeFrames = h.frames.length;
+  await drainWork(h, charger.preloadChargerAssets());
+  assert.equal(charger.getChargerSheet().source, charged);
+  assert.equal(
+    h.frames.length,
+    beforeFrames,
+    "cached charger unwrap must not queue another rAF",
+  );
+  assert.equal(sprites.SPRITE_BOX_PAD, 40);
+  assert.equal(sprites.SPRITE_FIT, 0.86);
+});
+
 test("sprite draws clamp source rects so gun tips never wrap behind the body", async () => {
   const h = createHarness();
   const sprites = await h.importModule(`js/soldierAssets.js?v=${BUILD}`);
   const variants = await h.importModule(`js/variantArt.js?v=${BUILD}`);
   const charger = await h.importModule(`js/chargerEnemy.js?v=${BUILD}`);
-  await sprites.preloadSoldierAssets();
-  await variants.preloadVariantAssets();
-  await charger.preloadChargerAssets();
+  await drainWork(h, sprites.preloadSoldierAssets());
+  await drainWork(h, variants.preloadVariantAssets());
+  await drainWork(h, charger.preloadChargerAssets());
   assert.equal(sprites.CELL_GUTTER, 40);
   assert.equal(sprites.SPRITE_BOX_PAD, 40);
   assert.equal(sprites.SPRITE_FIT, 0.86);
@@ -4072,6 +4172,7 @@ test("sprite draws clamp source rects so gun tips never wrap behind the body", a
   assert.equal(typeof sprites.drawClampedSheetFrame, "function");
   assert.equal(typeof sprites.stripWrappedOverflow, "function");
   assert.equal(typeof sprites.cleanPackedSheet, "function");
+  assert.equal(typeof sprites.cleanPackedSheetAsync, "function");
   assert.equal(typeof sprites.packedCellLayout, "function");
   assert.equal(typeof sprites.packedSpriteDest, "function");
   assert.equal(sprites.getSoldierAtlasInfo().cellGutter, 40);
@@ -4108,6 +4209,11 @@ test("sprite draws clamp source rects so gun tips never wrap behind the body", a
   assert.match(source, /SPRITE_BOX_PAD/);
   assert.match(source, /SPRITE_FIT/);
   assert.match(source, /packedSpriteDest/);
+  assert.match(source, /cleanPackedSheetAsync/);
+  assert.match(source, /requestAnimationFrame/);
+  assert.match(source, /__paddedSheetCache/);
+  assert.match(readFileSync("js/boot.js", "utf8"), /preloadChargerAssets\(\(p/);
+  assert.match(readFileSync("js/boot.js", "utf8"), /preloadVariantAssets\(\(p/);
   assert.equal(
     readFileSync("js/variantArt.js", "utf8").includes("drawClampedSheetFrame"),
     true,

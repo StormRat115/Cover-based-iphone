@@ -1,14 +1,15 @@
-import { loadImage } from "./assets.js?v=20260908-136";
-import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260908-136";
-import { faceThreat } from "./combatAI.js?v=20260908-136";
-import { incomingDefense } from "./leoKit.js?v=20260908-136";
-import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-136";
+import { loadImage } from "./assets.js?v=20260908-137";
+import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260908-137";
+import { faceThreat } from "./combatAI.js?v=20260908-137";
+import { incomingDefense } from "./leoKit.js?v=20260908-137";
+import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-137";
 import {
   cleanPackedSheet,
+  cleanPackedSheetAsync,
   drawClampedSheetFrame,
   packedCellLayout,
   packedSpriteDest,
-} from "./soldierAssets.js?v=20260908-136";
+} from "./soldierAssets.js?v=20260908-137";
 
 export const CHARGER_SHEET = {
   file: "enemy-charger-melee-sheet.png",
@@ -52,15 +53,19 @@ export function getChargerSheet() {
 
 export function preloadChargerAssets(onProgress) {
   onProgress = onProgress || function () {};
-  onProgress(0.2, "LOADING CHARGER");
-  return loadImage(chargerSource).then(function (img) {
-    onProgress(1, "CHARGER READY");
+  onProgress(0.12, "LOADING CHARGER");
+  return loadImage(chargerSource).then(async function (img) {
     if (!img) throw new Error("Charger sheet is not ready");
-    runtimeChargerSheet = cleanPackedSheet(
+    onProgress(0.4, "UNWRAPPING CHARGER");
+    runtimeChargerSheet = await cleanPackedSheetAsync(
       chargerSource,
       CHARGER_SHEET.frameWidth,
       CHARGER_SHEET.frameHeight,
+      function (p) {
+        onProgress(0.4 + 0.55 * (p || 0), "UNWRAPPING CHARGER");
+      },
     );
+    onProgress(1, "CHARGER READY");
     return getChargerSheet();
   });
 }

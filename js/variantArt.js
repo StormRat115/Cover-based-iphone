@@ -1,10 +1,11 @@
-import { loadImage } from "./assets.js?v=20260908-136";
+import { loadImage } from "./assets.js?v=20260908-137";
 import {
   cleanPackedSheet,
+  cleanPackedSheetAsync,
   drawClampedSheetFrame,
   packedCellLayout,
   packedSpriteDest,
-} from "./soldierAssets.js?v=20260908-136";
+} from "./soldierAssets.js?v=20260908-137";
 
 // Kit-locked Phone Art sheets from chore/enemy-variants-ripper-shield-medic.
 // Isolated from combat imports so boot can preload without the VM graph.
@@ -63,27 +64,40 @@ Object.keys(VARIANT_SHEETS).forEach(function (type) {
 
 export function preloadVariantAssets(onProgress) {
   onProgress = onProgress || function () {};
-  onProgress(0.2, "LOADING VARIANT THRALLS");
+  onProgress(0.08, "LOADING VARIANT THRALLS");
+  var types = Object.keys(variantSources);
+  var loaded = 0;
   return Promise.all(
-    Object.keys(variantSources).map(function (type) {
-      return loadImage(variantSources[type]);
+    types.map(function (type) {
+      return loadImage(variantSources[type]).then(function (img) {
+        loaded++;
+        onProgress(
+          0.08 + 0.22 * (loaded / types.length),
+          "LOADING VARIANT THRALLS",
+        );
+        return img;
+      });
     }),
-  ).then(function (imgs) {
-    onProgress(1, "VARIANT THRALLS READY");
+  ).then(async function (imgs) {
     if (
       imgs.some(function (img) {
         return !img;
       })
     )
       throw new Error("Variant thrall sheets are not ready");
-    Object.keys(variantSources).forEach(function (type) {
-      var spec = VARIANT_SHEETS[type];
-      variantSheets[type] = cleanPackedSheet(
-        variantSources[type],
+    for (var i = 0; i < types.length; i++) {
+      var spec = VARIANT_SHEETS[types[i]];
+      onProgress(
+        0.32 + 0.6 * (i / types.length),
+        "UNWRAPPING " + types[i].toUpperCase() + " THRALL",
+      );
+      variantSheets[types[i]] = await cleanPackedSheetAsync(
+        variantSources[types[i]],
         spec.frameWidth,
         spec.frameHeight,
       );
-    });
+    }
+    onProgress(1, "VARIANT THRALLS READY");
     return variantSources;
   });
 }
