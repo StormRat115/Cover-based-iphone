@@ -2,7 +2,7 @@ import {
   describeOuterSlots,
   livingBlocks,
   slotCountFromBlocks,
-} from "./coverBlocks.js?v=20260908-128";
+} from "./coverBlocks.js?v=20260908-129";
 
 function segmentsOf(cover) {
   if (cover && cover.blocks && cover.blocks.length) {

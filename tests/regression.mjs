@@ -3406,3 +3406,89 @@ test("Aggressive recovers at 10% HP; Follow does not leave allies trailing", asy
   });
 });
 
+test("player street draw scale shrinks ~11% without changing squad, marines, or enemies", async () => {
+  const h = createHarness();
+  const playerMod = await h.importModule(`js/player.js?v=${BUILD}`);
+  const allyMod = await h.importModule(`js/ally.js?v=${BUILD}`);
+  const marineMod = await h.importModule(`js/marines.js?v=${BUILD}`);
+  const enemyMod = await h.importModule(`js/enemy.js?v=${BUILD}`);
+  const sprites = await h.importModule(`js/soldierAssets.js?v=${BUILD}`);
+  await sprites.preloadSoldierAssets();
+  assert.equal(playerMod.PLAYER_DRAW_SCALE, 0.275);
+  assert.ok(
+    playerMod.PLAYER_DRAW_SCALE >= 0.31 * 0.88 - 1e-9 &&
+      playerMod.PLAYER_DRAW_SCALE <= 0.31 * 0.9 + 1e-9,
+    "0.275 is 11% smaller than the previous player draw scale 0.31",
+  );
+  const iso = () => [0, 0];
+  const ctx = h.document.createElement("canvas").getContext("2d");
+  const base = {
+    x: 0,
+    y: 0,
+    hp: 100,
+    maxHp: 100,
+    state: "idle",
+    facingX: 1,
+    facingY: 0,
+    dead: false,
+    downed: false,
+  };
+  function destWidth(draw) {
+    const before = h.metrics.drawImages.length;
+    draw();
+    const blit = h.metrics.drawImages
+      .slice(before)
+      .find((args) => args.length >= 9);
+    return blit ? blit[7] : 0;
+  }
+  const playerW = destWidth(() =>
+    playerMod.drawPlayer(ctx, { ...base, isPlayer: true }, iso),
+  );
+  const allyW = destWidth(() =>
+    allyMod.drawAlly(
+      ctx,
+      { ...base, name: "Rook", weapon: { short: "RFL" } },
+      iso,
+    ),
+  );
+  const leoW = destWidth(() =>
+    allyMod.drawAlly(
+      ctx,
+      { ...base, name: "Leo", knight: true, weapon: { short: "SWD" } },
+      iso,
+    ),
+  );
+  const marineW = destWidth(() =>
+    marineMod.drawMarine(ctx, { ...base, isMarine: true, name: "Marine 1" }, iso),
+  );
+  const enemyW = destWidth(() =>
+    enemyMod.drawBandit(ctx, { ...base, type: "rifleman", scale: 1 }, iso),
+  );
+  assert.ok(playerW > 0 && allyW > 0 && leoW > 0 && marineW > 0 && enemyW > 0);
+  assert.ok(playerW < allyW, "player dest width should be smaller than squad");
+  assert.ok(Math.abs(playerW / allyW - 0.275 / 0.3) < 0.02);
+  const col = await h.importModule(`js/unitCollision.js?v=${BUILD}`);
+  const created = playerMod.createPlayer();
+  assert.equal(
+    col.unitRadius(created),
+    col.UNIT_RADIUS,
+    "player collision radius is not tied to the street draw scale",
+  );
+  assert.equal(
+    allyW,
+    destWidth(() =>
+      sprites.drawSoldier(ctx, base, { team: "ally", scale: 0.3 }),
+    ),
+    "squad draw path still uses scale 0.3",
+  );
+  assert.equal(
+    marineW,
+    destWidth(() =>
+      sprites.drawSoldier(ctx, base, { team: "marine", scale: 0.29 }),
+    ),
+    "marine draw path still uses scale 0.29",
+  );
+  assert.ok(leoW >= allyW * 0.98, "Leo should not inherit the player shrink");
+  assert.ok(enemyW > playerW, "enemies should not inherit the player shrink");
+});
+

@@ -86,6 +86,10 @@ Independent abilities (`js/squadAbilities.js`, `ABILITY_KNOBS`):
 
 Rebased onto BUILD 127 (leapfrog fireteams, suppression VFX, MAG CHECK breath → door/wreck breach). Those systems stay.
 
+## Player street scale: 20260908-129
+
+Player character draw scale **0.31 → 0.275** (~11% smaller). Squad (Doc/Rook/Viper/Leo), marines, and enemies are unchanged. Atlas art and cover-slot / collision radii are unchanged.
+
 ## Optimization pass: 20260905-59
 
 - Replaced the global animation-frame override and competing autoplay/effect clocks with explicit startup and one loop.

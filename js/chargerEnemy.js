@@ -1,8 +1,8 @@
-import { loadImage } from "./assets.js?v=20260908-128";
-import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260908-128";
-import { faceThreat } from "./combatAI.js?v=20260908-128";
-import { incomingDefense } from "./leoKit.js?v=20260908-128";
-import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-128";
+import { loadImage } from "./assets.js?v=20260908-129";
+import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260908-129";
+import { faceThreat } from "./combatAI.js?v=20260908-129";
+import { incomingDefense } from "./leoKit.js?v=20260908-129";
+import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-129";
 
 export const CHARGER_SHEET = {
   file: "enemy-charger-melee-sheet.png",
