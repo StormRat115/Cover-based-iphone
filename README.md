@@ -127,13 +127,13 @@ Fourth named ally beside Rook / Viper / Doc. Default **defense 200**, sword mele
 - Cover is authored as square, rectangle, T, U, and L pieces. Collision segments and procedural art (sandbags, jersey barriers, crates, wrecks, rubble) follow those silhouettes.
 - Soldiers and monsters plant against the facing cover edge: closer slots, tall vs low poses, peek/lean offsets, and a slight depth nudge so tucked units sit on the cover silhouette instead of floating through it.
 
-## Combat spectacle pack: 20260908-123
+## Combat spectacle pack: 20260908-127
 
-Autoplay street fights should read like a directed war-movie push: bounding fireteams, visible suppression, and a breath → breach chapter after each street objective.
+Autoplay street fights should read like a directed war-movie push: bounding fireteams, visible suppression, and a breath → breach chapter after each street objective. Rebased onto latest `development` after PR #14 (exclusive-slot repath + façade street-flow) and PR #16 (Leo tactical knight).
 
-1. **Bound & leapfrog fireteams** — Squad splits as Rook+Viper plus Doc; Marines go in pairs. One element peeks/suppresses from an exclusive slot while the rear element scoots to the next cover farther up the street, then they swap. Bound hops cap at ~1.3s so nobody stays exposed mid-street. Overwatch still prefers cover during a firefight. Marine `MARINE_AGGRO` peek/dwell/speed knobs stay.
+1. **Bound & leapfrog fireteams** — Rook+Viper share `squad-alpha`. Remaining rifle squad (Doc) is its own element. Leo is a **solo knight fireteam** so melee is not gated by overwatch. Marines bound in pairs. One element peeks/suppresses from an exclusive slot while the rear element scoots to the next cover farther up the street, then they swap. Knobs in `FIRETEAM`: `boundMax` 1.28s, hop 88–500, hold 0.58–1.12s. Overwatch still prefers cover during a firefight. Marine `MARINE_AGGRO` peek/dwell/speed knobs stay. Works in autoplay and normal AI.
 2. **Visible suppression** — Light pin still drives accuracy/peek. VFX knobs in `COMBAT_VFX`: max 22 live effects, 10 sparks, 10 dust kicks, 8 tracer streaks. Cover impacts and armor hits spawn a brief spark; pinned enemies kick dirt and hug the slot (crouch / no peek). Not a particle flood.
-3. **Post-objective breath → breach** — Completing a street task starts a 2.15–3.55s mag-check hold (`STREET_BREATH`). Friendlies reload and stay planted. `releaseStreetObjectiveHold` still clears the freeze (BUILD 117 unstick). When the breath ends, a forced façade door explode plus a wreck/street detonation kicks the next contact chapter.
+3. **Post-objective breath → breach** — Completing a street task starts a 2.15–3.55s mag-check hold (`STREET_BREATH`). Friendlies reload and stay planted; the next street task does not spawn until the breath ends. `releaseStreetObjectiveHold` still clears the freeze (BUILD 117 unstick). When the breath ends, a forced façade door explode plus a wreck/street detonation kicks the next contact chapter. HUD title/line show **MAG CHECK**.
 
 ## Wartorn street, dialog, and unit collision: 20260906-82
 

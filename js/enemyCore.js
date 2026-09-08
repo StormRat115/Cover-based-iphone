@@ -2,32 +2,32 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260908-126";
-import { weaponCopy } from "./weapons.js?v=20260908-126";
+} from "./cover.js?v=20260908-127";
+import { weaponCopy } from "./weapons.js?v=20260908-127";
 import {
   moveTowardTarget,
   faceThreat,
   coverStillUseful,
   peekPoint,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-126";
+} from "./combatAI.js?v=20260908-127";
 import {
   ENEMY_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260908-126";
-import { AudioBus } from "./audio.js?v=20260908-126";
+} from "./combatStats.js?v=20260908-127";
+import { AudioBus } from "./audio.js?v=20260908-127";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-126";
-import { orderDefense } from "./squadDialog.js?v=20260908-126";
-import { leoShieldBonus } from "./leoKit.js?v=20260908-126";
-import { assignEnemyCover } from "./enemyCoverAI.js?v=20260908-126";
-import { chargerWeapon } from "./chargerEnemy.js?v=20260908-126";
-import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260908-126";
+} from "./suppression.js?v=20260908-127";
+import { orderDefense } from "./squadDialog.js?v=20260908-127";
+import { leoShieldBonus } from "./leoKit.js?v=20260908-127";
+import { assignEnemyCover } from "./enemyCoverAI.js?v=20260908-127";
+import { chargerWeapon } from "./chargerEnemy.js?v=20260908-127";
+import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260908-127";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },

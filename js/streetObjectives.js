@@ -1,10 +1,10 @@
-import { makeShapedCover } from "./cityMap.js?v=20260908-126";
-import { prepareCoverHp } from "./destructibleCover.js?v=20260908-126";
+import { makeShapedCover } from "./cityMap.js?v=20260908-127";
+import { prepareCoverHp } from "./destructibleCover.js?v=20260908-127";
 import {
   beginStreetBreath,
   isStreetBreathing,
   streetBreathRemaining,
-} from "./streetBeat.js?v=20260908-126";
+} from "./streetBeat.js?v=20260908-127";
 
 export const OBJECTIVE_TYPES = ["hold_crosswalk", "clear_blockade", "escort_segment"];
 
