@@ -1,0 +1,33 @@
+{
+  "cols": 4,
+  "rows": 5,
+  "cell": 160,
+  "frameWidth": 160,
+  "frameHeight": 160,
+  "facing": "right",
+  "character": "Shielded Thrall",
+  "role": "shield-melee",
+  "kit": [
+    "ribbed-tower-shield",
+    "short-cleaver"
+  ],
+  "states": [
+    "idle",
+    "run",
+    "shieldBlock",
+    "meleeSwing",
+    "death"
+  ],
+  "fps": {
+    "idle": 4,
+    "run": 10,
+    "shieldBlock": 6,
+    "meleeSwing": 12,
+    "death": 8
+  },
+  "transparent": true,
+  "opaque": true,
+  "alphaHardened": true,
+  "note": "kit-locked painted: same ribbed tower shield and cleaver every frame; shield always up",
+  "file": "enemy-shielded-thrall-sheet.png"
+}

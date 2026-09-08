@@ -1,0 +1,30 @@
+{
+  "cols": 4,
+  "rows": 4,
+  "cell": 160,
+  "frameWidth": 160,
+  "frameHeight": 160,
+  "facing": "right",
+  "character": "Ripper",
+  "role": "fast-melee",
+  "kit": [
+    "dual-short-blades"
+  ],
+  "states": [
+    "idle",
+    "run",
+    "meleeSwing",
+    "death"
+  ],
+  "fps": {
+    "idle": 6,
+    "run": 12,
+    "meleeSwing": 12,
+    "death": 8
+  },
+  "transparent": true,
+  "opaque": true,
+  "alphaHardened": true,
+  "note": "kit-locked painted: same hood and dual short blades every frame",
+  "file": "enemy-ripper-sheet.png"
+}
