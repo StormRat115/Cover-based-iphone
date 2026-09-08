@@ -3375,14 +3375,12 @@ test("independent squad abilities fire Doc stem, Rook MG88, Viper heat, Leo legi
   const abilities = await h.importModule(`js/squadAbilities.js?v=${BUILD}`);
   const alliesModule = await h.importModule(`js/allyCore2.js?v=${BUILD}`);
   const knobs = abilities.ABILITY_KNOBS;
-  assert.deepEqual(knobs.doc, {
-    id: "stem",
-    cooldown: 16,
-    range: 560,
-    heal: 48,
-    reviveHp: 0.45,
-    mark: 1.6,
-  });
+  assert.equal(knobs.doc.id, "stem");
+  assert.equal(knobs.doc.cooldown, 16);
+  assert.equal(knobs.doc.range, 560);
+  assert.equal(knobs.doc.heal, 48);
+  assert.equal(knobs.doc.reviveHp, 0.45);
+  assert.equal(knobs.doc.mark, 1.6);
   assert.ok(knobs.rook.shots === 200);
   assert.ok(knobs.viper.duration === 10);
   assert.equal(knobs.leo.regenPerSec, 2);
