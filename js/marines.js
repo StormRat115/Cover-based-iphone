@@ -1,20 +1,22 @@
 import {
   updateAllies as updateFriendlyAI,
   MARINE_AGGRO,
-} from "./allyCore2.js?v=20260908-129";
-import { tagMarineFireteams } from "./fireteams.js?v=20260908-129";
-import { weaponCopy } from "./weapons.js?v=20260908-129";
-import { knifeWeapon } from "./melee.js?v=20260908-129";
-import { drawSoldier } from "./soldierAssets.js?v=20260908-129";
-import { drawCoverShield } from "./coverSlots.js?v=20260908-129";
-import { drawCombatMarks } from "./engaged.js?v=20260908-129";
+} from "./allyCore2.js?v=20260908-130";
+import { tagMarineFireteams } from "./fireteams.js?v=20260908-130";
+import { weaponCopy } from "./weapons.js?v=20260908-130";
+import { knifeWeapon } from "./melee.js?v=20260908-130";
+import { drawSoldier } from "./soldierAssets.js?v=20260908-130";
+import { drawCoverShield } from "./coverSlots.js?v=20260908-130";
+import { drawCombatMarks } from "./engaged.js?v=20260908-130";
 export { MARINE_AGGRO };
 
+export const INITIAL_MARINE_COUNT = 2;
+
 const MARINE_STARTS = [
-  [-240, 255],
   [-130, 330],
-  [0, 365],
   [130, 330],
+  [-240, 255],
+  [0, 365],
   [240, 255],
 ];
 
@@ -74,9 +76,11 @@ export function createMarineAt(x, y, index) {
 }
 
 export function createMarines() {
-  const marines = MARINE_STARTS.map(function (position, index) {
-    return createMarineAt(position[0], position[1], index);
-  });
+  const marines = MARINE_STARTS.slice(0, INITIAL_MARINE_COUNT).map(
+    function (position, index) {
+      return createMarineAt(position[0], position[1], index);
+    },
+  );
   window.__battleMarines = marines;
   tagMarineFireteams(marines);
   return marines;

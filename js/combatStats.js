@@ -2,10 +2,11 @@ export const GENERAL_ACCURACY_PENALTY = -5;
 
 export const CHARACTER_STATS = {
   player: { hp: 100, defense: 50, accuracy: 6, regen: 5, damage: 3 },
-  Rook: { hp: 150, defense: 100, accuracy: 9, regen: 4, damage: 7 },
-  Viper: { hp: 115, defense: 50, accuracy: 8, regen: 5, damage: 5 },
-  Doc: { hp: 130, defense: 75, accuracy: 12, regen: 7, damage: 8 },
-  Leo: { hp: 170, defense: 200, accuracy: 6, regen: 3, damage: 9 },
+  // BUILD 130: squad-only combat bump (HP/DEF unchanged — not invincible).
+  Rook: { hp: 150, defense: 100, accuracy: 13, regen: 4, damage: 10 },
+  Viper: { hp: 115, defense: 50, accuracy: 12, regen: 5, damage: 8 },
+  Doc: { hp: 130, defense: 75, accuracy: 16, regen: 7, damage: 11 },
+  Leo: { hp: 170, defense: 200, accuracy: 9, regen: 3, damage: 12 },
 };
 
 export const ENEMY_STATS = {
