@@ -1,10 +1,10 @@
-import { moveTowardTarget, faceThreat } from "./combatAI.js?v=20260908-135";
+import { moveTowardTarget, faceThreat } from "./combatAI.js?v=20260908-136";
 import {
   mitigateDamage,
-} from "./combatStats.js?v=20260908-135";
-import { drawEnemyMonster, drawSoldier } from "./soldierAssets.js?v=20260908-135";
-import { drawOfficialVariant } from "./variantArt.js?v=20260908-135";
-import { inMeleeRange, meleeRangeOf } from "./melee.js?v=20260908-135";
+} from "./combatStats.js?v=20260908-136";
+import { drawEnemyMonster, drawSoldier } from "./soldierAssets.js?v=20260908-136";
+import { drawOfficialVariant } from "./variantArt.js?v=20260908-136";
+import { inMeleeRange, meleeRangeOf } from "./melee.js?v=20260908-136";
 import {
   coupleEngaged,
   clearEngaged,
@@ -12,7 +12,7 @@ import {
   updateEngagedFight,
   engagedTargetPenalty,
   preferShootTargets,
-} from "./engaged.js?v=20260908-135";
+} from "./engaged.js?v=20260908-136";
 
 // Ripper / Shield / Medic. Official Phone Art sheets live in
 // assets/generated/enemies/ from chore/enemy-variants-ripper-shield-medic.

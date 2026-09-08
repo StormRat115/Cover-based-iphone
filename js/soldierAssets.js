@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260908-135";
+import { loadImage } from "./assets.js?v=20260908-136";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
   "./assets/generated/soldier/player-solid-atlas.png?v=20260906-102";
@@ -195,7 +195,9 @@ const FRIENDLY_COLS = 4;
 const FRIENDLY_ROWS_COUNT = 6;
 // Transparent gutter around isolated cells so GPU REPEAT / bilinear
 // samples empty pixels instead of wrapping the barrel to the back.
-export const CELL_GUTTER = 12;
+export const CELL_GUTTER = 40;
+export const SPRITE_BOX_PAD = 40;
+export const SPRITE_FIT = 0.86;
 export const UNWRAP_PAD = 48;
 const cleanedSheetCache = new WeakMap();
 const FRIENDLY_ROWS = {
@@ -616,12 +618,32 @@ export function stripWrappedOverflow(canvas, ox, oy, cellW, cellH, cut) {
 
 export function packedCellLayout(source, coreW, coreH) {
   var pad = (source && source._unwrapPad) || 0;
+  var boxPad = (source && source._boxPad) || 0;
   return {
     pad: pad,
+    boxPad: boxPad,
+    footGutter: (source && source._footGutter) || 0,
     cellW: (source && source._paddedFrameW) || coreW,
     cellH: (source && source._paddedFrameH) || coreH,
     coreW: coreW,
     coreH: coreH,
+    fit: (source && source._fit) || 1,
+  };
+}
+
+/** Dest rect for a packed/fitted cell. Blit the full box (empty UV edges)
+ *  and plant using the foot gutter so ankles sit on the actor origin. */
+export function packedSpriteDest(layout, scale, yNudge) {
+  var dw = layout.cellW * scale;
+  var dh = layout.cellH * scale;
+  return {
+    dw: dw,
+    dh: dh,
+    dx: -dw * 0.5,
+    dy: -dh + (layout.footGutter || 0) * scale + (yNudge || 0),
+    bodyW: (layout.coreW || layout.cellW) * scale,
+    bodyH: (layout.coreH || layout.cellH) * scale,
+    inset: layout.boxPad ? 0 : layout.pad ? 1 : 5,
   };
 }
 
@@ -766,6 +788,55 @@ export function cleanPackedSheet(source, frameW, frameH) {
     c._paddedFrameH = frameH + pad;
     c._coreW = frameW;
     c._coreH = frameH;
+    // Inset each unwrapped cell in a larger box so GPU REPEAT / packing
+    // neighbors cannot sample overflow sitting on the cell edge.
+    var boxPad = SPRITE_BOX_PAD,
+      innerW = frameW + pad,
+      innerH = frameH + pad,
+      contentW = Math.max(1, Math.round(innerW * SPRITE_FIT)),
+      contentH = Math.max(1, Math.round(innerH * SPRITE_FIT)),
+      cellOutW = contentW + boxPad * 2,
+      cellOutH = contentH + boxPad * 2,
+      fitted = document.createElement("canvas"),
+      fg,
+      foot = 8;
+    fitted.width = cols * cellOutW;
+    fitted.height = rows * cellOutH;
+    fg = fitted.getContext("2d", { willReadFrequently: true });
+    if (fg && typeof fg.drawImage === "function") {
+      fg.clearRect(0, 0, fitted.width, fitted.height);
+      fg.imageSmoothingEnabled = false;
+      for (row = 0; row < rows; row++) {
+        for (col = 0; col < cols; col++) {
+          var ox = col * cellOutW + Math.round((cellOutW - contentW) / 2),
+            oy = row * cellOutH + (cellOutH - contentH - foot);
+          fg.drawImage(
+            c,
+            col * innerW,
+            row * innerH,
+            innerW,
+            innerH,
+            ox,
+            oy,
+            contentW,
+            contentH,
+          );
+        }
+      }
+      fitted.naturalWidth = fitted.width;
+      fitted.naturalHeight = fitted.height;
+      fitted.complete = true;
+      fitted._unwrapPad = pad;
+      fitted._boxPad = boxPad;
+      fitted._footGutter = foot;
+      fitted._paddedFrameW = cellOutW;
+      fitted._paddedFrameH = cellOutH;
+      fitted._coreW = frameW;
+      fitted._coreH = frameH;
+      fitted._fit = SPRITE_FIT;
+      cleanedSheetCache.set(source, fitted);
+      return fitted;
+    }
     cleanedSheetCache.set(source, c);
     return c;
   } catch (_err) {
@@ -809,37 +880,59 @@ export function drawClampedSheetFrame(ctx, source, sx, sy, sw, sh, dx, dy, dw, d
 function buildCellFrameCache(source, rowCount, cols, cell) {
   if (!source) return null;
   var frames = [];
-  var gutter = CELL_GUTTER;
-  var padded = cell + gutter * 2;
+  var boxPad = SPRITE_BOX_PAD;
+  var foot = 8;
+  var content = Math.max(1, Math.round(cell * SPRITE_FIT));
+  var box = content + boxPad * 2;
   try {
+    var scratch = document.createElement("canvas");
+    scratch.width = cell;
+    scratch.height = cell;
+    var sg = scratch.getContext("2d", { willReadFrequently: true });
+    if (!sg || typeof sg.drawImage !== "function") return null;
     for (var row = 0; row < rowCount; row++) {
       frames[row] = [];
       for (var col = 0; col < cols; col++) {
-        var frame = document.createElement("canvas");
-        frame.width = padded;
-        frame.height = padded;
-        var g = frame.getContext("2d", { willReadFrequently: true });
-        if (!g || typeof g.drawImage !== "function") return null;
-        g.clearRect(0, 0, padded, padded);
-        g.imageSmoothingEnabled = false;
-        g.drawImage(
+        sg.clearRect(0, 0, cell, cell);
+        sg.imageSmoothingEnabled = false;
+        sg.drawImage(
           source,
           col * cell,
           row * cell,
           cell,
           cell,
-          gutter,
-          gutter,
+          0,
+          0,
           cell,
           cell,
         );
-        stripWrappedOverflow(frame, gutter, gutter, cell, cell, 40);
-        // Keep every visible armor pixel fully opaque. A separate padded
-        // frame also stops mobile GPU REPEAT from wrapping the barrel.
+        stripWrappedOverflow(scratch, 0, 0, cell, cell, 40);
+        var frame = document.createElement("canvas");
+        frame.width = box;
+        frame.height = box;
+        var g = frame.getContext("2d", { willReadFrequently: true });
+        if (!g || typeof g.drawImage !== "function") return null;
+        g.clearRect(0, 0, box, box);
+        g.imageSmoothingEnabled = false;
+        g.drawImage(
+          scratch,
+          0,
+          0,
+          cell,
+          cell,
+          Math.round((box - content) / 2),
+          box - content - foot,
+          content,
+          content,
+        );
+        // Shrink-to-fit inside a larger box: GPU REPEAT samples empty pad,
+        // not the barrel or boots.
         var hardened = hardenSheetAlpha(frame, 40) || frame;
-        hardened._cellGutter = gutter;
-        hardened.naturalWidth = padded;
-        hardened.naturalHeight = padded;
+        hardened._cellGutter = boxPad;
+        hardened._fitBox = 1;
+        hardened._footGutter = foot;
+        hardened.naturalWidth = box;
+        hardened.naturalHeight = box;
         hardened.complete = true;
         frames[row][col] = hardened;
       }
@@ -1565,10 +1658,11 @@ export function drawEnemyMonster(ctx, actor, options) {
     ENEMY_MONSTER_FRAME_WIDTH,
     ENEMY_MONSTER_FRAME_HEIGHT,
   );
-  var bodyW = layout.coreW * scale,
-    bodyH = layout.coreH * scale,
-    dw = (layout.coreW + layout.pad) * scale,
-    dh = (layout.coreH + layout.pad) * scale;
+  var dest = packedSpriteDest(
+    layout,
+    scale,
+    state === "lowCover" ? 4 : state === "tallCover" ? 2 : 0,
+  );
   ctx.save();
   ctx.translate(
     (options.x || 0) + plant.x,
@@ -1580,8 +1674,8 @@ export function drawEnemyMonster(ctx, actor, options) {
   ctx.ellipse(
     0,
     2,
-    Math.max(8, bodyW * 0.22),
-    Math.max(2, bodyH * 0.05),
+    Math.max(8, dest.bodyW * 0.22),
+    Math.max(2, dest.bodyH * 0.05),
     0,
     0,
     Math.PI * 2,
@@ -1597,12 +1691,12 @@ export function drawEnemyMonster(ctx, actor, options) {
     row,
     layout.cellW,
     layout.cellH,
-    -bodyW * 0.5,
-    -dh + (state === "lowCover" ? 4 : state === "tallCover" ? 2 : 0),
-    dw,
-    dh,
+    dest.dx,
+    dest.dy,
+    dest.dw,
+    dest.dh,
     baseAlpha,
-    layout.pad ? 1 : 5,
+    dest.inset,
   );
   ctx.restore();
   return true;
@@ -1740,22 +1834,30 @@ export function drawSoldier(ctx, actor, options) {
   if (drawAtlas) {
     var baseAlpha = solidFriendly ? 1 : options.alpha == null ? 1 : options.alpha;
     if (enemyCorpse) baseAlpha *= 0.82;
-    var destX = -dw * 0.5;
-    var destY =
-      -dh +
-      (state === "lowCover" || state === "crouchShoot"
+    var coverNudge =
+      state === "lowCover" || state === "crouchShoot"
         ? 5
         : state === "tallCover"
           ? 2
-          : 0);
-    var gutter =
-      isolatedCell && isolatedCell._cellGutter != null
+          : 0;
+    var fitBox = !!(isolatedCell && isolatedCell._fitBox);
+    var gutter = fitBox
+      ? 0
+      : isolatedCell && isolatedCell._cellGutter != null
         ? isolatedCell._cellGutter
         : isolatedCell && isolatedCell.width > cellW
           ? Math.round((isolatedCell.width - cellW) / 2)
           : 0;
-    var srcX = isolatedCell ? gutter : r.col * cellW;
-    var srcY = isolatedCell ? gutter : (useVault ? 0 : r.row) * cellH;
+    var srcX = isolatedCell ? (fitBox ? 0 : gutter) : r.col * cellW;
+    var srcY = isolatedCell ? (fitBox ? 0 : gutter) : (useVault ? 0 : r.row) * cellH;
+    var srcW = fitBox ? isolatedCell.width : cellW;
+    var srcH = fitBox ? isolatedCell.height : cellH;
+    if (fitBox) {
+      dw = srcW * scale * (useVault ? 1.08 : 1);
+      dh = srcH * scale * (useVault ? 1.08 : 1);
+    }
+    var destX = -dw * 0.5;
+    var destY = -dh + (fitBox ? isolatedCell._footGutter || 0 : 0) * scale + coverNudge;
     if (solidFriendly) {
       ctx.globalAlpha = 1;
       ctx.filter = recolor || "none";
@@ -1768,8 +1870,8 @@ export function drawSoldier(ctx, actor, options) {
         drawAtlas,
         srcX,
         srcY,
-        cellW,
-        cellH,
+        srcW,
+        srcH,
         destX,
         destY,
         dw,
@@ -1858,6 +1960,8 @@ export function getSoldierAtlasInfo() {
     vaultCell: VAULT_CELL,
     cellGutter: CELL_GUTTER,
     unwrapPad: UNWRAP_PAD,
-    wrapFix: "clamp-unwrap-feet-and-barrel",
+    spriteBoxPad: SPRITE_BOX_PAD,
+    spriteFit: SPRITE_FIT,
+    wrapFix: "fit-box-empty-uv-edges",
   };
 }

@@ -1,40 +1,40 @@
-import { getHitChance } from "./cover.js?v=20260908-135";
+import { getHitChance } from "./cover.js?v=20260908-136";
 import {
   resolveSolidMove,
   updateVault,
   planRoute,
   continueRoute,
-} from "./coverCollision.js?v=20260908-135";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260908-135";
-import { weaponCopy } from "./weapons.js?v=20260908-135";
-import { knifeWeapon, swingMelee, tickMeleeTimer, ensureMeleeWeapon } from "./melee.js?v=20260908-135";
-import { canRegen, drawCombatMarks, updateEngagedFight } from "./engaged.js?v=20260908-135";
-import { applyIncomingHostileDamage } from "./enemyVariants.js?v=20260908-135";
-import { hasPerfectHit } from "./squadAbilities.js?v=20260908-135";
-import { AudioBus } from "./audio.js?v=20260908-135";
-import { drawSoldier } from "./soldierAssets.js?v=20260908-135";
-import { drawCoverShield, nextCoverSlotClaim } from "./coverSlots.js?v=20260908-135";
+} from "./coverCollision.js?v=20260908-136";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260908-136";
+import { weaponCopy } from "./weapons.js?v=20260908-136";
+import { knifeWeapon, swingMelee, tickMeleeTimer, ensureMeleeWeapon } from "./melee.js?v=20260908-136";
+import { canRegen, drawCombatMarks, updateEngagedFight } from "./engaged.js?v=20260908-136";
+import { applyIncomingHostileDamage } from "./enemyVariants.js?v=20260908-136";
+import { hasPerfectHit } from "./squadAbilities.js?v=20260908-136";
+import { AudioBus } from "./audio.js?v=20260908-136";
+import { drawSoldier } from "./soldierAssets.js?v=20260908-136";
+import { drawCoverShield, nextCoverSlotClaim } from "./coverSlots.js?v=20260908-136";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-135";
+} from "./combatStats.js?v=20260908-136";
 import {
   finishReload,
   canReloadFromReserve,
   isPrimaryDry,
   getSidearm,
   shouldSwapToSidearm,
-} from "./ammoEconomy.js?v=20260908-135";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-135";
+} from "./ammoEconomy.js?v=20260908-136";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-136";
 import {
   tickSuppression,
   suppressionAccuracyDelta,
   isHardSuppressed,
-} from "./suppression.js?v=20260908-135";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-135";
+} from "./suppression.js?v=20260908-136";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-136";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,

@@ -1,13 +1,14 @@
-import { loadImage } from "./assets.js?v=20260908-135";
-import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260908-135";
-import { faceThreat } from "./combatAI.js?v=20260908-135";
-import { incomingDefense } from "./leoKit.js?v=20260908-135";
-import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-135";
+import { loadImage } from "./assets.js?v=20260908-136";
+import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260908-136";
+import { faceThreat } from "./combatAI.js?v=20260908-136";
+import { incomingDefense } from "./leoKit.js?v=20260908-136";
+import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-136";
 import {
   cleanPackedSheet,
   drawClampedSheetFrame,
   packedCellLayout,
-} from "./soldierAssets.js?v=20260908-135";
+  packedSpriteDest,
+} from "./soldierAssets.js?v=20260908-136";
 
 export const CHARGER_SHEET = {
   file: "enemy-charger-melee-sheet.png",
@@ -241,28 +242,26 @@ export function drawCharger(ctx, actor, options) {
     fh = sheet.frameHeight,
     layout = packedCellLayout(source, fw, fh),
     scale = (options.scale == null ? 0.5 : options.scale * 1.65) * (actor.scale || 1),
-    dw = (layout.coreW + layout.pad) * scale,
-    dh = (layout.coreH + layout.pad) * scale,
+    dest = packedSpriteDest(layout, scale, 0),
     flip = (actor.facingX || 0) < 0 ? -1 : 1;
   ctx.save();
   ctx.translate(options.x || 0, options.y || 0);
   ctx.fillStyle = "#0007";
   ctx.beginPath();
-  ctx.ellipse(0, 3, layout.coreW * scale * 0.22, layout.coreH * scale * 0.05, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 3, dest.bodyW * 0.22, dest.bodyH * 0.05, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.scale(flip, 1);
-  var inset = layout.pad ? 1 : 2;
   drawClampedSheetFrame(
     ctx,
     source,
-    frame * layout.cellW + inset,
-    anim.row * layout.cellH + inset,
-    layout.cellW - inset * 2,
-    layout.cellH - inset * 2,
-    -(layout.coreW * scale) * 0.5,
-    -dh,
-    dw,
-    dh,
+    frame * layout.cellW + dest.inset,
+    anim.row * layout.cellH + dest.inset,
+    layout.cellW - dest.inset * 2,
+    layout.cellH - dest.inset * 2,
+    dest.dx,
+    dest.dy,
+    dest.dw,
+    dest.dh,
   );
   ctx.restore();
   return true;
