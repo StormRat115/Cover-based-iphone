@@ -4210,6 +4210,7 @@ test("sprite draws clamp source rects so gun tips never wrap behind the body", a
       facingX: 9,
       facingY: -4,
       scale: 1,
+      weapon: charger.chargerWeapon(),
     }),
     true,
   );

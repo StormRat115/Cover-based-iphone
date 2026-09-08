@@ -596,6 +596,9 @@ export function cleanPackedSheet(source, frameW, frameH) {
         stripWrappedOverflow(c, col * frameW, row * frameH, frameW, frameH, 40);
       }
     }
+    c.naturalWidth = iw;
+    c.naturalHeight = ih;
+    c.complete = true;
     cleanedSheetCache.set(source, c);
     return c;
   } catch (_err) {
@@ -668,6 +671,9 @@ function buildCellFrameCache(source, rowCount, cols, cell) {
         // frame also stops mobile GPU REPEAT from wrapping the barrel.
         var hardened = hardenSheetAlpha(frame, 40) || frame;
         hardened._cellGutter = gutter;
+        hardened.naturalWidth = padded;
+        hardened.naturalHeight = padded;
+        hardened.complete = true;
         frames[row][col] = hardened;
       }
     }
@@ -1375,7 +1381,8 @@ function drawBlendedSheetFrame(
 export function drawEnemyMonster(ctx, actor, options) {
   const sheet = getEnemyMonsterSheet(actor && actor.type),
     source = sheet && sheet.source;
-  if (!source || !source.complete || !source.naturalWidth) return false;
+  if (!source || source.complete === false || !(source.naturalWidth || source.width))
+    return false;
   options = options || {};
   const now = nowMs(),
     state = enemyMonsterState(actor, now),
