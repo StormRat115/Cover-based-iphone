@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260908-124";
+import { loadImage } from "./assets.js?v=20260908-125";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
   "./assets/generated/soldier/player-solid-atlas.png?v=20260906-102";
@@ -554,6 +554,11 @@ function desiredSoldierState(actor) {
   if (actor.vaulting || actor.state === "vault") return "vault";
   if (actor.downed) return "crouchShoot";
   if (actor.reloading || actor.state === "reload") return "reload";
+  if (
+    actor.combatState === "melee" ||
+    (actor.meleeTimer && actor.meleeTimer > 0.12)
+  )
+    return "standShoot";
   if (shooting(actor)) {
     if (lowCover(actor)) return "crouchShoot";
     return "standShoot";
@@ -1018,8 +1023,9 @@ export function drawSoldier(ctx, actor, options) {
     (options.y || 0) + bob + plant.y - vaultLift,
   );
   var solidFriendly = !isEnemy && !!runtimeFriendlyAtlas;
+  var recolor = options.recolorFilter || "";
   ctx.globalCompositeOperation = "source-over";
-  ctx.filter = solidFriendly ? "none" : teamFilter(team);
+  ctx.filter = solidFriendly ? recolor || "none" : teamFilter(team);
   ctx.globalAlpha = solidFriendly ? 1 : options.alpha == null ? 1 : options.alpha;
   if (state === "death") {
     if (isEnemy) {
@@ -1081,7 +1087,7 @@ export function drawSoldier(ctx, actor, options) {
     if (enemyCorpse) baseAlpha *= 0.82;
     if (solidFriendly) {
       ctx.globalAlpha = 1;
-      ctx.filter = "none";
+      ctx.filter = recolor || "none";
       ctx.globalCompositeOperation = "source-over";
       // Nearest-neighbor keeps binary atlas alpha; bilinear smoothing
       // invents milky fringe when the 160px cell is drawn small.

@@ -2390,12 +2390,24 @@ test("squad and Marines take exclusive cover slots instead of standing exposed",
     marineModule.updateMarines(marines, 1 / 60, player, field, [enemy], null, allies);
   }
   const living = allies.concat(marines).filter((unit) => !unit.dead);
-  const claimed = living.filter((unit) => unit.cover);
-  const slotted = living.filter((unit) => slots.occupiesCoverSlot(unit, 80));
-  assert.ok(claimed.length === living.length, "every friendly should claim a slot");
+  const rifleFriendlies = living.filter((unit) => unit.role !== "knight");
+  const claimed = rifleFriendlies.filter((unit) => unit.cover);
+  const slotted = rifleFriendlies.filter((unit) => slots.occupiesCoverSlot(unit, 80));
+  const leo = living.find((unit) => unit.name === "Leo");
   assert.ok(
-    slotted.length >= Math.ceil(living.length * 0.5),
-    "most friendlies should be planted on their slot during a firefight",
+    claimed.length === rifleFriendlies.length,
+    "every non-knight friendly should claim a slot",
+  );
+  assert.ok(
+    !leo ||
+      leo.cover ||
+      leo.combatState === "melee" ||
+      leo.combatState === "seeking",
+    "Leo may leave a slot to close for melee",
+  );
+  assert.ok(
+    slotted.length >= Math.ceil(rifleFriendlies.length * 0.5),
+    "most rifle friendlies should be planted on their slot during a firefight",
   );
 });
 
@@ -2821,4 +2833,122 @@ test("completing a street objective unsticks friendlies and autoplay", async () 
     Math.hypot(livePlayer.tx - dest0.x, livePlayer.ty - dest0.y) > 20 ||
     Math.hypot(livePlayer.x - liveTask.x, livePlayer.y - liveTask.y) > 24;
   assert.ok(moved, "autoplay should resume advancing after the street task ends");
+});
+
+test("Leo is a 200 DEF knight who prefers melee and uses a private sidearm", async () => {
+  const h = createHarness();
+  const stats = await h.importModule(`js/combatStats.js?v=${BUILD}`);
+  const leo = await h.importModule(`js/leoKnight.js?v=${BUILD}`);
+  const alliesModule = await h.importModule(`js/allyCore2.js?v=${BUILD}`);
+  const hud = await h.importModule(`js/squadHud.js?v=${BUILD}`);
+  const ammo = await h.importModule(`js/ammoEconomy.js?v=${BUILD}`);
+
+  assert.equal(stats.CHARACTER_STATS.Leo.defense, 200);
+  assert.ok(stats.CHARACTER_STATS.Leo.defense > stats.CHARACTER_STATS.Rook.defense);
+  assert.equal(leo.LEO_AGGRO.meleeRange, 82);
+  assert.equal(leo.LEO_AGGRO.engageDistance, 520);
+  assert.equal(leo.LEO_ART_STATUS, "temp-recolor");
+
+  const allies = alliesModule.createAllies();
+  const knight = allies.find((a) => a.name === "Leo");
+  assert.ok(knight, "Leo must spawn with the squad");
+  assert.equal(allies.length, 4);
+  assert.equal(knight.defense, 200);
+  assert.equal(knight.role, "knight");
+  assert.equal(knight.weapon.id, "sword");
+  assert.equal(knight.weapon.short, "SWORD");
+  assert.ok(knight.sidearm);
+  assert.equal(knight.sidearm.infinite, true);
+  assert.equal(knight.sidearm.role, "backup");
+  assert.ok(leo.isLeo(knight));
+
+  const playerGun = ammo.SIDEARMS.pistol;
+  assert.equal(playerGun.id, "pistol");
+  const player = {
+    x: 0,
+    y: 200,
+    hp: 100,
+    maxHp: 100,
+    dead: false,
+    downed: false,
+    weaponSlot: "primary",
+    primary: { ammo: 24, magazine: 24, reserve: 168, infinite: false },
+    sidearm: { ammo: 15, magazine: 15, reserve: Infinity, infinite: true, id: "pistol" },
+    weapon: { ammo: 24, magazine: 24, reserve: 168 },
+  };
+  const monster = {
+    x: 700,
+    y: 200,
+    hp: 80,
+    maxHp: 80,
+    defense: 25,
+    dead: false,
+    downed: false,
+    exposed: true,
+    spawnTimer: 0,
+    type: "rifleman",
+  };
+  knight.x = 0;
+  knight.y = 200;
+  knight.cover = null;
+  const startDist = Math.hypot(knight.x - monster.x, knight.y - monster.y);
+  let sidearmShots = 0;
+  for (let i = 0; i < 90; i++) {
+    alliesModule.updateAllies(
+      [knight],
+      1 / 60,
+      player,
+      [],
+      [monster],
+      () => sidearmShots++,
+      "ASSAULT",
+      [],
+    );
+  }
+  assert.ok(
+    Math.hypot(knight.x - monster.x, knight.y - monster.y) < startDist - 40,
+    "Leo should close the gap instead of hanging back",
+  );
+  assert.ok(sidearmShots >= 1, "Leo should fire the sidearm while closing");
+  assert.equal(player.sidearm.ammo, 15, "Leo must not spend the player sidearm");
+  assert.equal(player.primary.reserve, 168, "Leo must not spend player primary reserve");
+
+  Object.assign(monster, { x: knight.x + 40, y: knight.y, hp: 80, dead: false });
+  const hpBefore = monster.hp;
+  knight.meleeTimer = 0;
+  knight.weapon.fireCooldown = 0;
+  alliesModule.updateAllies(
+    [knight],
+    1 / 60,
+    player,
+    [],
+    [monster],
+    () => {},
+    "FOLLOW",
+    [],
+  );
+  assert.equal(knight.combatState, "melee");
+  assert.equal(knight.blocking, true);
+  assert.ok(monster.hp < hpBefore, "sword should deal meaningful melee damage");
+  assert.ok(hpBefore - monster.hp >= 18, "a sword hit should chunk a 25 DEF monster");
+  assert.equal(leo.leoShieldBonus(knight), leo.LEO_AGGRO.shieldDefense);
+  const blocked = leo.incomingDefense(knight);
+  assert.ok(blocked > 200, "shield should raise incoming defense in melee");
+
+  h.window.__battlePlayer = {
+    hp: 100,
+    maxHp: 100,
+    defense: 50,
+    dead: false,
+    downed: false,
+    kills: 0,
+    weapon: { short: "RIFLE" },
+  };
+  h.window.__battleAllies = allies;
+  hud.updateSquadHud();
+  const html = h.nodes.get("squadHealthHud").innerHTML;
+  assert.match(html, /LEO|Leo/);
+  assert.match(html, /DEF 200/);
+  assert.match(readFileSync("js/mainMenu.js", "utf8"), /key: "Leo"/);
+  assert.match(readFileSync("js/mainMenu.js", "utf8"), /TACTICAL KNIGHT/);
 });
