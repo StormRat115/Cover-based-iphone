@@ -2,7 +2,7 @@ import {
   describeOuterSlots,
   livingBlocks,
   slotCountFromBlocks,
-} from "./coverBlocks.js?v=20260907-122";
+} from "./coverBlocks.js?v=20260908-124";
 
 function segmentsOf(cover) {
   if (cover && cover.blocks && cover.blocks.length) {
@@ -172,18 +172,87 @@ export function describeCoverSlots(cover, threat, actor) {
   return slots;
 }
 
+export function reservedCoverOf(actor) {
+  if (!actor) return null;
+  if (actor.cover && !actor.cover.destroyed) return actor.cover;
+  if (actor.coverTarget && !actor.coverTarget.destroyed) return actor.coverTarget;
+  return null;
+}
+
+function livingActor(a, ignore) {
+  return !!(
+    a &&
+    a !== ignore &&
+    !a.dead &&
+    !a.downed &&
+    (a.hp == null || a.hp > 0)
+  );
+}
+
 export function claimedIndexes(cover, actors, ignore) {
   var used = {},
     i,
-    a;
+    a,
+    reserved;
   for (i = 0; i < (actors || []).length; i++) {
     a = actors[i];
-    if (!a || a === ignore || a.dead || a.downed || a.hp <= 0) continue;
-    if (a.cover !== cover) continue;
+    if (!livingActor(a, ignore)) continue;
+    reserved = reservedCoverOf(a);
+    if (reserved !== cover) continue;
     if (!Number.isFinite(a.coverSlotIndex)) continue;
     used[a.coverSlotIndex] = true;
   }
   return used;
+}
+
+export function slotClaimants(cover, index, actors, ignore) {
+  var list = [],
+    i,
+    a;
+  if (!cover || !Number.isFinite(index)) return list;
+  for (i = 0; i < (actors || []).length; i++) {
+    a = actors[i];
+    if (!livingActor(a, ignore)) continue;
+    if (reservedCoverOf(a) !== cover) continue;
+    if (a.coverSlotIndex !== index) continue;
+    list.push(a);
+  }
+  return list;
+}
+
+function slotClaimRank(unit) {
+  if (occupiesCoverSlot(unit, 40)) return 0;
+  if (Number.isFinite(unit.coverSlotClaimTime) && unit.coverSlotClaimTime > 0)
+    return unit.coverSlotClaimTime;
+  if (Number.isFinite(unit.coverAnchorX) && Number.isFinite(unit.coverAnchorY))
+    return (
+      1e6 + Math.hypot(unit.x - unit.coverAnchorX, unit.y - unit.coverAnchorY)
+    );
+  return 1e9;
+}
+
+export function slotOwner(cover, index, actors, ignore) {
+  var list = slotClaimants(cover, index, actors, ignore),
+    best = null,
+    bestRank = Infinity,
+    i,
+    rank;
+  for (i = 0; i < list.length; i++) {
+    rank = slotClaimRank(list[i]);
+    if (rank < bestRank) {
+      bestRank = rank;
+      best = list[i];
+    }
+  }
+  return best;
+}
+
+export function mustYieldCoverSlot(actor, occupants) {
+  var cover = reservedCoverOf(actor),
+    owner;
+  if (!cover || !Number.isFinite(actor.coverSlotIndex)) return false;
+  owner = slotOwner(cover, actor.coverSlotIndex, occupants || [], null);
+  return !!(owner && owner !== actor);
 }
 
 export function claimedCount(cover, actors, ignore) {
@@ -204,6 +273,13 @@ export function firstFreeSlotIndex(cover, actors, ignore) {
     i;
   for (i = 0; i < count; i++) if (!used[i]) return i;
   return -1;
+}
+
+var claimClock = 1;
+
+export function nextCoverSlotClaim() {
+  claimClock += 1;
+  return claimClock;
 }
 
 export function reserveCoverSlot(cover, actor, threat, actors) {

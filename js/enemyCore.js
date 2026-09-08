@@ -2,30 +2,31 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260907-122";
-import { weaponCopy } from "./weapons.js?v=20260907-122";
+} from "./cover.js?v=20260908-124";
+import { weaponCopy } from "./weapons.js?v=20260908-124";
 import {
   moveTowardTarget,
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260907-122";
+  repathIfSlotContested,
+} from "./combatAI.js?v=20260908-124";
 import {
   ENEMY_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260907-122";
-import { AudioBus } from "./audio.js?v=20260907-122";
+} from "./combatStats.js?v=20260908-124";
+import { AudioBus } from "./audio.js?v=20260908-124";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260907-122";
-import { orderDefense } from "./squadDialog.js?v=20260907-122";
-import { assignEnemyCover } from "./enemyCoverAI.js?v=20260907-122";
-import { chargerWeapon } from "./chargerEnemy.js?v=20260907-122";
-import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260907-122";
+} from "./suppression.js?v=20260908-124";
+import { orderDefense } from "./squadDialog.js?v=20260908-124";
+import { assignEnemyCover } from "./enemyCoverAI.js?v=20260908-124";
+import { chargerWeapon } from "./chargerEnemy.js?v=20260908-124";
+import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260908-124";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
@@ -435,6 +436,12 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
         e.repositionCooldown = 0.8;
     }
     if (e.combatState === "seeking") {
+      repathIfSlotContested(e, threat, covers, playerRoster().concat(enemies), {
+        advance: true,
+        minThreat: 50,
+        maxThreat: 2400,
+        maxTravel: 1700,
+      });
       e.exposed = true;
       if (moveTowardTarget(e, dt, 1.08 * PACE)) {
         if (e.cover) enterCovered(e);

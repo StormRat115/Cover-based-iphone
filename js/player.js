@@ -1,36 +1,36 @@
-import { getHitChance } from "./cover.js?v=20260907-122";
+import { getHitChance } from "./cover.js?v=20260908-124";
 import {
   resolveSolidMove,
   updateVault,
   planRoute,
   continueRoute,
-} from "./coverCollision.js?v=20260907-122";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260907-122";
-import { weaponCopy } from "./weapons.js?v=20260907-122";
-import { AudioBus } from "./audio.js?v=20260907-122";
-import { drawSoldier } from "./soldierAssets.js?v=20260907-122";
-import { drawCoverShield } from "./coverSlots.js?v=20260907-122";
+} from "./coverCollision.js?v=20260908-124";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260908-124";
+import { weaponCopy } from "./weapons.js?v=20260908-124";
+import { AudioBus } from "./audio.js?v=20260908-124";
+import { drawSoldier } from "./soldierAssets.js?v=20260908-124";
+import { drawCoverShield, nextCoverSlotClaim } from "./coverSlots.js?v=20260908-124";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260907-122";
+} from "./combatStats.js?v=20260908-124";
 import {
   finishReload,
   canReloadFromReserve,
   isPrimaryDry,
   getSidearm,
   shouldSwapToSidearm,
-} from "./ammoEconomy.js?v=20260907-122";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260907-122";
+} from "./ammoEconomy.js?v=20260908-124";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-124";
 import {
   tickSuppression,
   suppressionAccuracyDelta,
   isHardSuppressed,
-} from "./suppression.js?v=20260907-122";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260907-122";
+} from "./suppression.js?v=20260908-124";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-124";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,
@@ -197,10 +197,21 @@ export function createPlayer() {
     setDestination: function (x, y, cover) {
       if (this.dead || this.downed) return;
       this.keyboardMove = null;
-      this.cover = null;
+      var sameSlot =
+        cover &&
+        this.cover === cover &&
+        this.coverAnchorX === x &&
+        this.coverAnchorY === y;
       this.coverTarget = cover || null;
+      this.cover = cover || null;
       this.coverAnchorX = cover ? x : undefined;
       this.coverAnchorY = cover ? y : undefined;
+      if (cover) {
+        if (!sameSlot || !this.coverSlotClaimTime)
+          this.coverSlotClaimTime = nextCoverSlotClaim();
+      } else {
+        this.coverSlotClaimTime = 0;
+      }
       this.tx = x;
       this.ty = y;
       this.routeGoalX = x;

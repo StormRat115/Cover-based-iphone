@@ -2,9 +2,9 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260907-122";
-import { weaponCopy } from "./weapons.js?v=20260907-122";
-import { AudioBus } from "./audio.js?v=20260907-122";
+} from "./cover.js?v=20260908-124";
+import { weaponCopy } from "./weapons.js?v=20260908-124";
+import { AudioBus } from "./audio.js?v=20260908-124";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -12,32 +12,33 @@ import {
   faceThreat,
   coverStillUseful,
   peekPoint,
-} from "./combatAI.js?v=20260907-122";
+  repathIfSlotContested,
+} from "./combatAI.js?v=20260908-124";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260907-122";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260907-122";
+} from "./combatStats.js?v=20260908-124";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260908-124";
 import {
   isCoverFull,
   occupancyPenalty,
   occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260907-122";
+} from "./coverSlots.js?v=20260908-124";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260907-122";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260907-122";
+} from "./suppression.js?v=20260908-124";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-124";
 import {
   currentPushGoal,
   pushGoalKey,
-} from "./streetObjectives.js?v=20260907-122";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260907-122";
+} from "./streetObjectives.js?v=20260908-124";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-124";
 export const MARINE_AGGRO = {
   engageRangeFactor: 0.4,
   engageRangeCap: 700,
@@ -352,7 +353,18 @@ function advanceToMission(a, mission, covers, friendlies, dt, threats) {
     return true;
   }
   if (a.cover && a.combatState === "seeking") {
+    repathIfSlotContested(a, primaryThreat, covers, friendlies, {
+      advance: true,
+      advancePoint: goal,
+      minThreat: 10,
+      maxThreat: 4000,
+      maxTravel: 1600,
+    });
     a.exposed = true;
+    if (!a.cover) {
+      moveTowardTarget(a, dt, a.aggressiveAdvance ? 1.16 : 1.05);
+      return true;
+    }
     if (moveTowardTarget(a, dt, a.aggressiveAdvance ? 1.12 : 1)) {
       a.x = a.coverAnchorX;
       a.y = a.coverAnchorY;
@@ -442,6 +454,7 @@ export function updateAllies(
   // The player owns cover slots too. Excluding them let AI friendlies reserve
   // the same slot and physically pin the player against the barricade.
   if (player && friendlyTeam.indexOf(player) < 0) friendlyTeam.push(player);
+  var slotCrowd = friendlyTeam.concat(enemies || []);
   allies.forEach(function (a) {
     a.hit = Math.max(0, a.hit - dt);
     a.muzzle = Math.max(0, a.muzzle - dt);
@@ -520,7 +533,7 @@ export function updateAllies(
     else a.combatTarget = e;
     if (a.canRecover !== false && shouldRecover(a)) {
       if (e) faceThreat(a, e);
-      recoverInCover(a, e, covers, friendlyTeam, dt);
+      recoverInCover(a, e, covers, slotCrowd, dt);
       return;
     }
     var reviveSafe =
@@ -540,7 +553,7 @@ export function updateAllies(
         a,
         mission,
         covers,
-        friendlyTeam,
+        slotCrowd,
         dt,
         objectivePush ? enemies : [],
       );
@@ -593,6 +606,24 @@ export function updateAllies(
     }
     var useful = inSlot && coverStillUseful(a, e, covers, 80, 2000);
     var headingToSlot = !!(a.cover && !inSlot && Number.isFinite(a.coverAnchorX));
+    if (headingToSlot || (a.cover && Number.isFinite(a.coverSlotIndex) && !inSlot)) {
+      repathIfSlotContested(a, e, availableCovers, slotCrowd, {
+        slotPriority: true,
+        allowUnprotected: true,
+        advance: aggressiveAdvance,
+        desiredRange: aggressiveAdvance
+          ? tun
+            ? Math.min(a.weapon.range * tun.desiredRangeFactor, tun.engageRangeCap)
+            : engagementRange
+          : Math.min(a.weapon.range * 0.68, 1050),
+        threats: enemies.filter(activeEnemy),
+        minThreat: 50,
+        maxThreat: 2400,
+        maxTravel: 1500,
+      });
+      inSlot = occupiesCoverSlot(a, 58);
+      headingToSlot = !!(a.cover && !inSlot && Number.isFinite(a.coverAnchorX));
+    }
     var frontY = a.y;
     if (player && !player.dead && !player.downed) frontY = Math.min(frontY, player.y);
     friendlyTeam.forEach(function (f) {
@@ -614,7 +645,7 @@ export function updateAllies(
         (!useful && inSlot && squadMode !== "HOLD")) &&
       a.repositionCooldown <= 0
     ) {
-      var choice = pickTacticalCover(a, e, availableCovers, friendlyTeam, {
+      var choice = pickTacticalCover(a, e, availableCovers, slotCrowd, {
         maxTravel: 1500,
         minThreat: 50,
         maxThreat: 2400,
@@ -635,7 +666,7 @@ export function updateAllies(
         advance: aggressiveAdvance,
         threats: enemies.filter(activeEnemy),
       });
-      if (choice && !claimed(choice, a, friendlyTeam)) {
+      if (choice && !claimed(choice, a, slotCrowd)) {
         applyCoverChoice(a, choice);
         a.combatState = "seeking";
         a.repositionCooldown = aggressiveAdvance

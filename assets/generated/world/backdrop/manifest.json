@@ -111,6 +111,138 @@
       "category": "alley",
       "transparent": true,
       "notes": "Alley mouth for top sidewalk backdrop; black keyed; max width ~280"
+    },
+    {
+      "file": "facade-iso-flow-far.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-flow-far.webp",
+      "width": 1280,
+      "height": 1020,
+      "bytes": 259308,
+      "category": "facade-iso-flow",
+      "transparent": true,
+      "shear": 0.5,
+      "notes": "shear +0.5 from strip-a; far/top-left sidewalk"
+    },
+    {
+      "file": "facade-iso-flow-near.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-flow-near.webp",
+      "width": 1280,
+      "height": 1012,
+      "bytes": 263534,
+      "category": "facade-iso-flow",
+      "transparent": true,
+      "shear": -0.5,
+      "notes": "shear -0.5 from strip-a; near/bottom-right sidewalk"
+    },
+    {
+      "file": "facade-iso-flow-far-b.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-flow-far-b.webp",
+      "width": 1280,
+      "height": 1104,
+      "bytes": 272682,
+      "category": "facade-iso-flow",
+      "transparent": true,
+      "shear": 0.5,
+      "notes": "shear +0.5 from strip-b; far variant"
+    },
+    {
+      "file": "facade-iso-flow-near-b.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-flow-near-b.webp",
+      "width": 1280,
+      "height": 834,
+      "bytes": 276510,
+      "category": "facade-iso-flow",
+      "transparent": true,
+      "shear": -0.5,
+      "notes": "shear -0.5 from strip-b; near variant"
+    },
+    {
+      "file": "facade-iso-bldg-01.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-01.webp",
+      "width": 267,
+      "height": 515,
+      "bytes": 54460,
+      "category": "facade-iso-flow",
+      "transparent": true,
+      "shear": 0.5,
+      "notes": "shear +0.5 module from facade-bldg-01.webp"
+    },
+    {
+      "file": "facade-iso-bldg-02.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-02.webp",
+      "width": 256,
+      "height": 560,
+      "bytes": 51724,
+      "category": "facade-iso-flow",
+      "transparent": true,
+      "shear": 0.5,
+      "notes": "shear +0.5 module from facade-bldg-02.webp"
+    },
+    {
+      "file": "facade-iso-bldg-03.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-03.webp",
+      "width": 324,
+      "height": 612,
+      "bytes": 63866,
+      "category": "facade-iso-flow",
+      "transparent": true,
+      "shear": 0.5,
+      "notes": "shear +0.5 module from facade-bldg-03.webp"
+    },
+    {
+      "file": "facade-iso-bldg-04.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-04.webp",
+      "width": 183,
+      "height": 531,
+      "bytes": 35242,
+      "category": "facade-iso-flow",
+      "transparent": true,
+      "shear": 0.5,
+      "notes": "shear +0.5 module from facade-bldg-04.webp"
+    },
+    {
+      "file": "facade-iso-bldg-05.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-05.webp",
+      "width": 250,
+      "height": 564,
+      "bytes": 49916,
+      "category": "facade-iso-flow",
+      "transparent": true,
+      "shear": 0.5,
+      "notes": "shear +0.5 module from facade-bldg-05.webp"
+    },
+    {
+      "file": "facade-iso-bldg-01-mirror.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-01-mirror.webp",
+      "width": 267,
+      "height": 567,
+      "bytes": 55540,
+      "category": "facade-iso-flow",
+      "transparent": true,
+      "shear": -0.5,
+      "notes": "shear -0.5 near-side mirror module from facade-bldg-01.webp"
+    },
+    {
+      "file": "facade-iso-bldg-02-mirror.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-02-mirror.webp",
+      "width": 256,
+      "height": 575,
+      "bytes": 52614,
+      "category": "facade-iso-flow",
+      "transparent": true,
+      "shear": -0.5,
+      "notes": "shear -0.5 near-side mirror module from facade-bldg-02.webp"
+    },
+    {
+      "file": "facade-iso-bldg-03-mirror.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-03-mirror.webp",
+      "width": 324,
+      "height": 599,
+      "bytes": 65012,
+      "category": "facade-iso-flow",
+      "transparent": true,
+      "shear": -0.5,
+      "notes": "shear -0.5 near-side mirror module from facade-bldg-03.webp"
     }
   ],
   "door": {

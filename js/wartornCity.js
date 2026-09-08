@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260907-122";
+import { loadImage } from "./assets.js?v=20260908-124";
 
 var ROAD = 980;
 var WALK = 260;
@@ -21,7 +21,16 @@ function plate(file) {
 function backdrop(file) {
   var image = new Image();
   image.decoding = "async";
-  image.src = "./assets/generated/world/backdrop/" + file + "?v=20260907-119";
+  image.src = "./assets/generated/world/backdrop/" + file + "?v=20260908-124";
+  return image;
+}
+
+function markIso(image, leftBottomY, naturalH, shear) {
+  image.__isoEdge = {
+    leftBottomY: leftBottomY,
+    h: naturalH,
+    shear: shear,
+  };
   return image;
 }
 
@@ -45,6 +54,53 @@ export const facadeBldg02 = backdrop("facade-bldg-02.webp");
 export const facadeBldg03 = backdrop("facade-bldg-03.webp");
 export const facadeBldg04 = backdrop("facade-bldg-04.webp");
 export const facadeBldg05 = backdrop("facade-bldg-05.webp");
+export const facadeIsoFlowFar = markIso(
+  backdrop("facade-iso-flow-far.webp"),
+  379,
+  1020,
+  0.5,
+);
+export const facadeIsoFlowFarB = markIso(
+  backdrop("facade-iso-flow-far-b.webp"),
+  329,
+  1104,
+  0.5,
+);
+export const facadeIsoFlowNear = markIso(
+  backdrop("facade-iso-flow-near.webp"),
+  1008,
+  1012,
+  -0.5,
+);
+export const facadeIsoFlowNearB = markIso(
+  backdrop("facade-iso-flow-near-b.webp"),
+  828,
+  834,
+  -0.5,
+);
+export const facadeIsoBldg01 = markIso(backdrop("facade-iso-bldg-01.webp"), 379, 515, 0.5);
+export const facadeIsoBldg02 = markIso(backdrop("facade-iso-bldg-02.webp"), 432, 560, 0.5);
+export const facadeIsoBldg03 = markIso(backdrop("facade-iso-bldg-03.webp"), 444, 612, 0.5);
+export const facadeIsoBldg04 = markIso(backdrop("facade-iso-bldg-04.webp"), 439, 531, 0.5);
+export const facadeIsoBldg05 = markIso(backdrop("facade-iso-bldg-05.webp"), 439, 564, 0.5);
+export const facadeIsoBldg01Mirror = markIso(
+  backdrop("facade-iso-bldg-01-mirror.webp"),
+  563,
+  567,
+  -0.5,
+);
+export const facadeIsoBldg02Mirror = markIso(
+  backdrop("facade-iso-bldg-02-mirror.webp"),
+  573,
+  575,
+  -0.5,
+);
+export const facadeIsoBldg03Mirror = markIso(
+  backdrop("facade-iso-bldg-03-mirror.webp"),
+  594,
+  599,
+  -0.5,
+);
 export const alleyMouth = backdrop("alley-mouth.webp");
 export const doorExplodeSheet = backdrop("door-explode-sheet.webp");
 export const doorBlownIdle = backdrop("door-blown-idle.webp");
@@ -107,17 +163,21 @@ function buildTopFacades() {
 function buildSideFacades() {
   var kinds = ["storefront", "ruin", "apartment", "office", "graffiti"];
   var items = [];
-  for (var i = 0; i < 14; i++) {
+  var i = 0;
+  var y = 820;
+  while (y > -6400) {
     items.push({
       id: "side-" + i,
-      x: ROAD + WALK + 80 + hash01(i * 7) * 90,
-      y: 820 - i * 560,
+      x: ROAD + WALK + 36 + hash01(i * 7) * 48,
+      y: y,
       kind: kinds[i % kinds.length],
-      s: 0.42 + hash01(i * 5) * 0.1,
+      s: 0.7 + hash01(i * 5) * 0.12,
       flip: i % 2 === 0,
       door: false,
       side: "right",
     });
+    y -= 210 + hash01(i * 13) * 40;
+    i++;
   }
   return items;
 }
@@ -303,12 +363,30 @@ function punched(image) {
   return punchDarkPlate(image);
 }
 
-function spriteForBuilding(kind) {
-  if (kind === "bldg1") return facadeBldg01;
-  if (kind === "bldg2") return facadeBldg02;
-  if (kind === "bldg3") return facadeBldg03;
-  if (kind === "bldg4") return facadeBldg04;
-  if (kind === "bldg5") return facadeBldg05;
+function spriteForBuilding(kind, side) {
+  if (side === "right") {
+    if (kind === "storefront" || kind === "office")
+      return ready(facadeIsoBldg01Mirror)
+        ? facadeIsoBldg01Mirror
+        : punched(facadeStorefront);
+    if (kind === "ruin" || kind === "graffiti")
+      return ready(facadeIsoBldg02Mirror)
+        ? facadeIsoBldg02Mirror
+        : kind === "graffiti"
+          ? punched(facadeGraffiti)
+          : ready(wartornRuinCut)
+            ? wartornRuinCut
+            : punched(wartornRuin);
+    if (kind === "apartment")
+      return ready(facadeIsoBldg03Mirror)
+        ? facadeIsoBldg03Mirror
+        : punched(facadeApartment);
+  }
+  if (kind === "bldg1") return ready(facadeIsoBldg01) ? facadeIsoBldg01 : facadeBldg01;
+  if (kind === "bldg2") return ready(facadeIsoBldg02) ? facadeIsoBldg02 : facadeBldg02;
+  if (kind === "bldg3") return ready(facadeIsoBldg03) ? facadeIsoBldg03 : facadeBldg03;
+  if (kind === "bldg4") return ready(facadeIsoBldg04) ? facadeIsoBldg04 : facadeBldg04;
+  if (kind === "bldg5") return ready(facadeIsoBldg05) ? facadeIsoBldg05 : facadeBldg05;
   if (kind === "alley") return ready(alleyMouth) ? alleyMouth : punched(facadeAlley);
   if (kind === "apartment") return punched(facadeApartment);
   if (kind === "storefront") return punched(facadeStorefront);
@@ -369,7 +447,16 @@ function buildingSize(kind, s) {
   return { dw: 148 * s, dh: 172 * s };
 }
 
-function stamp(ctx, image, x, y, dw, dh, alpha, flip) {
+export function streetIsoShear(iso) {
+  if (!iso) return -0.5;
+  var a = iso(0, 0);
+  var b = iso(0, 200);
+  var dx = b && a ? b[0] - a[0] : 0;
+  if (!dx) return -0.5;
+  return (b[1] - a[1]) / dx;
+}
+
+function stamp(ctx, image, x, y, dw, dh, alpha, flip, shear) {
   var drawable =
     ready(image) ||
     (image && image.width > 0 && image.height > 0);
@@ -378,11 +465,27 @@ function stamp(ctx, image, x, y, dw, dh, alpha, flip) {
   ctx.globalAlpha = alpha == null ? 1 : alpha;
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-  if (flip) {
-    ctx.translate(x, y);
-    ctx.scale(-1, 1);
-    ctx.drawImage(image, -dw / 2, -dh, dw, dh);
-  } else ctx.drawImage(image, x - dw / 2, y - dh, dw, dh);
+  ctx.translate(x, y);
+  if (shear) ctx.transform(1, shear, 0, 1, 0, 0);
+  if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(image, -dw / 2, -dh, dw, dh);
+  ctx.restore();
+  return true;
+}
+
+function stampIsoFlow(ctx, image, x, y, dw, dh, alpha) {
+  var edge = image && image.__isoEdge;
+  var nh = (image && (image.naturalHeight || image.height)) || dh;
+  var frac = edge ? edge.leftBottomY / edge.h : 1;
+  var drawable =
+    ready(image) ||
+    (image && image.width > 0 && image.height > 0);
+  if (!drawable || dw < 8 || dh < 8) return false;
+  ctx.save();
+  ctx.globalAlpha = alpha == null ? 1 : alpha;
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(image, x, y - frac * dh, dw, dh);
   ctx.restore();
   return true;
 }
@@ -591,6 +694,18 @@ export function preloadWartornAssets(onProgress) {
     loadImage(facadeBldg03),
     loadImage(facadeBldg04),
     loadImage(facadeBldg05),
+    loadImage(facadeIsoFlowFar),
+    loadImage(facadeIsoFlowFarB),
+    loadImage(facadeIsoFlowNear),
+    loadImage(facadeIsoFlowNearB),
+    loadImage(facadeIsoBldg01),
+    loadImage(facadeIsoBldg02),
+    loadImage(facadeIsoBldg03),
+    loadImage(facadeIsoBldg04),
+    loadImage(facadeIsoBldg05),
+    loadImage(facadeIsoBldg01Mirror),
+    loadImage(facadeIsoBldg02Mirror),
+    loadImage(facadeIsoBldg03Mirror),
     loadImage(alleyMouth),
     loadImage(doorExplodeSheet),
     loadImage(doorBlownIdle),
@@ -686,66 +801,64 @@ function sidewalkBandY(iso, world, W, H) {
   return Math.max(160, Math.min((H || 844) * 0.48, band + 8));
 }
 
-function drawOfficialStripRow(ctx, width, band, scroll) {
+function drawOfficialStripRow(ctx, iso, world, width, band) {
   var tiles = [];
   var i;
-  var x;
   var img;
   var h;
   var w;
-  if (ready(facadeStripA)) tiles.push(facadeStripA);
-  if (ready(facadeStripB)) tiles.push(facadeStripB);
-  if (!tiles.length) return;
+  var q;
+  var y;
+  var shear;
+  var along;
+  var bounds;
+  var preSheared = false;
+  if (ready(facadeIsoFlowFar)) tiles.push(facadeIsoFlowFar);
+  if (ready(facadeIsoFlowFarB)) tiles.push(facadeIsoFlowFarB);
+  if (tiles.length) preSheared = true;
+  if (!tiles.length && ready(facadeStripA)) tiles.push(facadeStripA);
+  if (!tiles.length && ready(facadeStripB)) tiles.push(facadeStripB);
+  if (!tiles.length || !iso) return;
+  shear = streetIsoShear(iso);
+  bounds = worldBounds(world);
+  along = Math.hypot(
+    (world && world.scaleX) || 0.25,
+    (world && world.scaleY) || 0.125,
+  );
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   i = 0;
-  x = -((scroll * 0.42) % 80) - 48;
-  while (x < width + 120) {
+  y = bounds.maxY + 40;
+  h = Math.max(240, band * 0.95);
+  while (y > bounds.minY - 80) {
     img = tiles[i % tiles.length];
-    h = band + (i % 2 ? 22 : 6);
     w =
       img.naturalWidth && img.naturalHeight
         ? img.naturalWidth * (h / img.naturalHeight)
-        : Math.max(width * 1.15, 480);
-    if (w < 160) w = 480;
-    ctx.drawImage(img, x, band - h + 6, w, h);
-    x += w * 0.86;
+        : Math.max(width * 0.85, 360);
+    if (w < 200) w = 360;
+    q = iso(TOP_EDGE - 12, y);
+    if (preSheared) stampIsoFlow(ctx, img, q[0] - w * 0.08, q[1] + 6, w, h, 0.96);
+    else stamp(ctx, img, q[0], q[1] + 6, w, h, 0.96, false, shear);
+    y -= (w * 0.5) / (along || 0.28);
     i++;
   }
   if (ready(alleyMouth)) {
-    for (i = 0; i < Math.ceil(width / 320) + 1; i++) {
-      if (hash01(i + 17) < 0.4) continue;
-      stamp(
-        ctx,
-        alleyMouth,
-        i * 320 - scroll * 0.18 + 90,
-        band + 2,
-        110,
-        96,
-        0.94,
-        hash01(i + 3) > 0.5,
-      );
+    for (i = 0; i < SIDE_DRESSING.length; i++) {
+      if (SIDE_DRESSING[i].kind !== "alley") continue;
+      q = iso(TOP_EDGE + 8, SIDE_DRESSING[i].y);
+      stamp(ctx, alleyMouth, q[0], q[1] + 4, 118, 102, 0.94, SIDE_DRESSING[i].flip, shear);
     }
   }
   ctx.restore();
 }
 
 function drawFarBackdrop(ctx, iso, world, W, H) {
-  var origin;
-  var scroll;
-  var fade;
   var band;
   var width;
   width = W || 390;
   band = sidewalkBandY(iso, world, width, H);
-  origin = iso
-    ? iso(
-        world && world.cameraX != null ? world.cameraX : 0,
-        world && world.cameraY != null ? world.cameraY : 0,
-      )
-    : [0, 0];
-  scroll = ((origin[0] % 260) + 260) % 260;
   ctx.save();
   if (iso && world) clipAboveSidewalk(ctx, iso, world);
   if (ready(wartornSkyline)) {
@@ -754,16 +867,7 @@ function drawFarBackdrop(ctx, iso, world, W, H) {
     ctx.drawImage(wartornSkyline, -8, -10, width + 16, band + 8);
     ctx.restore();
   }
-  drawOfficialStripRow(ctx, width, band, scroll);
-  if (ctx.createLinearGradient) {
-    fade = ctx.createLinearGradient(0, band - 24, 0, band + 12);
-    if (fade && fade.addColorStop) {
-      fade.addColorStop(0, "rgba(36,32,28,0)");
-      fade.addColorStop(1, "rgba(36,32,28,0.16)");
-      ctx.fillStyle = fade;
-      ctx.fillRect(0, band - 24, width, 36);
-    }
-  }
+  drawOfficialStripRow(ctx, iso, world, width, band);
   ctx.restore();
 }
 
@@ -875,18 +979,87 @@ function drawEdgeAccents(ctx, iso, world, onScreen) {
   }
 }
 
+function streetAlong(world) {
+  return Math.hypot((world && world.scaleX) || 0.25, (world && world.scaleY) || 0.125) || 0.28;
+}
+
+function facadeStripTiles(side) {
+  var tiles = [];
+  if (side < 0) {
+    if (ready(facadeIsoFlowFar)) tiles.push(facadeIsoFlowFar);
+    if (ready(facadeIsoFlowFarB)) tiles.push(facadeIsoFlowFarB);
+  } else {
+    if (ready(facadeIsoFlowNear)) tiles.push(facadeIsoFlowNear);
+    if (ready(facadeIsoFlowNearB)) tiles.push(facadeIsoFlowNearB);
+  }
+  if (!tiles.length && ready(facadeStripA)) tiles.push(facadeStripA);
+  if (!tiles.length && ready(facadeStripB)) tiles.push(facadeStripB);
+  return tiles;
+}
+
+function drawIsoCurbWall(ctx, iso, world, side) {
+  var tiles = facadeStripTiles(side);
+  var shear;
+  var bounds;
+  var curbX;
+  var y;
+  var i;
+  var img;
+  var h;
+  var w;
+  var q;
+  var along;
+  var preSheared;
+  if (!tiles.length || !iso || !world) return;
+  shear = streetIsoShear(iso);
+  bounds = worldBounds(world);
+  curbX = side < 0 ? -ROAD - 8 : ROAD + 8;
+  along = streetAlong(world);
+  h = 200;
+  preSheared = !!(tiles[0] && tiles[0].__isoEdge);
+  ctx.save();
+  clipOffStreet(ctx, iso, world, side);
+  i = 0;
+  y = bounds.maxY + 60;
+  while (y > bounds.minY - 80) {
+    img = tiles[i % tiles.length];
+    w =
+      img.naturalWidth && img.naturalHeight
+        ? img.naturalWidth * (h / img.naturalHeight)
+        : 380;
+    if (w < 220) w = 380;
+    q = iso(curbX, y);
+    if (preSheared) stampIsoFlow(ctx, img, q[0] - (side < 0 ? 8 : w * 0.12), q[1] + 2, w, h, 0.97);
+    else stamp(ctx, img, q[0], q[1] + 2, w, h, 0.97, side > 0, shear);
+    y -= (w * 0.46) / along;
+    i++;
+  }
+  ctx.restore();
+}
+
 function drawSideBuildings(ctx, iso, world, onScreen) {
-  var i, item, q, img, size, outward;
+  var i, item, q, img, size, outward, shear;
+  shear = streetIsoShear(iso);
   for (i = 0; i < SIDE_DRESSING.length; i++) {
     item = SIDE_DRESSING[i];
     if (onScreen && !onScreen(item.x, item.y, 360)) continue;
     ctx.save();
     clipOffStreet(ctx, iso, world, item.x < 0 ? -1 : 1);
     q = iso(item.x, item.y);
-    img = spriteForBuilding(item.kind);
+    img = spriteForBuilding(item.kind, item.side);
     size = buildingSize(item.kind, item.s);
     outward = item.x < 0 ? -size.dw * 0.08 : size.dw * 0.22;
-    if (
+    if (img && img.__isoEdge) {
+      stampIsoFlow(
+        ctx,
+        img,
+        q[0] + outward - size.dw * 0.35,
+        q[1] + 10,
+        size.dw,
+        size.dh,
+        item.side === "top" ? 0.98 : 0.86,
+      );
+    } else if (
       !stamp(
         ctx,
         img,
@@ -896,9 +1069,13 @@ function drawSideBuildings(ctx, iso, world, onScreen) {
         size.dh,
         item.side === "top" ? 0.98 : 0.8,
         item.flip,
+        shear,
       )
-    )
-      fallbackRuin(ctx, q[0] + outward, q[1], size.dw, size.dh);
+    ) {
+      ctx.translate(q[0] + outward, q[1]);
+      ctx.transform(1, shear, 0, 1, 0, 0);
+      fallbackRuin(ctx, 0, 0, size.dw, size.dh);
+    }
     ctx.restore();
   }
 }
@@ -909,6 +1086,8 @@ export function drawWartornDressing(ctx, iso, world, W, H, onScreen) {
   drawFarBackdrop(ctx, iso, world, W, H);
   drawOrganicPatches(ctx, iso, world, onScreen);
   drawStreetScenes(ctx, iso, world, onScreen);
+  drawIsoCurbWall(ctx, iso, world, -1);
+  drawIsoCurbWall(ctx, iso, world, 1);
   drawSideBuildings(ctx, iso, world, onScreen);
   drawEdgeAccents(ctx, iso, world, onScreen);
   for (i = 0; i < WRECKS.length; i++) {

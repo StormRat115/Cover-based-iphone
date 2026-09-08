@@ -3,13 +3,13 @@ import {
   applyCoverChoice,
   coverProtects,
   peekPoint,
-} from "./combatAI.js?v=20260907-122";
-import { seeksCover } from "./enemyStance.js?v=20260907-122";
+} from "./combatAI.js?v=20260908-124";
+import { seeksCover } from "./enemyStance.js?v=20260908-124";
 import {
   isCoverFull,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260907-122";
+} from "./coverSlots.js?v=20260908-124";
 
 function living(list) {
   return (list || []).filter(function (a) {

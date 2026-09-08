@@ -1,22 +1,26 @@
-import { isLineBlocked } from "./cover.js?v=20260907-122";
+import { isLineBlocked } from "./cover.js?v=20260908-124";
 import {
   resolveSolidMove,
   updateVault,
   findDetour,
   firstCoverOnSegment,
   ignoreCoverFor,
-} from "./coverCollision.js?v=20260907-122";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260907-122";
+} from "./coverCollision.js?v=20260908-124";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260908-124";
 import {
   coverSlotCount,
   isCoverFull,
   occupancyPenalty,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260907-122";
+  nearestFreeSlot,
+  reservedCoverOf,
+  mustYieldCoverSlot,
+  nextCoverSlotClaim,
+} from "./coverSlots.js?v=20260908-124";
 import {
   suppressionPeekScale,
   suppressionMoveScale,
-} from "./suppression.js?v=20260907-122";
+} from "./suppression.js?v=20260908-124";
 function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
@@ -24,7 +28,11 @@ function clamp(v, a, b) {
   return Math.max(a, Math.min(b, v));
 }
 function candidateSlot(cover, actor, threat, actors) {
-  return reserveCoverSlot(cover, actor, threat, actors || []);
+  var point = actor || { x: cover.x, y: cover.y };
+  return (
+    nearestFreeSlot(cover, point, threat, actors || [], actor) ||
+    reserveCoverSlot(cover, actor, threat, actors || [])
+  );
 }
 function flankValue(actor, threat, slot) {
   var ax = actor.x - threat.x,
@@ -128,13 +136,78 @@ export function applyCoverChoice(actor, choice) {
   if (actor.cover && actor.cover !== choice.cover)
     actor.lastCoverId = actor.cover.id || null;
   actor.cover = choice.cover;
+  actor.coverTarget = choice.cover;
   actor.coverSlotIndex = choice.slot.index;
   actor.coverAnchorX = choice.slot.x;
   actor.coverAnchorY = choice.slot.y;
   actor.targetX = choice.slot.x;
   actor.targetY = choice.slot.y;
+  actor.coverSlotClaimTime = nextCoverSlotClaim();
   actor.exposed = false;
   actor.suppressionTimer = 0;
+  return true;
+}
+
+function abandonContestedSlot(actor, threat, options) {
+  actor.cover = null;
+  actor.coverTarget = null;
+  actor.coverSlotIndex = undefined;
+  actor.coverAnchorX = undefined;
+  actor.coverAnchorY = undefined;
+  actor.coverSlotClaimTime = 0;
+  actor.combatState = "seeking";
+  actor.exposed = true;
+  if (options && options.advancePoint) {
+    actor.targetX = options.advancePoint.x;
+    actor.targetY = options.advancePoint.y;
+    return;
+  }
+  if (threat) {
+    var dx = threat.x - actor.x,
+      dy = threat.y - actor.y,
+      d = Math.hypot(dx, dy) || 1;
+    actor.targetX = actor.x + (dx / d) * 180;
+    actor.targetY = actor.y + (dy / d) * 180;
+    return;
+  }
+  actor.targetX = actor.x;
+  actor.targetY = actor.y;
+}
+
+export function repathIfSlotContested(actor, threat, covers, occupants, options) {
+  var choice,
+    previous,
+    prevIndex;
+  options = options || {};
+  if (!actor || !mustYieldCoverSlot(actor, occupants || [])) return false;
+  previous = reservedCoverOf(actor);
+  prevIndex = actor.coverSlotIndex;
+  abandonContestedSlot(actor, threat, options);
+  choice = pickTacticalCover(actor, threat, covers || [], occupants || [], {
+    slotPriority: true,
+    allowUnprotected: true,
+    maxTravel: options.maxTravel || 1600,
+    minThreat: options.minThreat == null ? 50 : options.minThreat,
+    maxThreat: options.maxThreat || 2400,
+    desiredRange: options.desiredRange,
+    advance: !!options.advance,
+    threats: options.threats,
+    forceNew: false,
+  });
+  if (
+    choice &&
+    previous &&
+    choice.cover === previous &&
+    choice.slot &&
+    choice.slot.index === prevIndex
+  )
+    choice = null;
+  if (choice) {
+    applyCoverChoice(actor, choice);
+    actor.combatState = "seeking";
+    actor.exposed = true;
+    return true;
+  }
   return true;
 }
 export function moveTowardTarget(actor, dt, speedScale, covers) {

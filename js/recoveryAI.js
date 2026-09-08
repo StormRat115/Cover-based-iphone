@@ -3,7 +3,8 @@ import {
   applyCoverChoice,
   moveTowardTarget,
   coverStillUseful,
-} from "./combatAI.js?v=20260907-122";
+  repathIfSlotContested,
+} from "./combatAI.js?v=20260908-124";
 
 export function shouldRecover(actor) {
   if (!actor || actor.dead || actor.downed) return false;
@@ -49,6 +50,15 @@ export function recoverInCover(actor, threat, covers, friendlies, dt) {
       actor.combatState = "seeking";
       actor.recoveryCoverChosen = true;
     }
+  }
+  if (actor.cover) {
+    repathIfSlotContested(actor, threat, covers, friendlies || [], {
+      maxTravel: 850,
+      desiredRange: Math.min(
+        ((actor.weapon && actor.weapon.range) || 1200) * 0.82,
+        1350,
+      ),
+    });
   }
   if (actor.cover) {
     actor.exposed = false;
