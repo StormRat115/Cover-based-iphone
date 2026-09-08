@@ -1,39 +1,39 @@
-import { getHitChance } from "./cover.js?v=20260908-128";
+import { getHitChance } from "./cover.js?v=20260908-129";
 import {
   resolveSolidMove,
   updateVault,
   planRoute,
   continueRoute,
-} from "./coverCollision.js?v=20260908-128";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260908-128";
-import { weaponCopy } from "./weapons.js?v=20260908-128";
-import { knifeWeapon, swingMelee, tickMeleeTimer, ensureMeleeWeapon } from "./melee.js?v=20260908-128";
-import { canRegen, drawCombatMarks, updateEngagedFight } from "./engaged.js?v=20260908-128";
-import { hasPerfectHit } from "./squadAbilities.js?v=20260908-128";
-import { AudioBus } from "./audio.js?v=20260908-128";
-import { drawSoldier } from "./soldierAssets.js?v=20260908-128";
-import { drawCoverShield, nextCoverSlotClaim } from "./coverSlots.js?v=20260908-128";
+} from "./coverCollision.js?v=20260908-129";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260908-129";
+import { weaponCopy } from "./weapons.js?v=20260908-129";
+import { knifeWeapon, swingMelee, tickMeleeTimer, ensureMeleeWeapon } from "./melee.js?v=20260908-129";
+import { canRegen, drawCombatMarks, updateEngagedFight } from "./engaged.js?v=20260908-129";
+import { hasPerfectHit } from "./squadAbilities.js?v=20260908-129";
+import { AudioBus } from "./audio.js?v=20260908-129";
+import { drawSoldier } from "./soldierAssets.js?v=20260908-129";
+import { drawCoverShield, nextCoverSlotClaim } from "./coverSlots.js?v=20260908-129";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-128";
+} from "./combatStats.js?v=20260908-129";
 import {
   finishReload,
   canReloadFromReserve,
   isPrimaryDry,
   getSidearm,
   shouldSwapToSidearm,
-} from "./ammoEconomy.js?v=20260908-128";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-128";
+} from "./ammoEconomy.js?v=20260908-129";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-129";
 import {
   tickSuppression,
   suppressionAccuracyDelta,
   isHardSuppressed,
-} from "./suppression.js?v=20260908-128";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-128";
+} from "./suppression.js?v=20260908-129";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-129";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,
@@ -551,6 +551,9 @@ export function createPlayer() {
   p.weapon = p.primary;
   return p;
 }
+// Player street sprite only. Was 0.31; ~11% smaller so the operator reads
+// slightly smaller than squad (0.30) / marines (0.29). Atlas art unchanged.
+export const PLAYER_DRAW_SCALE = 0.275;
 export function drawPlayer(ctx, p, iso) {
   var q = iso(p.x, p.y);
   ctx.save();
@@ -565,7 +568,7 @@ export function drawPlayer(ctx, p, iso) {
     x: 0,
     y: 0,
     team: "player",
-    scale: 0.31,
+    scale: PLAYER_DRAW_SCALE,
     alpha: p.dead ? 0.94 : p.downed ? 0.74 : 1,
   });
   drawCoverShield(ctx, p, -56);

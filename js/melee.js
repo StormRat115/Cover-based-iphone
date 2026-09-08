@@ -2,8 +2,8 @@ import {
   mitigateDamage,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-128";
-import { incomingDefense } from "./leoKit.js?v=20260908-128";
+} from "./combatStats.js?v=20260908-129";
+import { incomingDefense } from "./leoKit.js?v=20260908-129";
 
 // Weak backup knife for rifle/sidearm units. Melee-focused kits stay in
 // leoKit (Leo sword) and chargerEnemy (rushblade).
