@@ -1,0 +1,225 @@
+{
+  "pack": "facade-street-flow",
+  "shear": 0.5,
+  "angle_deg": 26.565,
+  "note": "Upright fa\u00e7ades sheared so base follows isometric sidewalk diagonal; use far (+) on top-left sidewalk, near (-) on bottom-right. Replaces stair-step orthogonal plates. Implemented as vertical shear y'=y+shear*x (shear=\u00b10.5 \u2192 atan(0.5)\u224826.565\u00b0); not skewX \u2014 that would lean walls and leave the base horizontal.",
+  "files": [
+    {
+      "file": "facade-iso-flow-far.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-flow-far.webp",
+      "width": 1280,
+      "height": 1020,
+      "bytes": 259308,
+      "shear": 0.5,
+      "source": "facade-strip-a.webp",
+      "notes": "shear +0.5 from strip-a; far/top-left sidewalk",
+      "edge": {
+        "left_x": 0,
+        "left_bottom_y": 379,
+        "right_x": 1279,
+        "right_bottom_y": 1014,
+        "dy": 635,
+        "dx": 1279
+      }
+    },
+    {
+      "file": "facade-iso-flow-near.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-flow-near.webp",
+      "width": 1280,
+      "height": 1012,
+      "bytes": 263534,
+      "shear": -0.5,
+      "source": "facade-strip-a.webp",
+      "notes": "shear -0.5 from strip-a; near/bottom-right sidewalk",
+      "edge": {
+        "left_x": 0,
+        "left_bottom_y": 1008,
+        "right_x": 1279,
+        "right_bottom_y": 364,
+        "dy": -644,
+        "dx": 1279
+      }
+    },
+    {
+      "file": "facade-iso-flow-far-b.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-flow-far-b.webp",
+      "width": 1280,
+      "height": 1104,
+      "bytes": 272682,
+      "shear": 0.5,
+      "source": "facade-strip-b.webp",
+      "notes": "shear +0.5 from strip-b; far variant",
+      "edge": {
+        "left_x": 2,
+        "left_bottom_y": 329,
+        "right_x": 1278,
+        "right_bottom_y": 996,
+        "dy": 667,
+        "dx": 1276
+      }
+    },
+    {
+      "file": "facade-iso-flow-near-b.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-flow-near-b.webp",
+      "width": 1280,
+      "height": 834,
+      "bytes": 276510,
+      "shear": -0.5,
+      "source": "facade-strip-b.webp",
+      "notes": "shear -0.5 from strip-b; near variant",
+      "edge": {
+        "left_x": 2,
+        "left_bottom_y": 828,
+        "right_x": 1278,
+        "right_bottom_y": 219,
+        "dy": -609,
+        "dx": 1276
+      }
+    },
+    {
+      "file": "facade-iso-bldg-01.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-01.webp",
+      "width": 267,
+      "height": 515,
+      "bytes": 54460,
+      "shear": 0.5,
+      "source": "facade-bldg-01.webp",
+      "notes": "shear +0.5 module from facade-bldg-01.webp",
+      "edge": {
+        "left_x": 0,
+        "left_bottom_y": 379,
+        "right_x": 266,
+        "right_bottom_y": 511,
+        "dy": 132,
+        "dx": 266
+      }
+    },
+    {
+      "file": "facade-iso-bldg-02.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-02.webp",
+      "width": 256,
+      "height": 560,
+      "bytes": 51724,
+      "shear": 0.5,
+      "source": "facade-bldg-02.webp",
+      "notes": "shear +0.5 module from facade-bldg-02.webp",
+      "edge": {
+        "left_x": 0,
+        "left_bottom_y": 432,
+        "right_x": 255,
+        "right_bottom_y": 554,
+        "dy": 122,
+        "dx": 255
+      }
+    },
+    {
+      "file": "facade-iso-bldg-03.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-03.webp",
+      "width": 324,
+      "height": 612,
+      "bytes": 63866,
+      "shear": 0.5,
+      "source": "facade-bldg-03.webp",
+      "notes": "shear +0.5 module from facade-bldg-03.webp",
+      "edge": {
+        "left_x": 0,
+        "left_bottom_y": 444,
+        "right_x": 323,
+        "right_bottom_y": 610,
+        "dy": 166,
+        "dx": 323
+      }
+    },
+    {
+      "file": "facade-iso-bldg-04.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-04.webp",
+      "width": 183,
+      "height": 531,
+      "bytes": 35242,
+      "shear": 0.5,
+      "source": "facade-bldg-04.webp",
+      "notes": "shear +0.5 module from facade-bldg-04.webp",
+      "edge": {
+        "left_x": 0,
+        "left_bottom_y": 439,
+        "right_x": 182,
+        "right_bottom_y": 530,
+        "dy": 91,
+        "dx": 182
+      }
+    },
+    {
+      "file": "facade-iso-bldg-05.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-05.webp",
+      "width": 250,
+      "height": 564,
+      "bytes": 49916,
+      "shear": 0.5,
+      "source": "facade-bldg-05.webp",
+      "notes": "shear +0.5 module from facade-bldg-05.webp",
+      "edge": {
+        "left_x": 0,
+        "left_bottom_y": 439,
+        "right_x": 249,
+        "right_bottom_y": 558,
+        "dy": 119,
+        "dx": 249
+      }
+    },
+    {
+      "file": "facade-iso-bldg-01-mirror.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-01-mirror.webp",
+      "width": 267,
+      "height": 567,
+      "bytes": 55540,
+      "shear": -0.5,
+      "source": "facade-bldg-01.webp",
+      "notes": "shear -0.5 near-side mirror module from facade-bldg-01.webp",
+      "edge": {
+        "left_x": 0,
+        "left_bottom_y": 563,
+        "right_x": 266,
+        "right_bottom_y": 429,
+        "dy": -134,
+        "dx": 266
+      }
+    },
+    {
+      "file": "facade-iso-bldg-02-mirror.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-02-mirror.webp",
+      "width": 256,
+      "height": 575,
+      "bytes": 52614,
+      "shear": -0.5,
+      "source": "facade-bldg-02.webp",
+      "notes": "shear -0.5 near-side mirror module from facade-bldg-02.webp",
+      "edge": {
+        "left_x": 0,
+        "left_bottom_y": 573,
+        "right_x": 255,
+        "right_bottom_y": 440,
+        "dy": -133,
+        "dx": 255
+      }
+    },
+    {
+      "file": "facade-iso-bldg-03-mirror.webp",
+      "path": "assets/generated/world/backdrop/facade-iso-bldg-03-mirror.webp",
+      "width": 324,
+      "height": 599,
+      "bytes": 65012,
+      "shear": -0.5,
+      "source": "facade-bldg-03.webp",
+      "notes": "shear -0.5 near-side mirror module from facade-bldg-03.webp",
+      "edge": {
+        "left_x": 0,
+        "left_bottom_y": 594,
+        "right_x": 323,
+        "right_bottom_y": 437,
+        "dy": -157,
+        "dx": 323
+      }
+    }
+  ],
+  "transform": "y' = y + shear * x  (vertical shear; verticals stay upright; base/top become 2:1 diagonals)"
+}

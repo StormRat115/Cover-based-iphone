@@ -4,7 +4,7 @@ import {
   moveTowardTarget,
   coverStillUseful,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-123";
+} from "./combatAI.js?v=20260908-124";
 
 export function shouldRecover(actor) {
   if (!actor || actor.dead || actor.downed) return false;

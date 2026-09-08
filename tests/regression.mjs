@@ -1324,7 +1324,7 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    89,
+    101,
     "soldier/vault/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn facade plates",
   );
   assert.equal(h.metrics.intervals, 0);
@@ -1756,6 +1756,13 @@ test("wartorn city plates load and dress the street sides", async () => {
   assert.match(city.facadeStripA.src, /backdrop\/facade-strip-a\.webp/);
   assert.match(city.facadeStripB.src, /backdrop\/facade-strip-b\.webp/);
   assert.match(city.facadeBldg01.src, /backdrop\/facade-bldg-01\.webp/);
+  assert.match(city.facadeIsoFlowFar.src, /backdrop\/facade-iso-flow-far\.webp/);
+  assert.match(city.facadeIsoFlowNear.src, /backdrop\/facade-iso-flow-near\.webp/);
+  assert.match(city.facadeIsoBldg01.src, /backdrop\/facade-iso-bldg-01\.webp/);
+  assert.match(
+    city.facadeIsoBldg01Mirror.src,
+    /backdrop\/facade-iso-bldg-01-mirror\.webp/,
+  );
   assert.match(city.doorExplodeSheet.src, /backdrop\/door-explode-sheet\.webp/);
   assert.match(city.doorBlownIdle.src, /backdrop\/door-blown-idle\.webp/);
   assert.match(city.alleyMouth.src, /backdrop\/alley-mouth\.webp/);
@@ -1792,6 +1799,19 @@ test("wartorn city plates load and dress the street sides", async () => {
     "backdrop/facade-bldg-03.webp",
     "backdrop/facade-bldg-04.webp",
     "backdrop/facade-bldg-05.webp",
+    "backdrop/facade-iso-flow-far.webp",
+    "backdrop/facade-iso-flow-far-b.webp",
+    "backdrop/facade-iso-flow-near.webp",
+    "backdrop/facade-iso-flow-near-b.webp",
+    "backdrop/facade-iso-bldg-01.webp",
+    "backdrop/facade-iso-bldg-02.webp",
+    "backdrop/facade-iso-bldg-03.webp",
+    "backdrop/facade-iso-bldg-04.webp",
+    "backdrop/facade-iso-bldg-05.webp",
+    "backdrop/facade-iso-bldg-01-mirror.webp",
+    "backdrop/facade-iso-bldg-02-mirror.webp",
+    "backdrop/facade-iso-bldg-03-mirror.webp",
+    "backdrop/facade-iso-flow.json",
     "backdrop/door-explode-sheet.webp",
     "backdrop/door-blown-idle.webp",
     "backdrop/alley-mouth.webp",
@@ -1903,6 +1923,8 @@ test("wartorn city plates load and dress the street sides", async () => {
   assert.match(citySource, /ctx\.transform\(1, shear, 0, 1, 0, 0\)/);
   assert.match(citySource, /drawOfficialStripRow\(ctx, iso, world/);
   assert.match(citySource, /drawIsoCurbWall/);
+  assert.match(citySource, /facade-iso-flow-far\.webp/);
+  assert.match(citySource, /stampIsoFlow/);
   assert.equal(citySource.includes("drawImage(img, x, band - h"), false);
   city.drawWartornAtmosphere(ctx, 390, 844, iso, world);
   city.drawWartornStreetSurface(ctx, iso, world, () => true);
