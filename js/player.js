@@ -1,36 +1,36 @@
-import { getHitChance } from "./cover.js?v=20260908-126";
+import { getHitChance } from "./cover.js?v=20260908-127";
 import {
   resolveSolidMove,
   updateVault,
   planRoute,
   continueRoute,
-} from "./coverCollision.js?v=20260908-126";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260908-126";
-import { weaponCopy } from "./weapons.js?v=20260908-126";
-import { AudioBus } from "./audio.js?v=20260908-126";
-import { drawSoldier } from "./soldierAssets.js?v=20260908-126";
-import { drawCoverShield, nextCoverSlotClaim } from "./coverSlots.js?v=20260908-126";
+} from "./coverCollision.js?v=20260908-127";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260908-127";
+import { weaponCopy } from "./weapons.js?v=20260908-127";
+import { AudioBus } from "./audio.js?v=20260908-127";
+import { drawSoldier } from "./soldierAssets.js?v=20260908-127";
+import { drawCoverShield, nextCoverSlotClaim } from "./coverSlots.js?v=20260908-127";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-126";
+} from "./combatStats.js?v=20260908-127";
 import {
   finishReload,
   canReloadFromReserve,
   isPrimaryDry,
   getSidearm,
   shouldSwapToSidearm,
-} from "./ammoEconomy.js?v=20260908-126";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-126";
+} from "./ammoEconomy.js?v=20260908-127";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-127";
 import {
   tickSuppression,
   suppressionAccuracyDelta,
   isHardSuppressed,
-} from "./suppression.js?v=20260908-126";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-126";
+} from "./suppression.js?v=20260908-127";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-127";
 let shotHud = null,
   weaponHud = null,
   shotFeedbackTime = 0,

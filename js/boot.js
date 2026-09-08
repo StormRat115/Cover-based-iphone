@@ -1,4 +1,4 @@
-const BUILD = "20260908-126";
+const BUILD = "20260908-127";
 const element = (id) => document.getElementById(id);
 
 function showGameError(label, error) {
@@ -27,11 +27,11 @@ async function boot() {
     // Independent modules and images download concurrently, using the same URLs
     // as the gameplay imports so atlases are built only once.
     const [menu, soldiers, city, audio, charger] = await Promise.all([
-      import("./mainMenu.js?v=20260908-126"),
-      import("./soldierAssets.js?v=20260908-126"),
-      import("./cityAssets.js?v=20260908-126"),
-      import("./audio.js?v=20260908-126"),
-      import("./chargerEnemy.js?v=20260908-126"),
+      import("./mainMenu.js?v=20260908-127"),
+      import("./soldierAssets.js?v=20260908-127"),
+      import("./cityAssets.js?v=20260908-127"),
+      import("./audio.js?v=20260908-127"),
+      import("./chargerEnemy.js?v=20260908-127"),
     ]);
     if (audio && audio.AudioBus) audio.AudioBus.preload();
     let soldierProgress = 0,
@@ -60,18 +60,17 @@ async function boot() {
       throw new Error("Battlefield art is not ready. Please retry loading.");
     }
     setLoad(95, "LOADING STREET PUSH");
-    const game = await import("./game.js?v=20260908-126");
+    const game = await import("./game.js?v=20260908-127");
     setLoad(100, "READY");
     start.classList.add("ready");
-    start.addEventListener(
-      "click",
-      () => {
-        element("loadingScreen").classList.add("hidden");
-        element("mainMenu").classList.remove("hidden");
-        menu.initMainMenu(game.startGame);
-      },
-      { once: true },
-    );
+    let enteredMenu = false;
+    start.addEventListener("click", () => {
+      element("loadingScreen").classList.add("hidden");
+      element("mainMenu").classList.remove("hidden");
+      if (enteredMenu) return;
+      enteredMenu = true;
+      menu.initMainMenu(game.startGame);
+    });
   } catch (error) {
     setLoad(0, "FAILED: " + (error?.message || String(error)));
     showGameError("MODULE LOAD", error);

@@ -1,5 +1,7 @@
 /* Light incoming-fire suppression. Enemies get a short pin; friendlies barely flinch. */
 
+import { notifySuppressionPin } from "./combatVfx.js?v=20260908-127";
+
 export const SUPPRESSION = {
   enemyRadius: 210,
   enemyDuration: 0.78,
@@ -68,6 +70,7 @@ export function spraySuppression(origin, impact, victims, friendlyFire) {
     applySuppression(v, spec.stacks, spec.duration, spec.cap);
     pinned++;
   }
+  if (pinned) notifySuppressionPin(origin, impact, victims);
   return pinned;
 }
 

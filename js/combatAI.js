@@ -1,12 +1,12 @@
-import { isLineBlocked } from "./cover.js?v=20260908-126";
+import { isLineBlocked } from "./cover.js?v=20260908-127";
 import {
   resolveSolidMove,
   updateVault,
   findDetour,
   firstCoverOnSegment,
   ignoreCoverFor,
-} from "./coverCollision.js?v=20260908-126";
-import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260908-126";
+} from "./coverCollision.js?v=20260908-127";
+import { composeSolidAndUnitMove } from "./unitCollision.js?v=20260908-127";
 import {
   coverSlotCount,
   isCoverFull,
@@ -16,11 +16,11 @@ import {
   reservedCoverOf,
   mustYieldCoverSlot,
   nextCoverSlotClaim,
-} from "./coverSlots.js?v=20260908-126";
+} from "./coverSlots.js?v=20260908-127";
 import {
   suppressionPeekScale,
   suppressionMoveScale,
-} from "./suppression.js?v=20260908-126";
+} from "./suppression.js?v=20260908-127";
 function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
@@ -340,6 +340,7 @@ export function peekPoint(actor, threat, amount) {
     ay = actor.coverAnchorY;
   if (
     (actor.suppressionTimer || 0) > 0 ||
+    (actor.suppressTimer || 0) > 0 ||
     (Number.isFinite(actor.timeSinceDamage) && actor.timeSinceDamage < 1.35)
   )
     return { x: ax, y: ay };

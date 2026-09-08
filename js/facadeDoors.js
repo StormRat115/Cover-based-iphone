@@ -3,9 +3,9 @@ import {
   doorExplodeSheet,
   doorBlownIdle,
   playableStreetHalfWidth,
-} from "./wartornCity.js?v=20260908-126";
-import { createHostileAt, doorHostileType } from "./enemyCore.js?v=20260908-126";
-import { moveTowardTarget } from "./combatAI.js?v=20260908-126";
+} from "./wartornCity.js?v=20260908-127";
+import { createHostileAt, doorHostileType } from "./enemyCore.js?v=20260908-127";
+import { moveTowardTarget } from "./combatAI.js?v=20260908-127";
 
 export const DOOR_EXPLODE_FRAMES = 8;
 export const DOOR_EXPLODE_FRAME_W = 96;
@@ -136,9 +136,11 @@ export function tryFacadeDoorBurst(director, opts) {
   opts = opts || {};
   var wave = opts.wave || director.wave || 1;
   var enemies = opts.enemies || [];
-  if (opts.waveState && opts.waveState !== "active") return null;
-  if (livingCount(enemies) >= DOOR_SPAWN.skipIfLive(wave)) return null;
-  if (liveDoorCount(enemies) >= DOOR_SPAWN.maxLiveDoor(wave)) return null;
+  if (!opts.force) {
+    if (opts.waveState && opts.waveState !== "active") return null;
+    if (livingCount(enemies) >= DOOR_SPAWN.skipIfLive(wave)) return null;
+    if (liveDoorCount(enemies) >= DOOR_SPAWN.maxLiveDoor(wave)) return null;
+  }
   var door = pickDoor(director, opts.world, opts.onScreen);
   if (!door) return null;
   startBurst(director, door, wave, opts.random);
