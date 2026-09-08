@@ -1902,6 +1902,7 @@ test("wartorn city plates load and dress the street sides", async () => {
   assert.match(citySource, /streetIsoShear/);
   assert.match(citySource, /ctx\.transform\(1, shear, 0, 1, 0, 0\)/);
   assert.match(citySource, /drawOfficialStripRow\(ctx, iso, world/);
+  assert.match(citySource, /drawIsoCurbWall/);
   assert.equal(citySource.includes("drawImage(img, x, band - h"), false);
   city.drawWartornAtmosphere(ctx, 390, 844, iso, world);
   city.drawWartornStreetSurface(ctx, iso, world, () => true);

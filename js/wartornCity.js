@@ -107,17 +107,21 @@ function buildTopFacades() {
 function buildSideFacades() {
   var kinds = ["storefront", "ruin", "apartment", "office", "graffiti"];
   var items = [];
-  for (var i = 0; i < 14; i++) {
+  var i = 0;
+  var y = 820;
+  while (y > -6400) {
     items.push({
       id: "side-" + i,
-      x: ROAD + WALK + 80 + hash01(i * 7) * 90,
-      y: 820 - i * 560,
+      x: ROAD + WALK + 36 + hash01(i * 7) * 48,
+      y: y,
       kind: kinds[i % kinds.length],
-      s: 0.42 + hash01(i * 5) * 0.1,
+      s: 0.7 + hash01(i * 5) * 0.12,
       flip: i % 2 === 0,
       door: false,
       side: "right",
     });
+    y -= 210 + hash01(i * 13) * 40;
+    i++;
   }
   return items;
 }
@@ -719,9 +723,9 @@ function drawOfficialStripRow(ctx, iso, world, width, band) {
   ctx.imageSmoothingQuality = "high";
   i = 0;
   y = bounds.maxY + 40;
+  h = Math.max(240, band * 0.95);
   while (y > bounds.minY - 80) {
     img = tiles[i % tiles.length];
-    h = Math.max(220, band * 0.92) + (i % 2 ? 26 : 8);
     w =
       img.naturalWidth && img.naturalHeight
         ? img.naturalWidth * (h / img.naturalHeight)
@@ -729,7 +733,7 @@ function drawOfficialStripRow(ctx, iso, world, width, band) {
     if (w < 200) w = 360;
     q = iso(TOP_EDGE - 12, y);
     stamp(ctx, img, q[0], q[1] + 6, w, h, 0.96, false, shear);
-    y -= (w * 0.74) / (along || 0.28);
+    y -= (w * 0.5) / (along || 0.28);
     i++;
   }
   if (ready(alleyMouth)) {
@@ -867,6 +871,54 @@ function drawEdgeAccents(ctx, iso, world, onScreen) {
   }
 }
 
+function streetAlong(world) {
+  return Math.hypot((world && world.scaleX) || 0.25, (world && world.scaleY) || 0.125) || 0.28;
+}
+
+function facadeStripTiles() {
+  var tiles = [];
+  if (ready(facadeStripA)) tiles.push(facadeStripA);
+  if (ready(facadeStripB)) tiles.push(facadeStripB);
+  return tiles;
+}
+
+function drawIsoCurbWall(ctx, iso, world, side) {
+  var tiles = facadeStripTiles();
+  var shear;
+  var bounds;
+  var curbX;
+  var y;
+  var i;
+  var img;
+  var h;
+  var w;
+  var q;
+  var along;
+  if (!tiles.length || !iso || !world) return;
+  shear = streetIsoShear(iso);
+  bounds = worldBounds(world);
+  curbX = side < 0 ? -ROAD - 8 : ROAD + 8;
+  along = streetAlong(world);
+  h = 172;
+  ctx.save();
+  clipOffStreet(ctx, iso, world, side);
+  i = 0;
+  y = bounds.maxY + 60;
+  while (y > bounds.minY - 80) {
+    img = tiles[i % tiles.length];
+    w =
+      img.naturalWidth && img.naturalHeight
+        ? img.naturalWidth * (h / img.naturalHeight)
+        : 380;
+    if (w < 220) w = 380;
+    q = iso(curbX, y);
+    stamp(ctx, img, q[0], q[1] + 2, w, h, 0.97, side > 0, shear);
+    y -= (w * 0.46) / along;
+    i++;
+  }
+  ctx.restore();
+}
+
 function drawSideBuildings(ctx, iso, world, onScreen) {
   var i, item, q, img, size, outward, shear;
   shear = streetIsoShear(iso);
@@ -906,6 +958,8 @@ export function drawWartornDressing(ctx, iso, world, W, H, onScreen) {
   drawFarBackdrop(ctx, iso, world, W, H);
   drawOrganicPatches(ctx, iso, world, onScreen);
   drawStreetScenes(ctx, iso, world, onScreen);
+  drawIsoCurbWall(ctx, iso, world, -1);
+  drawIsoCurbWall(ctx, iso, world, 1);
   drawSideBuildings(ctx, iso, world, onScreen);
   drawEdgeAccents(ctx, iso, world, onScreen);
   for (i = 0; i < WRECKS.length; i++) {
