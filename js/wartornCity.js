@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260907-122";
+import { loadImage } from "./assets.js?v=20260908-123";
 
 var ROAD = 980;
 var WALK = 260;
@@ -369,7 +369,16 @@ function buildingSize(kind, s) {
   return { dw: 148 * s, dh: 172 * s };
 }
 
-function stamp(ctx, image, x, y, dw, dh, alpha, flip) {
+export function streetIsoShear(iso) {
+  if (!iso) return -0.5;
+  var a = iso(0, 0);
+  var b = iso(0, 200);
+  var dx = b && a ? b[0] - a[0] : 0;
+  if (!dx) return -0.5;
+  return (b[1] - a[1]) / dx;
+}
+
+function stamp(ctx, image, x, y, dw, dh, alpha, flip, shear) {
   var drawable =
     ready(image) ||
     (image && image.width > 0 && image.height > 0);
@@ -378,11 +387,10 @@ function stamp(ctx, image, x, y, dw, dh, alpha, flip) {
   ctx.globalAlpha = alpha == null ? 1 : alpha;
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
-  if (flip) {
-    ctx.translate(x, y);
-    ctx.scale(-1, 1);
-    ctx.drawImage(image, -dw / 2, -dh, dw, dh);
-  } else ctx.drawImage(image, x - dw / 2, y - dh, dw, dh);
+  ctx.translate(x, y);
+  if (shear) ctx.transform(1, shear, 0, 1, 0, 0);
+  if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(image, -dw / 2, -dh, dw, dh);
   ctx.restore();
   return true;
 }
@@ -686,66 +694,59 @@ function sidewalkBandY(iso, world, W, H) {
   return Math.max(160, Math.min((H || 844) * 0.48, band + 8));
 }
 
-function drawOfficialStripRow(ctx, width, band, scroll) {
+function drawOfficialStripRow(ctx, iso, world, width, band) {
   var tiles = [];
   var i;
-  var x;
   var img;
   var h;
   var w;
+  var q;
+  var y;
+  var shear;
+  var along;
+  var bounds;
   if (ready(facadeStripA)) tiles.push(facadeStripA);
   if (ready(facadeStripB)) tiles.push(facadeStripB);
-  if (!tiles.length) return;
+  if (!tiles.length || !iso) return;
+  shear = streetIsoShear(iso);
+  bounds = worldBounds(world);
+  along = Math.hypot(
+    (world && world.scaleX) || 0.25,
+    (world && world.scaleY) || 0.125,
+  );
   ctx.save();
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   i = 0;
-  x = -((scroll * 0.42) % 80) - 48;
-  while (x < width + 120) {
+  y = bounds.maxY + 40;
+  while (y > bounds.minY - 80) {
     img = tiles[i % tiles.length];
-    h = band + (i % 2 ? 22 : 6);
+    h = Math.max(220, band * 0.92) + (i % 2 ? 26 : 8);
     w =
       img.naturalWidth && img.naturalHeight
         ? img.naturalWidth * (h / img.naturalHeight)
-        : Math.max(width * 1.15, 480);
-    if (w < 160) w = 480;
-    ctx.drawImage(img, x, band - h + 6, w, h);
-    x += w * 0.86;
+        : Math.max(width * 0.85, 360);
+    if (w < 200) w = 360;
+    q = iso(TOP_EDGE - 12, y);
+    stamp(ctx, img, q[0], q[1] + 6, w, h, 0.96, false, shear);
+    y -= (w * 0.74) / (along || 0.28);
     i++;
   }
   if (ready(alleyMouth)) {
-    for (i = 0; i < Math.ceil(width / 320) + 1; i++) {
-      if (hash01(i + 17) < 0.4) continue;
-      stamp(
-        ctx,
-        alleyMouth,
-        i * 320 - scroll * 0.18 + 90,
-        band + 2,
-        110,
-        96,
-        0.94,
-        hash01(i + 3) > 0.5,
-      );
+    for (i = 0; i < SIDE_DRESSING.length; i++) {
+      if (SIDE_DRESSING[i].kind !== "alley") continue;
+      q = iso(TOP_EDGE + 8, SIDE_DRESSING[i].y);
+      stamp(ctx, alleyMouth, q[0], q[1] + 4, 118, 102, 0.94, SIDE_DRESSING[i].flip, shear);
     }
   }
   ctx.restore();
 }
 
 function drawFarBackdrop(ctx, iso, world, W, H) {
-  var origin;
-  var scroll;
-  var fade;
   var band;
   var width;
   width = W || 390;
   band = sidewalkBandY(iso, world, width, H);
-  origin = iso
-    ? iso(
-        world && world.cameraX != null ? world.cameraX : 0,
-        world && world.cameraY != null ? world.cameraY : 0,
-      )
-    : [0, 0];
-  scroll = ((origin[0] % 260) + 260) % 260;
   ctx.save();
   if (iso && world) clipAboveSidewalk(ctx, iso, world);
   if (ready(wartornSkyline)) {
@@ -754,16 +755,7 @@ function drawFarBackdrop(ctx, iso, world, W, H) {
     ctx.drawImage(wartornSkyline, -8, -10, width + 16, band + 8);
     ctx.restore();
   }
-  drawOfficialStripRow(ctx, width, band, scroll);
-  if (ctx.createLinearGradient) {
-    fade = ctx.createLinearGradient(0, band - 24, 0, band + 12);
-    if (fade && fade.addColorStop) {
-      fade.addColorStop(0, "rgba(36,32,28,0)");
-      fade.addColorStop(1, "rgba(36,32,28,0.16)");
-      ctx.fillStyle = fade;
-      ctx.fillRect(0, band - 24, width, 36);
-    }
-  }
+  drawOfficialStripRow(ctx, iso, world, width, band);
   ctx.restore();
 }
 
@@ -876,7 +868,8 @@ function drawEdgeAccents(ctx, iso, world, onScreen) {
 }
 
 function drawSideBuildings(ctx, iso, world, onScreen) {
-  var i, item, q, img, size, outward;
+  var i, item, q, img, size, outward, shear;
+  shear = streetIsoShear(iso);
   for (i = 0; i < SIDE_DRESSING.length; i++) {
     item = SIDE_DRESSING[i];
     if (onScreen && !onScreen(item.x, item.y, 360)) continue;
@@ -896,9 +889,13 @@ function drawSideBuildings(ctx, iso, world, onScreen) {
         size.dh,
         item.side === "top" ? 0.98 : 0.8,
         item.flip,
+        shear,
       )
-    )
-      fallbackRuin(ctx, q[0] + outward, q[1], size.dw, size.dh);
+    ) {
+      ctx.translate(q[0] + outward, q[1]);
+      ctx.transform(1, shear, 0, 1, 0, 0);
+      fallbackRuin(ctx, 0, 0, size.dw, size.dh);
+    }
     ctx.restore();
   }
 }

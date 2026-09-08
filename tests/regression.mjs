@@ -1897,6 +1897,12 @@ test("wartorn city plates load and dress the street sides", async () => {
   const ctx = h.document.createElement("canvas").getContext("2d");
   const iso = (x, y) => [x * 0.25, y * 0.125];
   const world = { minX: -2300, maxX: 2300, minY: -6600, maxY: 1900, cameraX: 0, cameraY: 0 };
+  assert.ok(Math.abs(city.streetIsoShear(iso) + 0.5) < 1e-6);
+  const citySource = readFileSync("js/wartornCity.js", "utf8");
+  assert.match(citySource, /streetIsoShear/);
+  assert.match(citySource, /ctx\.transform\(1, shear, 0, 1, 0, 0\)/);
+  assert.match(citySource, /drawOfficialStripRow\(ctx, iso, world/);
+  assert.equal(citySource.includes("drawImage(img, x, band - h"), false);
   city.drawWartornAtmosphere(ctx, 390, 844, iso, world);
   city.drawWartornStreetSurface(ctx, iso, world, () => true);
   city.drawWartornDressing(ctx, iso, world, 390, 844, () => true);
@@ -2130,6 +2136,177 @@ test("cover pieces expose exclusive slots by shape", async () => {
   const drawsBefore = h.metrics.draws;
   assert.equal(slots.drawCoverShield(shieldCtx, planted), true);
   assert.ok(h.metrics.draws > drawsBefore);
+});
+
+test("taken cover slots evict other seekers immediately", async () => {
+  const h = createHarness();
+  const slots = await h.importModule(`js/coverSlots.js?v=${BUILD}`);
+  const ai = await h.importModule(`js/combatAI.js?v=${BUILD}`);
+  const map = await h.importModule(`js/cityMap.js?v=${BUILD}`);
+  const cover = Object.assign(
+    map.makeShapedCover({
+      id: "contend",
+      x: 0,
+      y: 0,
+      shape: "rect",
+      theme: "jersey",
+    }),
+    { type: "wide" },
+  );
+  const nearby = Object.assign(
+    map.makeShapedCover({
+      id: "nearby",
+      x: 260,
+      y: -30,
+      shape: "L",
+      theme: "crates",
+    }),
+    { type: "wide" },
+  );
+  const threat = { x: 20, y: 480, hp: 80, dead: false, downed: false };
+  const winner = {
+    x: 0,
+    y: 50,
+    hp: 40,
+    dead: false,
+    downed: false,
+    cover: null,
+    speed: 200,
+  };
+  const first = slots.reserveCoverSlot(cover, winner, threat, []);
+  assert.ok(first);
+  ai.applyCoverChoice(winner, { cover, slot: first });
+  winner.x = first.x;
+  winner.y = first.y;
+  winner.combatState = "covered";
+  assert.equal(slots.occupiesCoverSlot(winner, 8), true);
+  assert.equal(slots.coverShieldKind(winner), "full");
+
+  const walker = {
+    x: first.x + 40,
+    y: first.y + 240,
+    hp: 40,
+    dead: false,
+    downed: false,
+    cover: cover,
+    coverTarget: cover,
+    coverSlotIndex: first.index,
+    coverAnchorX: first.x,
+    coverAnchorY: first.y,
+    targetX: first.x,
+    targetY: first.y,
+    coverSlotClaimTime: winner.coverSlotClaimTime + 8,
+    combatState: "seeking",
+    speed: 220,
+  };
+  assert.equal(slots.mustYieldCoverSlot(walker, [winner, walker]), true);
+  assert.equal(
+    slots.reserveCoverSlot(cover, { x: 80, y: 90, hp: 40 }, threat, [
+      winner,
+      walker,
+    ]) === null ||
+      slots.reserveCoverSlot(cover, { x: 80, y: 90, hp: 40 }, threat, [
+        winner,
+        walker,
+      ]).index !== first.index,
+    true,
+    "approaching and planted units both lock the slot",
+  );
+
+  const moved = ai.repathIfSlotContested(
+    walker,
+    threat,
+    [cover, nearby],
+    [winner, walker],
+    {
+      minThreat: 10,
+      maxThreat: 2000,
+      maxTravel: 2000,
+      desiredRange: 420,
+    },
+  );
+  assert.equal(moved, true);
+  assert.ok(
+    walker.cover !== cover || walker.coverSlotIndex !== first.index,
+    "contested seeker must drop the taken slot immediately",
+  );
+  assert.ok(Number.isFinite(walker.targetX) && Number.isFinite(walker.targetY));
+  assert.ok(
+    Math.hypot(walker.targetX - first.x, walker.targetY - first.y) > 12,
+    "new path leaves the occupied slot",
+  );
+  assert.equal(slots.coverShieldKind(winner), "full");
+  assert.equal(
+    slots.coverShieldKind({
+      x: first.x,
+      y: first.y,
+      cover: Object.assign({}, cover, { type: "low" }),
+      coverAnchorX: first.x,
+      coverAnchorY: first.y,
+      combatState: "covered",
+      dead: false,
+    }),
+    "half",
+  );
+
+  const tiny = Object.assign(
+    map.makeShapedCover({
+      id: "tiny",
+      x: -40,
+      y: 20,
+      shape: "square",
+      theme: "sandbags",
+    }),
+    { type: "low" },
+  );
+  const holders = [];
+  let extra = slots.reserveCoverSlot(tiny, { x: 0, y: 0, hp: 40 }, threat, holders);
+  while (extra) {
+    holders.push({
+      x: extra.x,
+      y: extra.y,
+      hp: 40,
+      dead: false,
+      downed: false,
+      cover: tiny,
+      coverSlotIndex: extra.index,
+      coverAnchorX: extra.x,
+      coverAnchorY: extra.y,
+      combatState: "covered",
+      coverSlotClaimTime: slots.nextCoverSlotClaim(),
+    });
+    extra = slots.reserveCoverSlot(
+      tiny,
+      { x: 0, y: 0, hp: 40 },
+      threat,
+      holders,
+    );
+  }
+  const stranded = {
+    x: tiny.x,
+    y: tiny.y + 160,
+    hp: 40,
+    dead: false,
+    downed: false,
+    cover: tiny,
+    coverTarget: tiny,
+    coverSlotIndex: 0,
+    coverAnchorX: tiny.x,
+    coverAnchorY: tiny.y + 30,
+    targetX: tiny.x,
+    targetY: tiny.y + 30,
+    coverSlotClaimTime: 9999,
+    combatState: "seeking",
+  };
+  ai.repathIfSlotContested(stranded, threat, [tiny], holders.concat([stranded]), {
+    minThreat: 10,
+    maxThreat: 2000,
+    maxTravel: 200,
+    advancePoint: { x: 40, y: -180 },
+  });
+  assert.equal(stranded.cover, null, "no free slot still abandons the contested path");
+  assert.equal(stranded.targetX, 40);
+  assert.equal(stranded.targetY, -180);
 });
 
 test("squad and Marines take exclusive cover slots instead of standing exposed", async () => {

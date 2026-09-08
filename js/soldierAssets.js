@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260907-122";
+import { loadImage } from "./assets.js?v=20260908-123";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
   "./assets/generated/soldier/player-solid-atlas.png?v=20260906-102";
