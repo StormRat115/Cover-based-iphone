@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260908-133";
+import { loadImage } from "./assets.js?v=20260908-134";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
   "./assets/generated/soldier/player-solid-atlas.png?v=20260906-102";
@@ -193,6 +193,10 @@ const ENEMY_FRAME_BOXES = {
 const FRIENDLY_CELL = 192;
 const FRIENDLY_COLS = 4;
 const FRIENDLY_ROWS_COUNT = 6;
+// Transparent gutter around isolated cells so GPU REPEAT / bilinear
+// samples empty pixels instead of wrapping the barrel to the back.
+export const CELL_GUTTER = 8;
+const cleanedSheetCache = new WeakMap();
 const FRIENDLY_ROWS = {
   idle: 0,
   run: 1,
@@ -445,19 +449,208 @@ export function hardenSheetAlpha(source, cut) {
   }
 }
 
+/** Drop disconnected chips glued to the left cell edge.
+ *  Packed sheets park the previous pose's barrel there; flipping then
+ *  teleports the tip behind the body. Right-edge chips stay — that is
+ *  this pose's muzzle. */
+export function stripWrappedOverflow(canvas, ox, oy, cellW, cellH, cut) {
+  if (!canvas || !cellW || !cellH) return canvas;
+  cut = cut == null ? 40 : cut;
+  ox = ox || 0;
+  oy = oy || 0;
+  try {
+    var g = canvas.getContext("2d", { willReadFrequently: true });
+    if (!g || typeof g.getImageData !== "function") return canvas;
+    var img = g.getImageData(ox, oy, cellW, cellH);
+    if (!img || !img.data) return canvas;
+    var d = img.data,
+      w = cellW,
+      h = cellH,
+      seen = new Uint8Array(w * h),
+      frags = [],
+      mainN = 0,
+      mainBest = -1,
+      x,
+      y,
+      i,
+      p,
+      px,
+      py,
+      nx,
+      ny,
+      n,
+      minx,
+      maxx,
+      touchL,
+      touchR,
+      pixels,
+      stack,
+      k,
+      pi,
+      cleared = false;
+    function idx(ix, iy) {
+      return iy * w + ix;
+    }
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) {
+        i = idx(x, y);
+        if (seen[i] || d[i * 4 + 3] < cut) continue;
+        stack = [i];
+        seen[i] = 1;
+        n = 0;
+        minx = x;
+        maxx = x;
+        touchL = false;
+        touchR = false;
+        pixels = [];
+        while (stack.length) {
+          p = stack.pop();
+          px = p % w;
+          py = (p - px) / w;
+          pixels.push(p);
+          n++;
+          if (px === 0) touchL = true;
+          if (px === w - 1) touchR = true;
+          if (px < minx) minx = px;
+          if (px > maxx) maxx = px;
+          if (px > 0 && !seen[(ny = idx(px - 1, py))] && d[(ny) * 4 + 3] >= cut) {
+            seen[ny] = 1;
+            stack.push(ny);
+          }
+          if (px + 1 < w && !seen[(ny = idx(px + 1, py))] && d[ny * 4 + 3] >= cut) {
+            seen[ny] = 1;
+            stack.push(ny);
+          }
+          if (py > 0 && !seen[(ny = idx(px, py - 1))] && d[ny * 4 + 3] >= cut) {
+            seen[ny] = 1;
+            stack.push(ny);
+          }
+          if (py + 1 < h && !seen[(ny = idx(px, py + 1))] && d[ny * 4 + 3] >= cut) {
+            seen[ny] = 1;
+            stack.push(ny);
+          }
+        }
+        frags.push({ n: n, minx: minx, maxx: maxx, touchL: touchL, touchR: touchR, pixels: pixels });
+        if (n > mainN) {
+          mainN = n;
+          mainBest = frags.length - 1;
+        }
+      }
+    }
+    if (mainBest < 0) return canvas;
+    var main = frags[mainBest];
+    for (i = 0; i < frags.length; i++) {
+      if (i === mainBest) continue;
+      var frag = frags[i];
+      // Previous-cell overflow sits on this cell's left, fully left of the body.
+      if (
+        frag.touchL &&
+        !frag.touchR &&
+        frag.maxx < main.minx + 2 &&
+        frag.maxx < w * 0.45
+      ) {
+        for (k = 0; k < frag.pixels.length; k++) {
+          pi = frag.pixels[k] * 4;
+          d[pi] = 0;
+          d[pi + 1] = 0;
+          d[pi + 2] = 0;
+          d[pi + 3] = 0;
+        }
+        cleared = true;
+      }
+    }
+    if (cleared) g.putImageData(img, ox, oy);
+    return canvas;
+  } catch (_err) {
+    return canvas;
+  }
+}
+
+/** Copy a packed sheet and strip per-cell wrap chips. Official PNGs stay. */
+export function cleanPackedSheet(source, frameW, frameH) {
+  if (!source || !frameW || !frameH) return source;
+  if (cleanedSheetCache.has(source)) return cleanedSheetCache.get(source);
+  var iw = source.naturalWidth || source.width || 0,
+    ih = source.naturalHeight || source.height || 0;
+  if (!iw || !ih) {
+    cleanedSheetCache.set(source, source);
+    return source;
+  }
+  try {
+    var c = document.createElement("canvas");
+    c.width = iw;
+    c.height = ih;
+    var g = c.getContext("2d", { willReadFrequently: true });
+    if (!g || typeof g.drawImage !== "function") {
+      cleanedSheetCache.set(source, source);
+      return source;
+    }
+    g.clearRect(0, 0, iw, ih);
+    g.drawImage(source, 0, 0);
+    var cols = Math.floor(iw / frameW),
+      rows = Math.floor(ih / frameH),
+      row,
+      col;
+    for (row = 0; row < rows; row++) {
+      for (col = 0; col < cols; col++) {
+        stripWrappedOverflow(c, col * frameW, row * frameH, frameW, frameH, 40);
+      }
+    }
+    cleanedSheetCache.set(source, c);
+    return c;
+  } catch (_err) {
+    cleanedSheetCache.set(source, source);
+    return source;
+  }
+}
+
+/** Draw a source rect clipped to the bitmap. Dest shrinks with the clip
+ *  so overflow is discarded instead of wrapping to the opposite edge. */
+export function drawClampedSheetFrame(ctx, source, sx, sy, sw, sh, dx, dy, dw, dh) {
+  if (!ctx || !source || sw <= 0 || sh <= 0 || !dw || !dh) return false;
+  var iw = source.naturalWidth || source.width || 0,
+    ih = source.naturalHeight || source.height || 0;
+  if (!iw || !ih) return false;
+  var x0 = Math.max(0, sx),
+    y0 = Math.max(0, sy),
+    x1 = Math.min(iw, sx + sw),
+    y1 = Math.min(ih, sy + sh);
+  if (x1 <= x0 || y1 <= y0) return false;
+  var left = x0 - sx,
+    top = y0 - sy,
+    right = sx + sw - x1,
+    bottom = sy + sh - y1,
+    xScale = dw / sw,
+    yScale = dh / sh;
+  ctx.drawImage(
+    source,
+    x0,
+    y0,
+    x1 - x0,
+    y1 - y0,
+    dx + left * xScale,
+    dy + top * yScale,
+    dw - (left + right) * xScale,
+    dh - (top + bottom) * yScale,
+  );
+  return true;
+}
+
 function buildCellFrameCache(source, rowCount, cols, cell) {
   if (!source) return null;
   var frames = [];
+  var gutter = CELL_GUTTER;
+  var padded = cell + gutter * 2;
   try {
     for (var row = 0; row < rowCount; row++) {
       frames[row] = [];
       for (var col = 0; col < cols; col++) {
         var frame = document.createElement("canvas");
-        frame.width = cell;
-        frame.height = cell;
+        frame.width = padded;
+        frame.height = padded;
         var g = frame.getContext("2d", { willReadFrequently: true });
         if (!g || typeof g.drawImage !== "function") return null;
-        g.clearRect(0, 0, cell, cell);
+        g.clearRect(0, 0, padded, padded);
         g.imageSmoothingEnabled = false;
         g.drawImage(
           source,
@@ -465,14 +658,17 @@ function buildCellFrameCache(source, rowCount, cols, cell) {
           row * cell,
           cell,
           cell,
-          0,
-          0,
+          gutter,
+          gutter,
           cell,
           cell,
         );
-        // Keep every visible armor pixel fully opaque. A separate frame canvas
-        // also prevents mobile GPU atlas sampling from bleeding between cells.
-        frames[row][col] = hardenSheetAlpha(frame, 40) || frame;
+        stripWrappedOverflow(frame, gutter, gutter, cell, cell, 40);
+        // Keep every visible armor pixel fully opaque. A separate padded
+        // frame also stops mobile GPU REPEAT from wrapping the barrel.
+        var hardened = hardenSheetAlpha(frame, 40) || frame;
+        hardened._cellGutter = gutter;
+        frames[row][col] = hardened;
       }
     }
   } catch (_error) {
@@ -624,6 +820,13 @@ export function preloadSoldierAssets(onProgress) {
     runtimeViperAtlas = hardenSheetAlpha(viperAtlasSource) || viperAtlasSource;
     runtimeViperFrames = buildFriendlyFrameCache(runtimeViperAtlas);
     runtimeVaultSheet = hardenSheetAlpha(vaultSheetSource) || vaultSheetSource;
+    Object.keys(enemyMonsterSources).forEach(function (type) {
+      cleanPackedSheet(
+        enemyMonsterSources[type],
+        ENEMY_MONSTER_FRAME_WIDTH,
+        ENEMY_MONSTER_FRAME_HEIGHT,
+      );
+    });
     // Legacy crop atlas kept as fallback; enemies still use monster atlas path.
     const soldierAtlas = buildAtlas(soldierSource, FRAME_BOXES);
     const monsterAtlas = buildAtlas(enemySource, ENEMY_FRAME_BOXES);
@@ -1019,7 +1222,11 @@ export function getEnemyMonsterSheet(type) {
   return {
     type: type,
     file: ENEMY_MONSTER_FILES[type],
-    source: source,
+    source: cleanPackedSheet(
+      source,
+      ENEMY_MONSTER_FRAME_WIDTH,
+      ENEMY_MONSTER_FRAME_HEIGHT,
+    ),
     width: ENEMY_MONSTER_SHEET_WIDTH,
     height: ENEMY_MONSTER_SHEET_HEIGHT,
     frameWidth: ENEMY_MONSTER_FRAME_WIDTH,
@@ -1128,25 +1335,30 @@ function drawBlendedSheetFrame(
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = "high";
   var pad = Math.max(0, inset || 0),
-    sx0 = frame * frameW + pad,
+    iw = (source && (source.naturalWidth || source.width)) || 0,
+    maxCol = frameW > 0 && iw > 0 ? Math.max(0, Math.floor(iw / frameW) - 1) : 0,
+    col0 = frame < 0 ? 0 : frame > maxCol ? maxCol : frame | 0,
+    col1 = next < 0 ? 0 : next > maxCol ? maxCol : next | 0,
+    sx0 = col0 * frameW + pad,
     sy0 = row * frameH + pad,
     sw = Math.max(1, frameW - pad * 2),
     sh = Math.max(1, frameH - pad * 2),
     a0 = baseAlpha * (1 - blend),
     a1 = baseAlpha * blend;
-  if (a0 <= 0.02 && (a1 <= 0.02 || next === frame)) {
+  if (a0 <= 0.02 && (a1 <= 0.02 || col1 === col0)) {
     ctx.globalAlpha = baseAlpha;
-    ctx.drawImage(source, sx0, sy0, sw, sh, dx, dy, dw, dh);
+    drawClampedSheetFrame(ctx, source, sx0, sy0, sw, sh, dx, dy, dw, dh);
   } else {
     if (a0 > 0.02) {
       ctx.globalAlpha = a0;
-      ctx.drawImage(source, sx0, sy0, sw, sh, dx, dy, dw, dh);
+      drawClampedSheetFrame(ctx, source, sx0, sy0, sw, sh, dx, dy, dw, dh);
     }
-    if (a1 > 0.02 && next !== frame) {
+    if (a1 > 0.02 && col1 !== col0) {
       ctx.globalAlpha = a1;
-      ctx.drawImage(
+      drawClampedSheetFrame(
+        ctx,
         source,
-        next * frameW + pad,
+        col1 * frameW + pad,
         sy0,
         sw,
         sh,
@@ -1347,6 +1559,22 @@ export function drawSoldier(ctx, actor, options) {
   if (drawAtlas) {
     var baseAlpha = solidFriendly ? 1 : options.alpha == null ? 1 : options.alpha;
     if (enemyCorpse) baseAlpha *= 0.82;
+    var destX = -dw * 0.5;
+    var destY =
+      -dh +
+      (state === "lowCover" || state === "crouchShoot"
+        ? 5
+        : state === "tallCover"
+          ? 2
+          : 0);
+    var gutter =
+      isolatedCell && isolatedCell._cellGutter != null
+        ? isolatedCell._cellGutter
+        : isolatedCell && isolatedCell.width > cellW
+          ? Math.round((isolatedCell.width - cellW) / 2)
+          : 0;
+    var srcX = isolatedCell ? gutter : r.col * cellW;
+    var srcY = isolatedCell ? gutter : (useVault ? 0 : r.row) * cellH;
     if (solidFriendly) {
       ctx.globalAlpha = 1;
       ctx.filter = recolor || "none";
@@ -1354,19 +1582,15 @@ export function drawSoldier(ctx, actor, options) {
       // Nearest-neighbor keeps binary atlas alpha; bilinear smoothing
       // invents milky fringe when the 160px cell is drawn small.
       ctx.imageSmoothingEnabled = false;
-      ctx.drawImage(
+      drawClampedSheetFrame(
+        ctx,
         drawAtlas,
-        isolatedCell ? 0 : r.col * cellW,
-        isolatedCell ? 0 : (useVault ? 0 : r.row) * cellH,
+        srcX,
+        srcY,
         cellW,
         cellH,
-        -dw * 0.5,
-        -dh +
-          (state === "lowCover" || state === "crouchShoot"
-            ? 5
-            : state === "tallCover"
-              ? 2
-              : 0),
+        destX,
+        destY,
         dw,
         dh,
       );
@@ -1380,16 +1604,12 @@ export function drawSoldier(ctx, actor, options) {
         useVault ? 0 : useFriendly || useLeo || useNamedKit ? r.row : ROWS[r.state] || 0,
         cellW,
         cellH,
-        -dw * 0.5,
-        -dh +
-          (state === "lowCover" || state === "crouchShoot"
-            ? 5
-            : state === "tallCover"
-              ? 2
-              : 0),
+        destX,
+        destY,
         dw,
         dh,
         baseAlpha,
+        useVault ? 1 : 2,
       );
     }
   } else {
@@ -1455,5 +1675,7 @@ export function getSoldierAtlasInfo() {
     coverRows: "mapped",
     vaultSheet: "vault-sheet.png",
     vaultCell: VAULT_CELL,
+    cellGutter: CELL_GUTTER,
+    wrapFix: "clamp-source-strip-left-overflow",
   };
 }

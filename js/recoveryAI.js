@@ -4,7 +4,7 @@ import {
   moveTowardTarget,
   coverStillUseful,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-133";
+} from "./combatAI.js?v=20260908-134";
 
 export function recoverThreshold(actor) {
   if (!actor || actor.isPlayer || actor.isMarine) return 0.2;

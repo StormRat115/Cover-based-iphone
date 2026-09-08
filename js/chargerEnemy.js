@@ -1,8 +1,12 @@
-import { loadImage } from "./assets.js?v=20260908-133";
-import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260908-133";
-import { faceThreat } from "./combatAI.js?v=20260908-133";
-import { incomingDefense } from "./leoKit.js?v=20260908-133";
-import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-133";
+import { loadImage } from "./assets.js?v=20260908-134";
+import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260908-134";
+import { faceThreat } from "./combatAI.js?v=20260908-134";
+import { incomingDefense } from "./leoKit.js?v=20260908-134";
+import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-134";
+import {
+  cleanPackedSheet,
+  drawClampedSheetFrame,
+} from "./soldierAssets.js?v=20260908-134";
 
 export const CHARGER_SHEET = {
   file: "enemy-charger-melee-sheet.png",
@@ -27,9 +31,21 @@ export const CHARGER_SHEET = {
 const chargerSource = new Image();
 chargerSource.src =
   "./assets/generated/enemies/" + CHARGER_SHEET.file + "?v=20260906-88";
+let runtimeChargerSheet = null;
 
 export function getChargerSheet() {
-  return Object.assign({ source: chargerSource }, CHARGER_SHEET);
+  return Object.assign(
+    {
+      source:
+        runtimeChargerSheet ||
+        cleanPackedSheet(
+          chargerSource,
+          CHARGER_SHEET.frameWidth,
+          CHARGER_SHEET.frameHeight,
+        ),
+    },
+    CHARGER_SHEET,
+  );
 }
 
 export function preloadChargerAssets(onProgress) {
@@ -38,6 +54,11 @@ export function preloadChargerAssets(onProgress) {
   return loadImage(chargerSource).then(function (img) {
     onProgress(1, "CHARGER READY");
     if (!img) throw new Error("Charger sheet is not ready");
+    runtimeChargerSheet = cleanPackedSheet(
+      chargerSource,
+      CHARGER_SHEET.frameWidth,
+      CHARGER_SHEET.frameHeight,
+    );
     return getChargerSheet();
   });
 }
@@ -197,7 +218,8 @@ function chargerState(actor) {
 export function drawCharger(ctx, actor, options) {
   var sheet = getChargerSheet();
   var source = sheet.source;
-  if (!source || !source.complete || !source.naturalWidth) return false;
+  if (!source || !(source.complete !== false) || !(source.naturalWidth || source.width))
+    return false;
   options = options || {};
   var state = chargerState(actor);
   var anim = sheet.animations[state] || sheet.animations.idle;
@@ -227,12 +249,14 @@ export function drawCharger(ctx, actor, options) {
   ctx.ellipse(0, 3, dw * 0.22, dh * 0.05, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.scale(flip, 1);
-  ctx.drawImage(
+  var pad = 2;
+  drawClampedSheetFrame(
+    ctx,
     source,
-    frame * fw,
-    anim.row * fh,
-    fw,
-    fh,
+    frame * fw + pad,
+    anim.row * fh + pad,
+    fw - pad * 2,
+    fh - pad * 2,
     -dw * 0.5,
     -dh * 0.88,
     dw,
