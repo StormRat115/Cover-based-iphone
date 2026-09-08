@@ -1,4 +1,4 @@
-import { ignoresCover } from "./melee.js?v=20260908-130";
+import { ignoresCover } from "./melee.js?v=20260908-132";
 
 export function stanceForEnemy(index, type) {
   if (type === "charger" || type === "melee") return "rush";

@@ -2,33 +2,33 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260908-130";
-import { weaponCopy, scaledWeaponRange } from "./weapons.js?v=20260908-130";
+} from "./cover.js?v=20260908-132";
+import { weaponCopy, scaledWeaponRange } from "./weapons.js?v=20260908-132";
 import {
   moveTowardTarget,
   faceThreat,
   coverStillUseful,
   peekPoint,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-130";
+} from "./combatAI.js?v=20260908-132";
 import {
   ENEMY_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260908-130";
-import { AudioBus } from "./audio.js?v=20260908-130";
+} from "./combatStats.js?v=20260908-132";
+import { AudioBus } from "./audio.js?v=20260908-132";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-130";
-import { orderDefense } from "./squadDialog.js?v=20260908-130";
-import { leoShieldBonus } from "./leoKit.js?v=20260908-130";
-import { assignEnemyCover } from "./enemyCoverAI.js?v=20260908-130";
-import { chargerWeapon } from "./chargerEnemy.js?v=20260908-130";
-import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260908-130";
-import { knifeWeapon, tickMeleeTimer } from "./melee.js?v=20260908-130";
+} from "./suppression.js?v=20260908-132";
+import { orderDefense } from "./squadDialog.js?v=20260908-132";
+import { leoShieldBonus } from "./leoKit.js?v=20260908-132";
+import { assignEnemyCover } from "./enemyCoverAI.js?v=20260908-132";
+import { chargerWeapon } from "./chargerEnemy.js?v=20260908-132";
+import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260908-132";
+import { knifeWeapon, tickMeleeTimer } from "./melee.js?v=20260908-132";
 import {
   preferShootTargets,
   engagedTargetPenalty,
@@ -38,7 +38,7 @@ import {
   tickEngaged,
   maybeDogpile,
   ignoresCover,
-} from "./engaged.js?v=20260908-130";
+} from "./engaged.js?v=20260908-132";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },
