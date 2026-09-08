@@ -38,6 +38,15 @@ import {
   currentPushGoal,
   pushGoalKey,
 } from "./streetObjectives.js?v=20260908-126";
+import { isStreetBreathing } from "./streetBeat.js?v=20260908-126";
+import {
+  tagSquadFireteams,
+  updateFireteams,
+  isFireteamOverwatch,
+  isFireteamBounding,
+  boundSpeedScale,
+  hopCoversAhead,
+} from "./fireteams.js?v=20260908-126";
 import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-126";
 import {
   isLeo,
@@ -223,6 +232,7 @@ export function createAllies() {
     };
   });
   window.__battleAllies = allies;
+  tagSquadFireteams(allies);
   return allies;
 }
 function activeEnemy(e) {
@@ -404,9 +414,23 @@ function advanceToMission(a, mission, covers, friendlies, dt, threats) {
   }
   a.missionPause = Math.max(0, (a.missionPause || 0) - dt);
   if (a.missionPause > 0) return true;
+  if (
+    isFireteamOverwatch(a) &&
+    !isLeo(a) &&
+    a.cover &&
+    occupiesCoverSlot(a, 58)
+  ) {
+    a.exposed = false;
+    a.combatState = "covered";
+    a.targetX = a.coverAnchorX;
+    a.targetY = a.coverAnchorY;
+    a.missionPause = 0.18;
+    return true;
+  }
+  var hopPool = isFireteamBounding(a) ? hopCoversAhead(a, covers) : covers;
   var best = null,
     bestScore = Infinity;
-  covers.forEach(function (cover) {
+  hopPool.forEach(function (cover) {
     if (!cover || cover.destroyed) return;
     var travel = Math.hypot(cover.x - a.x, cover.y - a.y),
       remaining = Math.hypot(cover.x - goal.x, cover.y - goal.y);
@@ -444,12 +468,17 @@ function advanceToMission(a, mission, covers, friendlies, dt, threats) {
     return true;
   }
   // No leapfrog slot — keep walking so a finished street task cannot freeze AI.
+  if (isFireteamOverwatch(a) && a.cover && !isLeo(a)) return true;
   a.cover = null;
   a.targetX = goal.x + ((a.coverSlotIndex || 0) - 1) * 72;
   a.targetY = goal.y + 70 + (a.isMarine ? 75 : 0);
   a.exposed = true;
   a.combatState = "seeking";
-  moveTowardTarget(a, dt, a.aggressiveAdvance ? 1.16 : 1.05);
+  moveTowardTarget(
+    a,
+    dt,
+    (a.aggressiveAdvance ? 1.16 : 1.05) * boundSpeedScale(a),
+  );
   return true;
 }
 function shouldPressStreetObjective(a, e, d, covers, goal) {
@@ -478,6 +507,7 @@ export function updateAllies(
   otherFriendlies,
 ) {
   squadMode = mode || window.squadMode || squadMode;
+  updateFireteams(allies, otherFriendlies, dt);
   var friendlyTeam = allies.concat(otherFriendlies || []);
   // The player owns cover slots too. Excluding them let AI friendlies reserve
   // the same slot and physically pin the player against the barricade.
@@ -555,8 +585,25 @@ export function updateAllies(
       street =
         typeof window !== "undefined" ? window.__streetObjectives : null,
       activeGoal = currentPushGoal(mission, street),
-      objectivePush = shouldPressStreetObjective(a, e, d, covers, activeGoal);
-    a.objectiveAdvancePaused = !!e && !objectivePush;
+      streetBreathing = isStreetBreathing(street),
+      objectivePush =
+        !streetBreathing &&
+        shouldPressStreetObjective(a, e, d, covers, activeGoal);
+    a.objectiveAdvancePaused = streetBreathing || (!!e && !objectivePush);
+    if (streetBreathing) {
+      a.objectiveHold = true;
+      if (e) faceThreat(a, e);
+      if (a.cover && Number.isFinite(a.coverAnchorX)) {
+        a.targetX = a.coverAnchorX;
+        a.targetY = a.coverAnchorY;
+        a.combatState = "covered";
+        a.exposed = false;
+        moveTowardTarget(a, dt, 1.05);
+      }
+      if (e && a.weapon.ammo > 0 && !a.reloading && d <= a.weapon.range * 0.72)
+        shoot(a, e, spawnProjectile, covers, -6);
+      return;
+    }
     if (!Object.prototype.hasOwnProperty.call(a, "combatTarget"))
       Object.defineProperty(a, "combatTarget", {
         value: e,
@@ -671,20 +718,27 @@ export function updateAllies(
     var pinned =
       a.timeSinceDamage < 0.55 || (a.suppressionTimer || 0) > 0.35;
     var behindFront = !!(tun && a.y > frontY + tun.behindFront);
+    var teamHold = isFireteamOverwatch(a);
+    var teamBound = isFireteamBounding(a);
     var shouldLeap =
       inSlot &&
-      aggressiveAdvance &&
-      squadMode !== "HOLD" &&
       !pinned &&
-      (d > engagementRange * (tun ? tun.leapRangeFactor : 1.45) ||
-        behindFront);
+      squadMode !== "HOLD" &&
+      (teamBound ||
+        (aggressiveAdvance &&
+          !teamHold &&
+          (d > engagementRange * (tun ? tun.leapRangeFactor : 1.45) ||
+            behindFront)));
+    if (teamHold && useful && inSlot) shouldLeap = false;
+    var seekPool =
+      teamBound && shouldLeap ? hopCoversAhead(a, availableCovers) : availableCovers;
     if (
       ((!inSlot && !headingToSlot) ||
         shouldLeap ||
         (!useful && inSlot && squadMode !== "HOLD")) &&
       a.repositionCooldown <= 0
     ) {
-      var choice = pickTacticalCover(a, e, availableCovers, slotCrowd, {
+      var choice = pickTacticalCover(a, e, seekPool, slotCrowd, {
         maxTravel: 1500,
         minThreat: 50,
         maxThreat: 2400,
@@ -725,7 +779,7 @@ export function updateAllies(
         !isSightBlocked(a, e, covers)
       )
         shoot(a, e, spawnProjectile, covers, -12);
-      moveTowardTarget(a, dt, 1.18);
+      moveTowardTarget(a, dt, 1.18 * boundSpeedScale(a));
       if (occupiesCoverSlot(a, 18)) {
         a.x = a.coverAnchorX;
         a.y = a.coverAnchorY;

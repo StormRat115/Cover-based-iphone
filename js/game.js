@@ -96,6 +96,22 @@ import {
   drawFacadeDoorBursts,
 } from "./facadeDoors.js?v=20260908-126";
 import {
+  updateFireteams,
+  assignFireteams,
+} from "./fireteams.js?v=20260908-126";
+import {
+  updateCombatVfx,
+  drawCombatVfx,
+  resetCombatVfx,
+  notifyShotImpact,
+} from "./combatVfx.js?v=20260908-126";
+import {
+  tickStreetBreath,
+  applyStreetBreathHold,
+  triggerBreachBeat,
+  isStreetBreathing,
+} from "./streetBeat.js?v=20260908-126";
+import {
   updateSquadDialog,
   drawDialogBubbles,
   resetSquadDialog,
@@ -208,6 +224,7 @@ window.__frontLineCam = false;
 window.__ammoDrops = ammoDrops;
 window.__streetObjectives = streetTasks;
 window.__activeStreetGoal = currentPushGoal(mission, streetTasks);
+assignFireteams(allies, marines);
 function resize() {
   dpr = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth;
@@ -380,6 +397,7 @@ function updateProjectiles(dt) {
           [player].concat(allies).concat(marines).concat(enemies),
           coverHit.piece,
         );
+        notifyShotImpact(p, coverHit.piece || coverHit.cover, { hitCover: true });
         projectiles.splice(i, 1);
         continue;
       }
@@ -391,6 +409,9 @@ function updateProjectiles(dt) {
     if (d <= step || p.life >= p.maxLife) {
       if (p.owner === "enemy" && p.damage > 0) {
         if (!player.dead && !player.downed) player.takeDamage(p.damage);
+        notifyShotImpact(p, player, { hitArmor: true });
+      } else if (p.damage > 0 && p.target) {
+        notifyShotImpact(p, p.target, { hitArmor: true });
       }
       // Player/ally damage is applied once, at fire time. Their projectiles are visual.
       projectiles.splice(i, 1);
@@ -651,6 +672,22 @@ function updateAutoPlayer(dt) {
     // Recovery moves directly; do not also pursue an old tap-to-move destination.
     player.tx = player.x;
     player.ty = player.y;
+    return;
+  }
+  if (isStreetBreathing(streetTasks)) {
+    player.objectiveAdvancePaused = true;
+    player.tacticalState = "MAG CHECK";
+    if (
+      player.weapon &&
+      player.weapon.ammo < player.weapon.magazine &&
+      !player.reloading &&
+      player.startReload
+    )
+      player.startReload();
+    if (player.cover && Number.isFinite(player.coverAnchorX)) {
+      player.tx = player.coverAnchorX;
+      player.ty = player.coverAnchorY;
+    }
     return;
   }
   if (!e) {
@@ -962,6 +999,8 @@ function reset() {
   resetMarineTimer();
   resetSquadDialog();
   resetUnitUnstick();
+  resetCombatVfx();
+  assignFireteams(allies, marines);
   ammoDrops.length = 0;
   streetTasks = resetStreetObjectives(streetTasks);
   window.__streetObjectives = streetTasks;
@@ -1011,6 +1050,7 @@ function update(dt) {
     else if (player.keyboardMove) player.setKeyboardMove(null);
   } else if (player.keyboardMove) player.setKeyboardMove(null);
   if ((fireHeld || isKeyboardFireHeld()) && !autoPlay) attemptFire();
+  updateFireteams(allies, marines, dt);
   updateAutoPlayer(dt);
   updateBandits(enemies, dt, player, covers, spawnEnemyProjectile);
   updateAllies(
@@ -1058,7 +1098,31 @@ function update(dt) {
     rebuildLayers();
   }
   if (streetResult && streetResult.justCompleted) {
-    releaseStreetObjectiveHold([player].concat(allies).concat(marines));
+    applyStreetBreathHold([player].concat(allies).concat(marines));
+    autoMoveTimer = 0.45;
+    autoTargetTimer = 0;
+    spawnWaveAmmo(streetResult.justCompleted, 2).forEach(function (d) {
+      ammoDrops.push(d);
+    });
+    hudDirty = true;
+  }
+  var breathTick = tickStreetBreath(streetTasks, dt);
+  if (breathTick && breathTick.finished) {
+    var beatActors = [player].concat(allies).concat(marines);
+    releaseStreetObjectiveHold(beatActors);
+    triggerBreachBeat({
+      director: doorDirector,
+      wave: wave,
+      enemies: enemies,
+      world: world,
+      onScreen: onScreen,
+      rebuildLayers: rebuildLayers,
+      covers: covers,
+      occupants: beatActors.concat(enemies),
+      actors: beatActors,
+      x: breathTick.finished.x,
+      y: breathTick.finished.y,
+    });
     autoMoveTimer = 0;
     autoTargetTimer = 0;
     if (autoPlay && !player.dead && !player.downed) {
@@ -1080,9 +1144,6 @@ function update(dt) {
           stepAutoPlayerToward(resumeGoal, 180);
       }
     }
-    spawnWaveAmmo(streetResult.justCompleted, 2).forEach(function (d) {
-      ammoDrops.push(d);
-    });
     hudDirty = true;
   }
   updateAmmoDrops(ammoDrops, player, dt);
@@ -1114,6 +1175,7 @@ function update(dt) {
     }
   });
   updateProjectiles(dt);
+  updateCombatVfx(dt);
   var clock =
     (typeof performance !== "undefined" ? performance.now() : Date.now()) / 1000;
   trySquadGrenades([player].concat(allies), enemies, dt, clock);
@@ -1405,11 +1467,13 @@ function drawMissionUI() {
   ctx.fillStyle = "#fff";
   ctx.font = "900 15px system-ui";
   ctx.fillText(
-    streetTasks && streetTasks.current
-      ? streetTasks.current.label
-      : mission.captured
-        ? "FORTIFICATION SECURED"
-        : "CAPTURE THE FORT",
+    isStreetBreathing(streetTasks)
+      ? "MAG CHECK"
+      : streetTasks && streetTasks.current
+        ? streetTasks.current.label
+        : mission.captured
+          ? "FORTIFICATION SECURED"
+          : "CAPTURE THE FORT",
     x + 14,
     y + 41,
   );
@@ -1422,7 +1486,7 @@ function drawMissionUI() {
       return !marine.dead;
     }).length,
     objectiveLine =
-      streetTasks && streetTasks.current
+      streetTasks && (streetTasks.current || isStreetBreathing(streetTasks))
         ? objectiveStatusLine(streetTasks)
         : mission.captured
           ? "OBJECTIVE SECURE  •  TURRET ACTIVE"
@@ -1478,6 +1542,7 @@ function draw(now) {
   drawPlayerEngagementRange();
   drawBlood(ctx, iso);
   drawProjectiles();
+  drawCombatVfx(ctx, iso);
   drawGrenades(ctx, iso);
   for (const layer of layers) {
     var o = layer.o;

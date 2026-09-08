@@ -2833,7 +2833,9 @@ test("completing a street objective unsticks friendlies and autoplay", async () 
     });
   assert.equal(state.current, null);
   assert.ok(state.completed >= 1);
+  assert.ok(state.breath, "objective completion starts a 2-4s breath before unstick");
   obj.releaseStreetObjectiveHold(parked);
+  assert.equal(state.breath, null);
   assert.ok(parked.every((actor) => actor.missionPause === 0));
   assert.ok(parked.every((actor) => actor.combatState === "seeking"));
   const allyStart = allies.map((ally) => ally.y);
@@ -2882,14 +2884,24 @@ test("completing a street objective unsticks friendlies and autoplay", async () 
   h.nodes.get("autoPlay").emit("pointerdown");
   street.current.hold = street.current.holdNeed;
   h.frame();
+  h.advance(4);
+  assert.ok(street.breath, "completing a street task should start a breath hold");
+  street.breath.duration = 2.2;
+  street.breath.t = 0;
   const y0 = livePlayer.y;
   const dest0 = { x: livePlayer.tx, y: livePlayer.ty };
-  h.advance(2.4);
+  h.advance(90);
+  assert.ok(street.breath, "autoplay should still be in the post-objective breath");
+  const held =
+    Math.hypot(livePlayer.x - liveTask.x, livePlayer.y - liveTask.y) < 30 &&
+    Math.hypot(livePlayer.tx - dest0.x, livePlayer.ty - dest0.y) < 28;
+  assert.ok(held, "autoplay should mag-check instead of instantly rushing the next fight");
+  h.advance(220);
   const moved =
     livePlayer.y < y0 - 24 ||
     Math.hypot(livePlayer.tx - dest0.x, livePlayer.ty - dest0.y) > 20 ||
     Math.hypot(livePlayer.x - liveTask.x, livePlayer.y - liveTask.y) > 24;
-  assert.ok(moved, "autoplay should resume advancing after the street task ends");
+  assert.ok(moved, "autoplay should resume advancing after the street breath");
 });
 
 test("Leo is a 200 DEF knight who prefers melee and uses a private sidearm", async () => {
@@ -3009,3 +3021,141 @@ test("Leo is a 200 DEF knight who prefers melee and uses a private sidearm", asy
   assert.match(readFileSync("js/mainMenu.js", "utf8"), /key: "Leo"/);
   assert.match(readFileSync("js/mainMenu.js", "utf8"), /TACTICAL KNIGHT/);
 });
+
+test("fireteams split into a squad pair plus marine pairs and alternate bounds", async () => {
+  const h = createHarness();
+  const fire = await h.importModule(`js/fireteams.js?v=${BUILD}`);
+  const alliesModule = await h.importModule(`js/allyCore2.js?v=${BUILD}`);
+  const marineModule = await h.importModule(`js/marines.js?v=${BUILD}`);
+  const allies = alliesModule.createAllies();
+  const marines = marineModule.createMarines();
+  const teams = fire.assignFireteams(allies, marines);
+  assert.equal(allies[0].fireteamId, allies[1].fireteamId, "Rook and Viper share a fireteam");
+  assert.notEqual(allies[2].fireteamId, allies[0].fireteamId, "Doc is a separate element");
+  const leo = allies.find((a) => a.name === "Leo");
+  assert.ok(leo, "Leo is on the squad");
+  assert.equal(
+    allies.filter((a) => a.fireteamId === leo.fireteamId).length,
+    1,
+    "Leo leapfrogs as a solo knight so melee is not gated by overwatch",
+  );
+  assert.equal(marines[0].fireteamId, marines[1].fireteamId);
+  assert.equal(marines[2].fireteamId, marines[3].fireteamId);
+  assert.ok(teams.filter((team) => team.members.length === 2).length >= 3);
+  allies[0].x = 0;
+  allies[0].y = 220;
+  allies[0].cover = { id: "rear" };
+  allies[0].coverAnchorX = 0;
+  allies[0].coverAnchorY = 220;
+  allies[1].x = 20;
+  allies[1].y = 90;
+  allies[1].cover = { id: "front" };
+  allies[1].coverAnchorX = 20;
+  allies[1].coverAnchorY = 90;
+  const squad = teams.find((team) => team.id === "squad-alpha");
+  squad.phase = "hold";
+  squad.timer = 0;
+  fire.updateFireteams(allies, marines, 0.05);
+  assert.equal(allies[0].fireteamBound, true, "rear element should bound");
+  assert.equal(allies[1].fireteamOverwatch, true, "forward element should overwatch");
+  assert.equal(fire.isFireteamBounding(allies[0]), true);
+  assert.equal(fire.isFireteamOverwatch(allies[1]), true);
+});
+
+test("suppression VFX stays capped and pinned enemies peek worse", async () => {
+  const h = createHarness();
+  const vfx = await h.importModule(`js/combatVfx.js?v=${BUILD}`);
+  const combat = await h.importModule(`js/combatAI.js?v=${BUILD}`);
+  const sup = await h.importModule(`js/suppression.js?v=${BUILD}`);
+  vfx.resetCombatVfx();
+  for (let i = 0; i < 40; i++) vfx.spawnHitSpark(i, 0, "cover");
+  assert.ok(vfx.activeCombatVfx().length <= vfx.COMBAT_VFX.maxLive);
+  vfx.notifySuppressionPin(
+    { x: -40, y: 0 },
+    { x: 0, y: 0 },
+    [{ x: 0, y: 0, dead: false, suppressTimer: 1, suppressStacks: 2 }],
+  );
+  assert.ok(
+    vfx.activeCombatVfx().some((fx) => fx.kind === "streak" || fx.kind === "dust"),
+  );
+  vfx.notifyShotImpact({ x: 0, y: 0 }, { x: 12, y: 4 }, { hitCover: true });
+  vfx.notifyShotImpact({ x: 0, y: 0 }, { x: 8, y: -6 }, { hitArmor: true });
+  assert.ok(vfx.activeCombatVfx().some((fx) => fx.kind === "spark"));
+  const enemy = {
+    x: 0,
+    y: 0,
+    hp: 40,
+    dead: false,
+    downed: false,
+    cover: { id: "bag", type: "wide" },
+    coverAnchorX: 0,
+    coverAnchorY: 0,
+    coverSlotIndex: 0,
+    suppressTimer: 0,
+    suppressStacks: 0,
+  };
+  const threat = { x: 200, y: 0 };
+  const open = combat.peekPoint(enemy, threat, 40);
+  sup.applySuppression(enemy, 2, 0.8, 3);
+  const pinned = combat.peekPoint(enemy, threat, 40);
+  assert.ok(Math.hypot(open.x - 0, open.y - 0) > 8, "unpinned peek should leave the slot");
+  assert.ok(
+    Math.hypot(pinned.x - enemy.coverAnchorX, pinned.y - enemy.coverAnchorY) < 2,
+    "pinned enemies should hug cover instead of peeking",
+  );
+  assert.ok(vfx.isVisiblyPinned(enemy));
+});
+
+test("street objective breath lasts 2-4s then a breach beat can fire", async () => {
+  const h = createHarness();
+  const beat = await h.importModule(`js/streetBeat.js?v=${BUILD}`);
+  const obj = await h.importModule(`js/streetObjectives.js?v=${BUILD}`);
+  const vfx = await h.importModule(`js/combatVfx.js?v=${BUILD}`);
+  const doors = await h.importModule(`js/facadeDoors.js?v=${BUILD}`);
+  const state = obj.createStreetObjectives();
+  const completed = { id: "obj-1", x: 10, y: -240, type: "hold_crosswalk" };
+  const breath = beat.beginStreetBreath(state, completed, () => 0);
+  assert.ok(breath.duration >= beat.STREET_BREATH.min);
+  assert.ok(breath.duration <= beat.STREET_BREATH.max);
+  assert.equal(beat.isStreetBreathing(state), true);
+  assert.match(obj.objectiveStatusLine(state), /MAG CHECK/);
+  const actor = {
+    weapon: { ammo: 4, magazine: 30, reload: 1.1, infinite: false },
+    dead: false,
+    downed: false,
+    cover: { id: "hold" },
+    coverAnchorX: 4,
+    coverAnchorY: 8,
+    calloutTimer: 0,
+  };
+  assert.equal(beat.applyStreetBreathHold([actor]), 1);
+  assert.equal(actor.reloading, true);
+  assert.equal(actor.combatState, "covered");
+  assert.ok(beat.tickStreetBreath(state, 1).breathing);
+  assert.equal(beat.isStreetBreathing(state), true);
+  const done = beat.tickStreetBreath(state, 5);
+  assert.ok(done.finished);
+  assert.equal(beat.isStreetBreathing(state), false);
+  const holdState = obj.createStreetObjectives();
+  beat.beginStreetBreath(holdState, completed, () => 0);
+  holdState.cooldown = 0;
+  assert.equal(
+    obj.updateStreetObjectives(holdState, 0.5, { marines: [], covers: [] }),
+    null,
+    "next street task waits until the breath ends",
+  );
+  vfx.resetCombatVfx();
+  const director = doors.createFacadeDoorDirector();
+  const burst = beat.triggerBreachBeat({
+    director,
+    wave: 2,
+    enemies: [],
+    covers: [],
+    x: completed.x,
+    y: completed.y,
+  });
+  assert.ok(burst.x != null);
+  assert.ok(vfx.activeCombatVfx().some((fx) => fx.kind === "boom"));
+  assert.ok(director.bursts.length >= 1, "forced door explode should start the next chapter");
+});
+

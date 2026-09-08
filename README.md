@@ -127,6 +127,14 @@ Fourth named ally beside Rook / Viper / Doc. Default **defense 200**, sword mele
 - Cover is authored as square, rectangle, T, U, and L pieces. Collision segments and procedural art (sandbags, jersey barriers, crates, wrecks, rubble) follow those silhouettes.
 - Soldiers and monsters plant against the facing cover edge: closer slots, tall vs low poses, peek/lean offsets, and a slight depth nudge so tucked units sit on the cover silhouette instead of floating through it.
 
+## Combat spectacle pack: 20260908-123
+
+Autoplay street fights should read like a directed war-movie push: bounding fireteams, visible suppression, and a breath → breach chapter after each street objective.
+
+1. **Bound & leapfrog fireteams** — Squad splits as Rook+Viper plus Doc; Marines go in pairs. One element peeks/suppresses from an exclusive slot while the rear element scoots to the next cover farther up the street, then they swap. Bound hops cap at ~1.3s so nobody stays exposed mid-street. Overwatch still prefers cover during a firefight. Marine `MARINE_AGGRO` peek/dwell/speed knobs stay.
+2. **Visible suppression** — Light pin still drives accuracy/peek. VFX knobs in `COMBAT_VFX`: max 22 live effects, 10 sparks, 10 dust kicks, 8 tracer streaks. Cover impacts and armor hits spawn a brief spark; pinned enemies kick dirt and hug the slot (crouch / no peek). Not a particle flood.
+3. **Post-objective breath → breach** — Completing a street task starts a 2.15–3.55s mag-check hold (`STREET_BREATH`). Friendlies reload and stay planted. `releaseStreetObjectiveHold` still clears the freeze (BUILD 117 unstick). When the breath ends, a forced façade door explode plus a wreck/street detonation kicks the next contact chapter.
+
 ## Wartorn street, dialog, and unit collision: 20260906-82
 
 - Side-of-street ruined buildings, rubble, smoke, and a smoky skyline dress the battlefield. The playable lane stays street + cover.

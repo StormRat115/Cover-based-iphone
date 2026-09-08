@@ -63,15 +63,14 @@ async function boot() {
     const game = await import("./game.js?v=20260908-126");
     setLoad(100, "READY");
     start.classList.add("ready");
-    start.addEventListener(
-      "click",
-      () => {
-        element("loadingScreen").classList.add("hidden");
-        element("mainMenu").classList.remove("hidden");
-        menu.initMainMenu(game.startGame);
-      },
-      { once: true },
-    );
+    let enteredMenu = false;
+    start.addEventListener("click", () => {
+      element("loadingScreen").classList.add("hidden");
+      element("mainMenu").classList.remove("hidden");
+      if (enteredMenu) return;
+      enteredMenu = true;
+      menu.initMainMenu(game.startGame);
+    });
   } catch (error) {
     setLoad(0, "FAILED: " + (error?.message || String(error)));
     showGameError("MODULE LOAD", error);

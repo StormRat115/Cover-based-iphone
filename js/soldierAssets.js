@@ -587,7 +587,11 @@ function shooting(actor) {
       actor.state === "shoot")
   );
 }
+function pinnedDown(actor) {
+  return !!(actor && (actor.suppressTimer || 0) > 0 && (actor.suppressStacks || 0) >= 1);
+}
 function lowCover(actor) {
+  if (pinnedDown(actor) && actor.cover) return true;
   return !!(actor && actor.cover && actor.cover.type === "low");
 }
 function peekingFromCover(actor) {
@@ -615,7 +619,17 @@ export function coverPlantOffset(actor) {
     peeking = peekingFromCover(actor),
     low = lowCover(actor),
     pull = peeking ? -6 : 8,
-    squat = low ? (peeking ? 2 : 7) : peeking ? 0 : 3;
+    squat = low
+      ? peeking
+        ? pinnedDown(actor)
+          ? 6
+          : 2
+        : pinnedDown(actor)
+          ? 10
+          : 7
+      : peeking
+        ? 0
+        : 3;
   return {
     x: sx * pull,
     y: sy * pull * 0.42 + squat,

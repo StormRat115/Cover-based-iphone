@@ -1,5 +1,10 @@
 import { makeShapedCover } from "./cityMap.js?v=20260908-126";
 import { prepareCoverHp } from "./destructibleCover.js?v=20260908-126";
+import {
+  beginStreetBreath,
+  isStreetBreathing,
+  streetBreathRemaining,
+} from "./streetBeat.js?v=20260908-126";
 
 export const OBJECTIVE_TYPES = ["hold_crosswalk", "clear_blockade", "escort_segment"];
 
@@ -23,6 +28,7 @@ export function createStreetObjectives() {
     current: null,
     completed: 0,
     nextIndex: 0,
+    breath: null,
   };
 }
 
@@ -32,6 +38,7 @@ export function resetStreetObjectives(state) {
   state.current = null;
   state.completed = 0;
   state.nextIndex = 0;
+  state.breath = null;
   return state;
 }
 
@@ -140,6 +147,8 @@ export function pushGoalKey(goal) {
 }
 
 export function releaseStreetObjectiveHold(actors) {
+  if (typeof window !== "undefined" && window.__streetObjectives)
+    window.__streetObjectives.breath = null;
   (actors || []).forEach(function (a) {
     if (!a || a.dead) return;
     a.missionPause = 0;
@@ -166,6 +175,7 @@ export function updateStreetObjectives(state, dt, opts) {
     .concat(opts.squad || [])
     .concat(opts.marines || []);
   if (!state.current) {
+    if (isStreetBreathing(state)) return null;
     state.cooldown = Math.max(0, (state.cooldown || 0) - dt);
     if (state.cooldown <= 0) spawnStreetObjective(state, {
       actors: actors,
@@ -198,7 +208,8 @@ export function updateStreetObjectives(state, dt, opts) {
     state.completed++;
     state.current = null;
     state.cooldown = 16 + Math.random() * 10;
-    return { justCompleted: obj, current: null };
+    var breath = beginStreetBreath(state, obj, opts.random);
+    return { justCompleted: obj, current: null, breath: breath };
   }
   obj.marinesPresent = marinesHere;
   obj.occupants = inside.length;
@@ -206,6 +217,11 @@ export function updateStreetObjectives(state, dt, opts) {
 }
 
 export function objectiveStatusLine(state) {
+  if (isStreetBreathing(state)) {
+    return (
+      "MAG CHECK  •  " + streetBreathRemaining(state).toFixed(1) + "s"
+    );
+  }
   if (!state || !state.current) {
     return state && state.completed
       ? "STREET CLEAR  •  NEXT TASK SOON"

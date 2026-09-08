@@ -136,9 +136,11 @@ export function tryFacadeDoorBurst(director, opts) {
   opts = opts || {};
   var wave = opts.wave || director.wave || 1;
   var enemies = opts.enemies || [];
-  if (opts.waveState && opts.waveState !== "active") return null;
-  if (livingCount(enemies) >= DOOR_SPAWN.skipIfLive(wave)) return null;
-  if (liveDoorCount(enemies) >= DOOR_SPAWN.maxLiveDoor(wave)) return null;
+  if (!opts.force) {
+    if (opts.waveState && opts.waveState !== "active") return null;
+    if (livingCount(enemies) >= DOOR_SPAWN.skipIfLive(wave)) return null;
+    if (liveDoorCount(enemies) >= DOOR_SPAWN.maxLiveDoor(wave)) return null;
+  }
   var door = pickDoor(director, opts.world, opts.onScreen);
   if (!door) return null;
   startBurst(director, door, wave, opts.random);

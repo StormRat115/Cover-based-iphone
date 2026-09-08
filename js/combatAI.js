@@ -340,6 +340,7 @@ export function peekPoint(actor, threat, amount) {
     ay = actor.coverAnchorY;
   if (
     (actor.suppressionTimer || 0) > 0 ||
+    (actor.suppressTimer || 0) > 0 ||
     (Number.isFinite(actor.timeSinceDamage) && actor.timeSinceDamage < 1.35)
   )
     return { x: ax, y: ay };

@@ -462,7 +462,8 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       if (
         e.combatTimer <= 0 &&
         dist < e.weapon.range * 1.18 &&
-        !e.weapon.reloading
+        !e.weapon.reloading &&
+        (e.suppressTimer || 0) <= 0.16
       )
         enterExposed(e, threat);
     } else if (e.combatState === "exposed") {

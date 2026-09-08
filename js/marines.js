@@ -2,6 +2,7 @@ import {
   updateAllies as updateFriendlyAI,
   MARINE_AGGRO,
 } from "./allyCore2.js?v=20260908-126";
+import { tagMarineFireteams } from "./fireteams.js?v=20260908-126";
 import { weaponCopy } from "./weapons.js?v=20260908-126";
 import { drawSoldier } from "./soldierAssets.js?v=20260908-126";
 import { drawCoverShield } from "./coverSlots.js?v=20260908-126";
@@ -73,6 +74,7 @@ export function createMarines() {
     return createMarineAt(position[0], position[1], index);
   });
   window.__battleMarines = marines;
+  tagMarineFireteams(marines);
   return marines;
 }
 
