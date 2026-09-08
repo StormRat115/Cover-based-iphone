@@ -75,11 +75,11 @@ function frame(now) {
       len = Math.hypot(dx, dy) || 1;
     g.save();
     g.globalAlpha = Math.max(0.3, 1 - s.t / s.life);
-    g.strokeStyle = "#ffe36b";
-    g.lineWidth = 2.4;
+    g.strokeStyle = "#ffd400";
+    g.lineWidth = 1;
     g.lineCap = "round";
     g.shadowColor = "#ffe36b";
-    g.shadowBlur = 7;
+    g.shadowBlur = 0;
     g.beginPath();
     g.moveTo(x - (dx / len) * 38, y - (dy / len) * 38);
     g.lineTo(x, y);

@@ -14,7 +14,7 @@ import {
 import {
   ENEMY_STATS,
   mitigateDamage,
-  combatAccuracy,
+  unitAccuracy,
   attackDamage,
 } from "./combatStats.js?v=20260908-137";
 import { AudioBus } from "./audio.js?v=20260908-137";
@@ -582,16 +582,7 @@ export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
       e.exposed &&
       (!lineBlocked || peekOffset > 28);
     if (e.fire <= 0 && canFire) {
-      var chance = combatAccuracy(
-        getHitChance(e, threat, covers),
-        e.weapon.accuracy,
-        e.accuracy,
-        suppressionAccuracyDelta(e),
-      );
-      if (threat !== player) {
-        chance = Math.max(6, Math.min(62, chance * 0.58));
-        if (!threat.exposed) chance *= 0.55;
-      }
+      var chance = unitAccuracy(e, threat);
       e.lastHitChance = chance;
       e.weapon.ammo--;
       if (Math.random() < 0.4) AudioBus.playFire(e.weapon, { volume: 0.32, priority: 0 });

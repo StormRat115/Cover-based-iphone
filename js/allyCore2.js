@@ -18,7 +18,7 @@ import {
 import {
   CHARACTER_STATS,
   mitigateDamage,
-  combatAccuracy,
+  unitAccuracy,
   attackDamage,
   creditKill,
 } from "./combatStats.js?v=20260908-137";
@@ -338,14 +338,7 @@ function shoot(a, e, spawnProjectile, covers, accuracyModifier) {
     a.weapon.fireCooldown > 0
   )
     return;
-  var chance = hasPerfectHit(a)
-      ? 100
-      : combatAccuracy(
-          getHitChance(a, e, covers),
-          a.weapon.accuracy,
-          a.accuracy,
-          suppressionAccuracyDelta(a) + orderAccuracy(a) + (accuracyModifier || 0),
-        ),
+  var chance = unitAccuracy(a, e),
     hit = Math.random() * 100 < chance;
   a.weapon.ammo--;
   a.weapon.fireCooldown = a.weapon.cooldown;

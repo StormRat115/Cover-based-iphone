@@ -70,3 +70,18 @@ export function creditKill(actor) {
   actor.kills = (actor.kills || 0) + 1;
   return actor.kills;
 }
+
+/** Non-player ranged accuracy: a static rating with cover-only modifiers. */
+export function unitAccuracy(shooter, target) {
+  function inCover(unit) {
+    return !!(unit && unit.cover && !unit.cover.destroyed &&
+      ((Number.isFinite(unit.coverAnchorX) && Number.isFinite(unit.coverAnchorY) &&
+        Math.hypot(unit.x - unit.coverAnchorX, unit.y - unit.coverAnchorY) <= 58) ||
+       unit.coverBlend >= 0.55 || unit.combatState === "covered"));
+  }
+  const base = Number.isFinite(shooter.baseAccuracy)
+    ? shooter.baseAccuracy : 72 + (Number(shooter.accuracy) || 0);
+  const firingBonus = inCover(shooter) ? 8 : 0;
+  const targetPenalty = inCover(target) ? (target.cover.type === "low" ? 5 : 10) : 0;
+  return Math.max(5, Math.min(98, base + firingBonus - targetPenalty));
+}

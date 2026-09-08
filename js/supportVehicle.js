@@ -1,3 +1,4 @@
+import { unitAccuracy } from "./combatStats.js?v=20260908-137";
 import { isSightBlocked } from "./cover.js?v=20260908-137";
 import { drawSoldier } from "./soldierAssets.js?v=20260908-137";
 import { mitigateDamage } from "./combatStats.js?v=20260908-137";
@@ -102,7 +103,7 @@ export function updateSupportVehicle(
   vehicle.fireCooldown = vehicle.weapon.cooldown;
   vehicle.muzzle = 0.09;
   vehicle.gunner.muzzle = 0.09;
-  const hit = Math.random() < 0.72;
+  const hit = Math.random() * 100 < unitAccuracy(vehicle, target);
   if (spawnProjectile) spawnProjectile(vehicle, target, "ally", hit ? 1 : 0);
   if (!hit) return;
   const dealt = mitigateDamage(vehicle.weapon.damage, target.defense);

@@ -436,28 +436,17 @@ function drawProjectiles() {
       dy = ty - y,
       d = Math.hypot(dx, dy) || 1,
       isPlayerShot = p.owner === "player",
-      tracer =
-        p.owner === "enemy"
-          ? "#ff8d62"
-          : p.owner === "ally"
-            ? "#71b9ff"
-            : "#ffd400",
-      tip =
-        p.owner === "enemy"
-          ? "#ffd0a8"
-          : p.owner === "ally"
-            ? "#c8e7ff"
-            : "#fffbd1";
+      tracer = "#ffd400";
     ctx.save();
     ctx.globalAlpha = Math.max(
       isPlayerShot ? 0.88 : 0.62,
       1 - p.life / p.maxLife,
     );
     ctx.strokeStyle = tracer;
-    ctx.lineWidth = isPlayerShot ? 4 : 2.2;
+    ctx.lineWidth = 1;
     ctx.lineCap = "round";
     ctx.shadowColor = tracer;
-    ctx.shadowBlur = isPlayerShot ? 13 : 6;
+    ctx.shadowBlur = 0;
     ctx.beginPath();
     ctx.moveTo(
       x - (dx / d) * (isPlayerShot ? 66 : 34),
@@ -466,10 +455,6 @@ function drawProjectiles() {
     ctx.lineTo(x, y);
     ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = tip;
-    ctx.beginPath();
-    ctx.arc(x, y, isPlayerShot ? 3.2 : 2, 0, Math.PI * 2);
-    ctx.fill();
     ctx.restore();
   });
 }
