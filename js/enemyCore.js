@@ -2,33 +2,33 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260908-134";
-import { weaponCopy, scaledWeaponRange } from "./weapons.js?v=20260908-134";
+} from "./cover.js?v=20260908-135";
+import { weaponCopy, scaledWeaponRange } from "./weapons.js?v=20260908-135";
 import {
   moveTowardTarget,
   faceThreat,
   coverStillUseful,
   peekPoint,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-134";
+} from "./combatAI.js?v=20260908-135";
 import {
   ENEMY_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
-} from "./combatStats.js?v=20260908-134";
-import { AudioBus } from "./audio.js?v=20260908-134";
+} from "./combatStats.js?v=20260908-135";
+import { AudioBus } from "./audio.js?v=20260908-135";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-134";
-import { orderDefense } from "./squadDialog.js?v=20260908-134";
-import { leoShieldBonus } from "./leoKit.js?v=20260908-134";
-import { assignEnemyCover } from "./enemyCoverAI.js?v=20260908-134";
-import { chargerWeapon } from "./chargerEnemy.js?v=20260908-134";
-import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260908-134";
-import { knifeWeapon, tickMeleeTimer } from "./melee.js?v=20260908-134";
+} from "./suppression.js?v=20260908-135";
+import { orderDefense } from "./squadDialog.js?v=20260908-135";
+import { leoShieldBonus } from "./leoKit.js?v=20260908-135";
+import { assignEnemyCover } from "./enemyCoverAI.js?v=20260908-135";
+import { chargerWeapon } from "./chargerEnemy.js?v=20260908-135";
+import { tagEnemyStance, seeksCover, applyExposedHold } from "./enemyStance.js?v=20260908-135";
+import { knifeWeapon, tickMeleeTimer } from "./melee.js?v=20260908-135";
 import {
   preferShootTargets,
   engagedTargetPenalty,
@@ -38,7 +38,7 @@ import {
   tickEngaged,
   maybeDogpile,
   ignoresCover,
-} from "./engaged.js?v=20260908-134";
+} from "./engaged.js?v=20260908-135";
 import {
   isVariantType,
   pickVariantType,
@@ -46,7 +46,7 @@ import {
   variantWeapon,
   variantWorldLabel,
   variantStats,
-} from "./enemyVariants.js?v=20260908-134";
+} from "./enemyVariants.js?v=20260908-135";
 
 var TYPES = {
   rifleman: { weapon: "rifle", hp: 60, speed: 205, scale: 1 },

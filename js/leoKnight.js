@@ -1,27 +1,27 @@
-import { isSightBlocked, getHitChance } from "./cover.js?v=20260908-134";
-import { AudioBus } from "./audio.js?v=20260908-134";
+import { isSightBlocked, getHitChance } from "./cover.js?v=20260908-135";
+import { AudioBus } from "./audio.js?v=20260908-135";
 import {
   moveTowardTarget,
   faceThreat,
-} from "./combatAI.js?v=20260908-134";
+} from "./combatAI.js?v=20260908-135";
 import {
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-134";
+} from "./combatStats.js?v=20260908-135";
 import {
   spraySuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-134";
-import { orderAccuracy } from "./squadDialog.js?v=20260908-134";
+} from "./suppression.js?v=20260908-135";
+import { orderAccuracy } from "./squadDialog.js?v=20260908-135";
 import {
   LEO_AGGRO,
   isLeo,
-} from "./leoKit.js?v=20260908-134";
-import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-134";
-import { applyIncomingHostileDamage } from "./enemyVariants.js?v=20260908-134";
-import { hasPerfectHit } from "./squadAbilities.js?v=20260908-134";
+} from "./leoKit.js?v=20260908-135";
+import { coupleEngaged, updateEngagedFight } from "./engaged.js?v=20260908-135";
+import { applyIncomingHostileDamage } from "./enemyVariants.js?v=20260908-135";
+import { hasPerfectHit } from "./squadAbilities.js?v=20260908-135";
 
 export {
   LEO_AGGRO,
@@ -34,7 +34,7 @@ export {
   incomingDefense,
   isLeoBlocking,
   drawLeoGear,
-} from "./leoKit.js?v=20260908-134";
+} from "./leoKit.js?v=20260908-135";
 
 function fireLeoSidearm(a, e, spawnProjectile, covers, accuracyModifier) {
   var gun = a.sidearm;

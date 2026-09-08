@@ -1,13 +1,13 @@
 import {
   updateAllies as updateFriendlyAI,
   MARINE_AGGRO,
-} from "./allyCore2.js?v=20260908-134";
-import { tagMarineFireteams } from "./fireteams.js?v=20260908-134";
-import { weaponCopy } from "./weapons.js?v=20260908-134";
-import { knifeWeapon } from "./melee.js?v=20260908-134";
-import { drawSoldier } from "./soldierAssets.js?v=20260908-134";
-import { drawCoverShield } from "./coverSlots.js?v=20260908-134";
-import { drawCombatMarks } from "./engaged.js?v=20260908-134";
+} from "./allyCore2.js?v=20260908-135";
+import { tagMarineFireteams } from "./fireteams.js?v=20260908-135";
+import { weaponCopy } from "./weapons.js?v=20260908-135";
+import { knifeWeapon } from "./melee.js?v=20260908-135";
+import { drawSoldier } from "./soldierAssets.js?v=20260908-135";
+import { drawCoverShield } from "./coverSlots.js?v=20260908-135";
+import { drawCombatMarks } from "./engaged.js?v=20260908-135";
 export { MARINE_AGGRO };
 
 export const INITIAL_MARINE_COUNT = 2;

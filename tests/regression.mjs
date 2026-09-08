@@ -4065,14 +4065,17 @@ test("sprite draws clamp source rects so gun tips never wrap behind the body", a
   await sprites.preloadSoldierAssets();
   await variants.preloadVariantAssets();
   await charger.preloadChargerAssets();
-  assert.equal(sprites.CELL_GUTTER, 8);
+  assert.equal(sprites.CELL_GUTTER, 12);
+  assert.equal(sprites.UNWRAP_PAD, 48);
   assert.equal(typeof sprites.drawClampedSheetFrame, "function");
   assert.equal(typeof sprites.stripWrappedOverflow, "function");
   assert.equal(typeof sprites.cleanPackedSheet, "function");
-  assert.equal(sprites.getSoldierAtlasInfo().cellGutter, 8);
+  assert.equal(typeof sprites.packedCellLayout, "function");
+  assert.equal(sprites.getSoldierAtlasInfo().cellGutter, 12);
+  assert.equal(sprites.getSoldierAtlasInfo().unwrapPad, 48);
   assert.equal(
     sprites.getSoldierAtlasInfo().wrapFix,
-    "clamp-source-strip-left-overflow",
+    "clamp-unwrap-feet-and-barrel",
   );
   const source = readFileSync("js/soldierAssets.js", "utf8");
   assert.match(source, /drawClampedSheetFrame/);

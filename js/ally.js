@@ -2,16 +2,16 @@ import {
   createAllies,
   updateAllies as updateAlliesCore,
   SQUAD_MODES,
-} from "./allyCore2.js?v=20260908-134";
-import { drawSoldier, leoAtlasReady } from "./soldierAssets.js?v=20260908-134";
-import { drawCoverShield } from "./coverSlots.js?v=20260908-134";
-import { speak } from "./squadDialog.js?v=20260908-134";
+} from "./allyCore2.js?v=20260908-135";
+import { drawSoldier, leoAtlasReady } from "./soldierAssets.js?v=20260908-135";
+import { drawCoverShield } from "./coverSlots.js?v=20260908-135";
+import { speak } from "./squadDialog.js?v=20260908-135";
 import {
   isLeo,
   LEO_TEMP_FILTER,
   drawLeoGear,
-} from "./leoKit.js?v=20260908-134";
-import { drawCombatMarks } from "./engaged.js?v=20260908-134";
+} from "./leoKit.js?v=20260908-135";
+import { drawCombatMarks } from "./engaged.js?v=20260908-135";
 export { createAllies, SQUAD_MODES };
 var ALLY_LINES = {
   contact: ["CONTACT!", "ENEMY SPOTTED!", "I SEE THEM!", "EYES UP!"],
