@@ -5,6 +5,7 @@ export const CHARACTER_STATS = {
   Rook: { hp: 150, defense: 100, accuracy: 9, regen: 4, damage: 7 },
   Viper: { hp: 115, defense: 50, accuracy: 8, regen: 5, damage: 5 },
   Doc: { hp: 130, defense: 75, accuracy: 12, regen: 7, damage: 8 },
+  Leo: { hp: 170, defense: 200, accuracy: 6, regen: 3, damage: 9 },
 };
 
 export const ENEMY_STATS = {

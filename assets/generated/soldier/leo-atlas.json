@@ -1,0 +1,39 @@
+{
+  "cols": 4,
+  "rows": 8,
+  "cell": 192,
+  "frameWidth": 192,
+  "frameHeight": 192,
+  "facing": "right",
+  "opaque": true,
+  "alphaHardened": true,
+  "character": "Leo",
+  "role": "heavy-knight",
+  "kit": [
+    "tower-shield",
+    "sword",
+    "sidearm"
+  ],
+  "states": [
+    "idle",
+    "run",
+    "standShoot",
+    "shieldRaise",
+    "meleeSwing",
+    "shieldBlock",
+    "reload",
+    "death"
+  ],
+  "fps": {
+    "idle": 3,
+    "run": 9,
+    "standShoot": 10,
+    "shieldRaise": 8,
+    "meleeSwing": 12,
+    "shieldBlock": 4,
+    "reload": 8,
+    "death": 7
+  },
+  "file": "leo-atlas.webp",
+  "note": "kit-locked v4: standShoot/reload/death kit-matched; all states same tower shield/vest/helmet"
+}

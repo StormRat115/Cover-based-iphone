@@ -52,6 +52,15 @@ node scripts/version.mjs YYYYMMDD-N
 
 When replacing an image, also bump that image's source URL in the relevant asset module. Do not create separate query versions of a stateful module: browsers treat them as separate instances.
 
+## Squadmate Leo (tactical knight): 20260908-126
+
+Fourth named ally beside Rook / Viper / Doc. Default **defense 200**, sword melee preference, infinite personal sidearm while closing. Rebased onto BUILD 124 exclusive-slot repath + façade street flow.
+
+- Loadout tab, HUD kills/DEF, crawl-revive, green cover shields, team XP, and autoplay include Leo.
+- AI knobs live on `LEO_AGGRO` in `js/leoKit.js`: `meleeRange` (82), `engageDistance` (520), `abandonCover` (300), `sidearmRange` (780), `shieldDefense` (+80 DEF while blocking / in melee).
+- When Leo hop-closes through a slot he uses `repathIfSlotContested` so leapfrog occupancy stays exclusive.
+- Art: kit-locked Phone Art `leo-atlas` from `chore/leo-heavy-knight` (`523fd40`) under `assets/generated/soldier/`. States: idle, run, standShoot, shieldRaise, meleeSwing, shieldBlock, reload, death. Temp recolor + drawn props only if that sheet fails to decode.
+
 ## Optimization pass: 20260905-59
 
 - Replaced the global animation-frame override and competing autoplay/effect clocks with explicit startup and one loop.

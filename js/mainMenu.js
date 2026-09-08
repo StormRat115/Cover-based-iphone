@@ -3,47 +3,66 @@ import {
   SIDEARMS,
   weaponCopy,
   weaponWithAttachments,
-} from "./weapons.js?v=20260908-124";
-import { soldierSource } from "./soldierAssets.js?v=20260908-124";
+} from "./weapons.js?v=20260908-126";
+import {
+  soldierSource,
+  drawSoldier,
+  leoAtlasReady,
+} from "./soldierAssets.js?v=20260908-126";
 import {
   CHARACTER_STATS,
   damageReductionPercent,
   GENERAL_ACCURACY_PENALTY,
-} from "./combatStats.js?v=20260908-124";
+} from "./combatStats.js?v=20260908-126";
 import {
   ATTACHMENT_SLOTS,
   ATTACHMENT_SLOT_LABELS,
   attachmentsForSlot,
   emptyAttachmentIds,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260908-124";
+} from "./attachments.js?v=20260908-126";
 import {
   getTeamProgress,
   xpIntoLevel,
   xpForLevel,
-} from "./teamProgress.js?v=20260908-124";
+} from "./teamProgress.js?v=20260908-126";
 import {
   SKILL_BRANCHES,
   canBuySkill,
   buySkill,
   getSkillMods,
-} from "./skillTree.js?v=20260908-124";
+} from "./skillTree.js?v=20260908-126";
 import {
   ARMOR_OPTIONS,
   describeArmorStats,
   selectArmor,
   selectedArmorId,
   signed,
-} from "./armor.js?v=20260908-124";
+} from "./armor.js?v=20260908-126";
+import {
+  isLeo,
+  leoSword,
+  leoSidearmFromLoadout,
+  LEO_TEMP_FILTER,
+  drawLeoGear,
+} from "./leoKit.js?v=20260908-126";
 
-var DEFAULT_WEAPONS = { player: "rifle", Rook: "rifle", Viper: "smg", Doc: "dmr" },
+var DEFAULT_WEAPONS = {
+    player: "rifle",
+    Rook: "rifle",
+    Viper: "smg",
+    Doc: "dmr",
+    Leo: "pistol",
+  },
   STORAGE = "coverShooterLoadout",
   CHARACTERS = [
     { key: "player", label: "PLAYER" },
     { key: "Rook", label: "ROOK" },
     { key: "Viper", label: "VIPER" },
     { key: "Doc", label: "DOC" },
+    { key: "Leo", label: "LEO" },
   ],
+  previewKey = "player",
   previewImage = soldierSource;
 
 function defaultEntry(weaponId, sidearmId) {
@@ -166,18 +185,16 @@ function ensureStyle() {
   var s = document.createElement("style");
   s.id = "loadoutPanelStyle";
   s.textContent =
-    ".loadoutTabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 12px}.loadoutTab{min-height:36px;border:1px solid #ffffff33;border-radius:8px;background:#172126;color:#9eb0b8;font:900 9px system-ui}.loadoutTab.active{background:#315a68;color:#fff}.characterLoadoutCard{position:relative;text-align:left;border:1px solid #ffffff2d;border-radius:12px;background:#11191ed9;padding:14px;min-height:270px;overflow:hidden}.characterLoadoutName{font:950 20px system-ui;color:#fff;padding-right:94px}.characterLoadoutRole{font:800 9px system-ui;color:#7fa7b8;margin:2px 0 12px}.characterSprite{position:absolute;right:3px;top:1px;width:100px;height:110px}.characterStatsGrid,.weaponStatsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0 12px}.statCell{padding:7px 8px;border-radius:8px;background:#ffffff09;border:1px solid #ffffff14}.statCell b{display:block;color:#8fb7c8;font:800 8px system-ui}.statCell strong{display:block;margin-top:2px;color:#fff;font:950 13px system-ui}.weaponBlock{margin-top:8px;padding-top:10px;border-top:1px solid #ffffff1c}.weaponBlockTitle{font:900 9px system-ui;color:#8fb7c8;margin-bottom:6px}.weaponSelect,.attachmentSelect{width:100%;min-height:42px;border:1px solid #ffffff44;border-radius:9px;background:#182228;color:#fff;padding:0 10px;font:850 11px system-ui}.attachmentGrid{display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0 8px}.attachmentRow label{display:block;font:850 8px system-ui;color:#8fb7c8;letter-spacing:1px;margin:0 0 4px}.accuracyNote{font:750 8px system-ui;color:#7f929a;margin-top:6px}.teamBar{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin:0 0 10px;padding:10px;border:1px solid #ffffff24;border-radius:10px;background:#0f171b;text-align:left}.teamBar b{display:block;color:#8fb7c8;font:800 8px system-ui}.teamBar strong{color:#fff;font:950 16px system-ui}.xpTrack{height:6px;border-radius:99px;background:#ffffff14;overflow:hidden}.xpFill{height:100%;background:#7eb8d2}.pageTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 0 12px}.pageTab{min-height:34px;border:1px solid #ffffff33;border-radius:8px;background:#172126;color:#9eb0b8;font:900 9px system-ui}.pageTab.active{background:#3d5344;color:#fff}.skillTree{display:grid;grid-template-columns:1fr;gap:10px}.skillBranch{border:1px solid #ffffff1f;border-radius:10px;padding:10px;text-align:left;background:#0f171bd4}.skillBranch h3{margin:0 0 8px;font:900 11px system-ui;letter-spacing:1px}.skillNode{width:100%;margin:4px 0;padding:8px 10px;border-radius:8px;border:1px solid #ffffff2a;background:#182228;color:#d5e2e7;text-align:left}.skillNode small{display:block;color:#8aa0aa;font:750 9px system-ui;margin-top:2px}.skillNode.owned{background:#2b4a38;border-color:#7dca8a55}.skillNode.locked{opacity:.42}.armorGrid{display:grid;gap:8px}.armorCard{text-align:left;border:1px solid #ffffff24;border-radius:10px;background:#11191ed9;padding:10px;color:#dce7eb}.armorCard.active{border-color:#7eb8d2;background:#1a2a31}.armorCard b{display:block;font:900 12px system-ui}.armorCard p{margin:4px 0 6px;font:750 9px system-ui;color:#8aa0aa}.armorStats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font:800 8px system-ui;color:#c5d6dd}";
+    ".loadoutTabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:0 0 12px}.loadoutTab{min-height:36px;border:1px solid #ffffff33;border-radius:8px;background:#172126;color:#9eb0b8;font:900 9px system-ui}.loadoutTab.active{background:#315a68;color:#fff}.characterLoadoutCard{position:relative;text-align:left;border:1px solid #ffffff2d;border-radius:12px;background:#11191ed9;padding:14px;min-height:270px;overflow:hidden}.characterLoadoutName{font:950 20px system-ui;color:#fff;padding-right:94px}.characterLoadoutRole{font:800 9px system-ui;color:#7fa7b8;margin:2px 0 12px}.characterSprite{position:absolute;right:3px;top:1px;width:100px;height:110px}.characterStatsGrid,.weaponStatsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:8px 0 12px}.statCell{padding:7px 8px;border-radius:8px;background:#ffffff09;border:1px solid #ffffff14}.statCell b{display:block;color:#8fb7c8;font:800 8px system-ui}.statCell strong{display:block;margin-top:2px;color:#fff;font:950 13px system-ui}.weaponBlock{margin-top:8px;padding-top:10px;border-top:1px solid #ffffff1c}.weaponBlockTitle{font:900 9px system-ui;color:#8fb7c8;margin-bottom:6px}.weaponSelect,.attachmentSelect{width:100%;min-height:42px;border:1px solid #ffffff44;border-radius:9px;background:#182228;color:#fff;padding:0 10px;font:850 11px system-ui}.attachmentGrid{display:grid;grid-template-columns:1fr;gap:8px;margin:10px 0 8px}.attachmentRow label{display:block;font:850 8px system-ui;color:#8fb7c8;letter-spacing:1px;margin:0 0 4px}.accuracyNote{font:750 8px system-ui;color:#7f929a;margin-top:6px}.teamBar{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin:0 0 10px;padding:10px;border:1px solid #ffffff24;border-radius:10px;background:#0f171b;text-align:left}.teamBar b{display:block;color:#8fb7c8;font:800 8px system-ui}.teamBar strong{color:#fff;font:950 16px system-ui}.xpTrack{height:6px;border-radius:99px;background:#ffffff14;overflow:hidden}.xpFill{height:100%;background:#7eb8d2}.pageTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 0 12px}.pageTab{min-height:34px;border:1px solid #ffffff33;border-radius:8px;background:#172126;color:#9eb0b8;font:900 9px system-ui}.pageTab.active{background:#3d5344;color:#fff}.skillTree{display:grid;grid-template-columns:1fr;gap:10px}.skillBranch{border:1px solid #ffffff1f;border-radius:10px;padding:10px;text-align:left;background:#0f171bd4}.skillBranch h3{margin:0 0 8px;font:900 11px system-ui;letter-spacing:1px}.skillNode{width:100%;margin:4px 0;padding:8px 10px;border-radius:8px;border:1px solid #ffffff2a;background:#182228;color:#d5e2e7;text-align:left}.skillNode small{display:block;color:#8aa0aa;font:750 9px system-ui;margin-top:2px}.skillNode.owned{background:#2b4a38;border-color:#7dca8a55}.skillNode.locked{opacity:.42}.armorGrid{display:grid;gap:8px}.armorCard{text-align:left;border:1px solid #ffffff24;border-radius:10px;background:#11191ed9;padding:10px;color:#dce7eb}.armorCard.active{border-color:#7eb8d2;background:#1a2a31}.armorCard b{display:block;font:900 12px system-ui}.armorCard p{margin:4px 0 6px;font:750 9px system-ui;color:#8aa0aa}.armorStats{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;font:800 8px system-ui;color:#c5d6dd}";
   document.head.appendChild(s);
 }
 
 function roleName(k) {
-  return k === "Rook"
-    ? "ASSAULT"
-    : k === "Viper"
-      ? "FLANKER"
-      : k === "Doc"
-        ? "MARKSMAN"
-        : "OPERATOR";
+  if (k === "Rook") return "ASSAULT";
+  if (k === "Viper") return "FLANKER";
+  if (k === "Doc") return "MARKSMAN";
+  if (k === "Leo") return "TACTICAL KNIGHT";
+  return "OPERATOR";
 }
 
 function statCell(l, v) {
@@ -354,35 +371,58 @@ function renderSquad(key, selection) {
     statCell("REGEN", stats.regen + " HP/s") +
     statCell("DAMAGE", "+" + stats.damage) +
     statCell("BASE ACCURACY", GENERAL_ACCURACY_PENALTY + " global") +
-    '</div><div class="weaponBlock"><div class="weaponBlockTitle">EQUIPPED WEAPON</div><select class="weaponSelect" data-loadout="' +
-    key +
-    '">' +
-    weaponOptions(entry.weapon) +
-    '</select><div class="attachmentGrid">' +
-    attachmentHtml +
-    '</div><div class="weaponStatsGrid">' +
-    statCell("DAMAGE", w.damage + " + " + stats.damage + " = " + totalDamage) +
-    statCell("ACCURACY", (w.accuracy >= 0 ? "+" : "") + w.accuracy) +
-    statCell("SHOT SPREAD", w.spread + "°") +
-    statCell("RANGE", w.range) +
-    statCell("FIRE RATE", fireRate + " / sec") +
-    statCell("RELOAD SPEED", w.reload.toFixed(2) + " sec") +
-    statCell("MAGAZINE", w.magazine) +
     '</div>' +
-    (key === "player"
-      ? '<div class="weaponBlock"><div class="weaponBlockTitle">SIDEARM · INFINITE AMMO</div><select class="weaponSelect" data-sidearm="player">' +
-        sidearmOptions(entry.sidearm) +
-        '</select><div class="weaponStatsGrid">' +
-        statCell("NAME", side.name) +
-        statCell("DAMAGE", side.damage) +
-        statCell("ACCURACY", (side.accuracy >= 0 ? "+" : "") + side.accuracy) +
-        statCell("RANGE", side.range) +
-        statCell("FIRE RATE", (1 / side.cooldown).toFixed(1) + " / sec") +
-        statCell("MAGAZINE", side.magazine + " ∞") +
-        '</div><div class="accuracyNote">' +
-        side.blurb +
-        " Auto-swaps when the primary is dry or you are pinned hard.</div></div>"
-      : "") +
+    (key === "Leo"
+      ? (function () {
+          var blade = leoSword();
+          return (
+            '<div class="weaponBlock"><div class="weaponBlockTitle">MELEE · ALWAYS PREFERRED</div><div class="weaponStatsGrid">' +
+            statCell("NAME", blade.name) +
+            statCell("DAMAGE", blade.damage + " + " + stats.damage + " = " + (blade.damage + stats.damage)) +
+            statCell("RANGE", blade.range + " (melee)") +
+            statCell("SWING", (1 / blade.cooldown).toFixed(1) + " / sec") +
+            '</div><div class="accuracyNote">Leo closes into sword range. Shield adds +80 DEF while blocking or in melee. Knobs: LEO_AGGRO.meleeRange / engageDistance / abandonCover.</div></div>' +
+            '<div class="weaponBlock"><div class="weaponBlockTitle">SIDEARM · INFINITE AMMO</div><select class="weaponSelect" data-sidearm="Leo">' +
+            sidearmOptions(entry.sidearm) +
+            '</select><div class="weaponStatsGrid">' +
+            statCell("NAME", side.name) +
+            statCell("DAMAGE", side.damage) +
+            statCell("ACCURACY", (side.accuracy >= 0 ? "+" : "") + side.accuracy) +
+            statCell("RANGE", side.range) +
+            statCell("FIRE RATE", (1 / side.cooldown).toFixed(1) + " / sec") +
+            statCell("MAGAZINE", side.magazine + " ∞") +
+            '</div><div class="accuracyNote">Leo fires this while closing. Does not share or spend the player sidearm.</div></div>'
+          );
+        })()
+      : '<div class="weaponBlock"><div class="weaponBlockTitle">EQUIPPED WEAPON</div><select class="weaponSelect" data-loadout="' +
+        key +
+        '">' +
+        weaponOptions(entry.weapon) +
+        '</select><div class="attachmentGrid">' +
+        attachmentHtml +
+        '</div><div class="weaponStatsGrid">' +
+        statCell("DAMAGE", w.damage + " + " + stats.damage + " = " + totalDamage) +
+        statCell("ACCURACY", (w.accuracy >= 0 ? "+" : "") + w.accuracy) +
+        statCell("SHOT SPREAD", w.spread + "°") +
+        statCell("RANGE", w.range) +
+        statCell("FIRE RATE", fireRate + " / sec") +
+        statCell("RELOAD SPEED", w.reload.toFixed(2) + " sec") +
+        statCell("MAGAZINE", w.magazine) +
+        '</div>' +
+        (key === "player"
+          ? '<div class="weaponBlock"><div class="weaponBlockTitle">SIDEARM · INFINITE AMMO</div><select class="weaponSelect" data-sidearm="player">' +
+            sidearmOptions(entry.sidearm) +
+            '</select><div class="weaponStatsGrid">' +
+            statCell("NAME", side.name) +
+            statCell("DAMAGE", side.damage) +
+            statCell("ACCURACY", (side.accuracy >= 0 ? "+" : "") + side.accuracy) +
+            statCell("RANGE", side.range) +
+            statCell("FIRE RATE", (1 / side.cooldown).toFixed(1) + " / sec") +
+            statCell("MAGAZINE", side.magazine + " ∞") +
+            '</div><div class="accuracyNote">' +
+            side.blurb +
+            " Auto-swaps when the primary is dry or you are pinned hard.</div></div>"
+          : "")) +
     '<div class="accuracyNote">Character Accuracy is added after the general ' +
     Math.abs(GENERAL_ACCURACY_PENALTY) +
     " point accuracy reduction. Attachments modify the weapon stats above. Armor and skill tree bonuses apply on PLAY.</div></div></div>"
@@ -399,15 +439,42 @@ function renderPanel(rows, key, selection, page) {
       : page === "armor"
         ? renderArmor()
         : renderSquad(key, selection));
-  if (page === "squad") drawPreview();
+  if (page === "squad") drawPreview(key);
 }
 
-function drawPreview() {
+function drawPreview(key) {
+  if (key) previewKey = key;
   var canvas = document.getElementById("characterPreview");
   if (!canvas) return;
   var g = canvas.getContext("2d");
   function paint() {
     g.clearRect(0, 0, canvas.width, canvas.height);
+    if (previewKey === "Leo") {
+      g.save();
+      g.translate(100, 198);
+      drawSoldier(
+        g,
+        {
+          x: 0,
+          y: 0,
+          hp: 170,
+          maxHp: 170,
+          facingX: 1,
+          facingY: 0,
+          name: "Leo",
+          knight: true,
+        },
+        {
+          team: "ally",
+          scale: 0.72,
+          recolorFilter: leoAtlasReady() ? "" : LEO_TEMP_FILTER,
+        },
+      );
+      if (!leoAtlasReady())
+        drawLeoGear(g, { name: "Leo", knight: true, blocking: true, combatState: "idle" });
+      g.restore();
+      return;
+    }
     g.drawImage(previewImage, 200, 0, 120, 165, 38, 42, 124, 170);
   }
   if (previewImage && previewImage.complete && previewImage.naturalWidth) {
@@ -432,6 +499,12 @@ function equipFromSelection(s) {
       s[a.name],
       DEFAULT_WEAPONS[a.name] || "rifle",
     );
+    if (isLeo(a)) {
+      a.weapon = leoSword();
+      a.sidearm = leoSidearmFromLoadout(ae);
+      a.weaponSlot = "melee";
+      return;
+    }
     a.weapon = weaponCopy(ae.weapon, ae.attachments);
   });
 }
@@ -503,8 +576,9 @@ export function initMainMenu(onPlay) {
         return;
       }
       if (t.dataset.sidearm) {
-        selection.player = normalizeEntry(selection.player, DEFAULT_WEAPONS.player);
-        selection.player.sidearm = t.value;
+        var sk = t.dataset.sidearm;
+        selection[sk] = normalizeEntry(selection[sk], DEFAULT_WEAPONS[sk]);
+        selection[sk].sidearm = t.value;
         saveSelection(selection);
         renderPanel(rows, active, selection, page);
         return;

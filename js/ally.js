@@ -2,13 +2,19 @@ import {
   createAllies,
   updateAllies as updateAlliesCore,
   SQUAD_MODES,
-} from "./allyCore2.js?v=20260908-124";
-import { drawSoldier } from "./soldierAssets.js?v=20260908-124";
-import { drawCoverShield } from "./coverSlots.js?v=20260908-124";
-import { speak } from "./squadDialog.js?v=20260908-124";
+} from "./allyCore2.js?v=20260908-126";
+import { drawSoldier, leoAtlasReady } from "./soldierAssets.js?v=20260908-126";
+import { drawCoverShield } from "./coverSlots.js?v=20260908-126";
+import { speak } from "./squadDialog.js?v=20260908-126";
+import {
+  isLeo,
+  LEO_TEMP_FILTER,
+  drawLeoGear,
+} from "./leoKit.js?v=20260908-126";
 export { createAllies, SQUAD_MODES };
 var ALLY_LINES = {
   contact: ["CONTACT!", "ENEMY SPOTTED!", "I SEE THEM!", "EYES UP!"],
+  knight: ["ON ME!", "BREAKING THEIR LINE!", "SWORD OUT!", "HOLD BEHIND THE SHIELD!"],
   fire: [
     "ENGAGING!",
     "SENDING ROUNDS!",
@@ -64,7 +70,8 @@ export function updateAllies(
     }
     if (a.flavorClock <= 0) {
       a.flavorClock = 3.8 + Math.random() * 5.5;
-      if (alive) flavor(a, a.exposed ? "fire" : "contact", 0.32, 1.4);
+      if (alive && isLeo(a)) flavor(a, "knight", 0.38, 1.4);
+      else if (alive) flavor(a, a.exposed ? "fire" : "contact", 0.32, 1.4);
       else flavor(a, "calm", 0.3, 1.5);
     }
   });
@@ -99,7 +106,9 @@ export function drawAlly(ctx, a, iso) {
     team: "ally",
     scale: 0.3,
     alpha: a.dead ? 0.94 : a.downed ? 0.74 : 1,
+    recolorFilter: isLeo(a) && !leoAtlasReady() ? LEO_TEMP_FILTER : "",
   });
+  if (isLeo(a) && !a.dead && !leoAtlasReady()) drawLeoGear(ctx, a);
   ctx.fillStyle = "#fff";
   ctx.font = "800 8px system-ui";
   ctx.textAlign = "center";

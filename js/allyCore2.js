@@ -2,9 +2,9 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260908-124";
-import { weaponCopy } from "./weapons.js?v=20260908-124";
-import { AudioBus } from "./audio.js?v=20260908-124";
+} from "./cover.js?v=20260908-126";
+import { weaponCopy } from "./weapons.js?v=20260908-126";
+import { AudioBus } from "./audio.js?v=20260908-126";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -13,32 +13,39 @@ import {
   coverStillUseful,
   peekPoint,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-124";
+} from "./combatAI.js?v=20260908-126";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-124";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260908-124";
+} from "./combatStats.js?v=20260908-126";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260908-126";
 import {
   isCoverFull,
   occupancyPenalty,
   occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260908-124";
+} from "./coverSlots.js?v=20260908-126";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-124";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-124";
+} from "./suppression.js?v=20260908-126";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-126";
 import {
   currentPushGoal,
   pushGoalKey,
-} from "./streetObjectives.js?v=20260908-124";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-124";
+} from "./streetObjectives.js?v=20260908-126";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-126";
+import {
+  isLeo,
+  leoSword,
+  leoSidearmFromLoadout,
+  tickLeoTimers,
+  updateLeoKnight,
+} from "./leoKnight.js?v=20260908-126";
 export const MARINE_AGGRO = {
   engageRangeFactor: 0.4,
   engageRangeCap: 700,
@@ -99,6 +106,17 @@ var SQUAD = [
     regen: CHARACTER_STATS.Doc.regen,
     damage: CHARACTER_STATS.Doc.damage,
   },
+  {
+    name: "Leo",
+    weapon: "pistol",
+    role: "knight",
+    speed: 168,
+    hp: CHARACTER_STATS.Leo.hp,
+    defense: CHARACTER_STATS.Leo.defense,
+    accuracy: CHARACTER_STATS.Leo.accuracy,
+    regen: CHARACTER_STATS.Leo.regen,
+    damage: CHARACTER_STATS.Leo.damage,
+  },
 ];
 function syncCommandButtons() {
   document
@@ -138,20 +156,29 @@ export function createAllies() {
       [-70, 170],
       [75, 185],
       [0, 260],
+      [155, 230],
     ],
     chosen = window.__selectedLoadout || {};
   var allies = SQUAD.map(function (s, i) {
     var pos = starts[i];
+    var entry = chosen[s.name];
+    var knight = s.role === "knight";
     return {
       name: s.name,
       role: s.role,
-      weapon: (function () {
-        var entry = chosen[s.name];
-        if (typeof entry === "string") return weaponCopy(entry);
-        if (entry && typeof entry === "object")
-          return weaponCopy(entry.weapon || s.weapon, entry.attachments);
-        return weaponCopy(s.weapon);
-      })(),
+      knight: knight,
+      meleePrefer: knight,
+      weapon: knight
+        ? leoSword()
+        : (function () {
+            if (typeof entry === "string") return weaponCopy(entry);
+            if (entry && typeof entry === "object")
+              return weaponCopy(entry.weapon || s.weapon, entry.attachments);
+            return weaponCopy(s.weapon);
+          })(),
+      sidearm: knight ? leoSidearmFromLoadout(entry) : null,
+      weaponSlot: knight ? "melee" : "primary",
+      blocking: false,
       x: pos[0],
       y: pos[1],
       hp: s.hp,
@@ -231,6 +258,7 @@ function chooseCombatEnemy(a, enemies, covers, friendlies, player, mode) {
     else if (e.combatTarget && !e.combatTarget.dead) score += 18;
     if (e === a.combatTarget) score += 34;
     if (a.role === "flanker" && d < 700 && e.exposed) score += 20;
+    if (a.role === "knight" && d < 480) score += 36;
     if (score > bestScore) {
       bestScore = score;
       best = e;
@@ -463,6 +491,7 @@ export function updateAllies(
     a.repositionCooldown = Math.max(0, a.repositionCooldown - dt);
     if (a.weapon.fireCooldown > 0)
       a.weapon.fireCooldown = Math.max(0, a.weapon.fireCooldown - dt);
+    tickLeoTimers(a, dt);
     if (a.dead) {
       a.deathTimer += dt;
       return;
@@ -494,6 +523,10 @@ export function updateAllies(
       if (a.reloadTimer <= 0) {
         a.reloading = false;
         a.weapon.ammo = a.weapon.magazine;
+        if (a.sidearm) {
+          a.sidearm.ammo = a.sidearm.magazine;
+          a.sidearm.reserve = Infinity;
+        }
       }
     }
     if (a.regenRate > 0 && a.hp < a.maxHp && a.timeSinceDamage > a.regenDelay)
@@ -561,11 +594,17 @@ export function updateAllies(
     }
     if (!e) {
       a.cover = null;
+      a.blocking = false;
       a.targetX = player.x + (a.coverSlotIndex - 1) * 90;
       a.targetY = player.y + 100;
       moveTowardTarget(a, dt);
       return;
     }
+    if (
+      isLeo(a) &&
+      updateLeoKnight(a, dt, e, d, covers, slotCrowd, spawnProjectile, squadMode)
+    )
+      return;
     var defendingObjective = !!(
       a.isMarine &&
       mission &&

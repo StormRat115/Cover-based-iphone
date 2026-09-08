@@ -1,6 +1,7 @@
-import { loadImage } from "./assets.js?v=20260908-124";
-import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260908-124";
-import { faceThreat } from "./combatAI.js?v=20260908-124";
+import { loadImage } from "./assets.js?v=20260908-126";
+import { mitigateDamage, attackDamage } from "./combatStats.js?v=20260908-126";
+import { faceThreat } from "./combatAI.js?v=20260908-126";
+import { incomingDefense } from "./leoKit.js?v=20260908-126";
 
 export const CHARGER_SHEET = {
   file: "enemy-charger-melee-sheet.png",
@@ -99,7 +100,7 @@ export function chooseChargeTarget(e) {
 
 function slam(target, raw) {
   if (!valid(target)) return;
-  var dealt = mitigateDamage(Math.max(6, raw), target.defense);
+  var dealt = mitigateDamage(Math.max(6, raw), incomingDefense(target));
   target.hp = Math.max(0, target.hp - dealt);
   target.lastDamageTaken = dealt;
   target.hit = 0.28;
