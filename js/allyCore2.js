@@ -2,9 +2,10 @@ import {
   isLineBlocked,
   isSightBlocked,
   getHitChance,
-} from "./cover.js?v=20260908-129";
-import { weaponCopy } from "./weapons.js?v=20260908-129";
-import { AudioBus } from "./audio.js?v=20260908-129";
+} from "./cover.js?v=20260908-130";
+import { weaponCopy } from "./weapons.js?v=20260908-130";
+import { fillEmptySquadAttachments } from "./attachments.js?v=20260908-130";
+import { AudioBus } from "./audio.js?v=20260908-130";
 import {
   pickTacticalCover,
   applyCoverChoice,
@@ -13,32 +14,32 @@ import {
   coverStillUseful,
   peekPoint,
   repathIfSlotContested,
-} from "./combatAI.js?v=20260908-129";
+} from "./combatAI.js?v=20260908-130";
 import {
   CHARACTER_STATS,
   mitigateDamage,
   combatAccuracy,
   attackDamage,
   creditKill,
-} from "./combatStats.js?v=20260908-129";
-import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260908-129";
+} from "./combatStats.js?v=20260908-130";
+import { recoverInCover, shouldRecover } from "./recoveryAI.js?v=20260908-130";
 import {
   isCoverFull,
   occupancyPenalty,
   occupiesCoverSlot,
   reserveCoverSlot,
-} from "./coverSlots.js?v=20260908-129";
+} from "./coverSlots.js?v=20260908-130";
 import {
   spraySuppression,
   tickSuppression,
   suppressionAccuracyDelta,
-} from "./suppression.js?v=20260908-129";
-import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-129";
+} from "./suppression.js?v=20260908-130";
+import { updateDownedCrawl } from "./downedCrawl.js?v=20260908-130";
 import {
   currentPushGoal,
   pushGoalKey,
-} from "./streetObjectives.js?v=20260908-129";
-import { isStreetBreathing } from "./streetBeat.js?v=20260908-129";
+} from "./streetObjectives.js?v=20260908-130";
+import { isStreetBreathing } from "./streetBeat.js?v=20260908-130";
 import {
   tagSquadFireteams,
   updateFireteams,
@@ -46,16 +47,16 @@ import {
   isFireteamBounding,
   boundSpeedScale,
   hopCoversAhead,
-} from "./fireteams.js?v=20260908-129";
-import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-129";
+} from "./fireteams.js?v=20260908-130";
+import { orderAccuracy, orderDefense } from "./squadDialog.js?v=20260908-130";
 import {
   isLeo,
   leoSword,
   leoSidearmFromLoadout,
   tickLeoTimers,
   updateLeoKnight,
-} from "./leoKnight.js?v=20260908-129";
-import { knifeWeapon, ignoresCover, tickMeleeTimer } from "./melee.js?v=20260908-129";
+} from "./leoKnight.js?v=20260908-130";
+import { knifeWeapon, ignoresCover, tickMeleeTimer } from "./melee.js?v=20260908-130";
 import {
   preferShootTargets,
   engagedTargetPenalty,
@@ -64,12 +65,12 @@ import {
   closeForMelee,
   tickEngaged,
   canRegen,
-} from "./engaged.js?v=20260908-129";
+} from "./engaged.js?v=20260908-130";
 import {
   tickSquadAbilities,
   abilityBusy,
   hasPerfectHit,
-} from "./squadAbilities.js?v=20260908-129";
+} from "./squadAbilities.js?v=20260908-130";
 export const MARINE_AGGRO = {
   engageRangeFactor: 0.4,
   engageRangeCap: 700,
@@ -93,12 +94,12 @@ export const MARINE_AGGRO = {
 };
 export const SQUAD_AGGRO = {
   recoverPct: 0.1,
-  coveredDwell: 0.14,
-  peekMin: 2.05,
-  peekMax: 3.25,
-  peekShotsMin: 11,
-  peekShotsExtra: 7,
-  reposition: 0.22,
+  coveredDwell: 0.09,
+  peekMin: 2.35,
+  peekMax: 3.65,
+  peekShotsMin: 14,
+  peekShotsExtra: 9,
+  reposition: 0.16,
   engageRangeFactor: 0.42,
   advanceSpeed: 1.22,
   followLag: 56,
@@ -212,19 +213,20 @@ export function createAllies() {
     var pos = starts[i];
     var entry = chosen[s.name];
     var knight = s.role === "knight";
+    var weaponId = s.weapon;
+    var attachmentIds = null;
+    if (typeof entry === "string") weaponId = entry;
+    else if (entry && typeof entry === "object") {
+      weaponId = entry.weapon || s.weapon;
+      attachmentIds = entry.attachments;
+    }
+    if (!knight) attachmentIds = fillEmptySquadAttachments(attachmentIds);
     return {
       name: s.name,
       role: s.role,
       knight: knight,
       meleePrefer: knight,
-      weapon: knight
-        ? leoSword()
-        : (function () {
-            if (typeof entry === "string") return weaponCopy(entry);
-            if (entry && typeof entry === "object")
-              return weaponCopy(entry.weapon || s.weapon, entry.attachments);
-            return weaponCopy(s.weapon);
-          })(),
+      weapon: knight ? leoSword() : weaponCopy(weaponId, attachmentIds),
       sidearm: knight ? leoSidearmFromLoadout(entry) : null,
       weaponSlot: knight ? "melee" : "primary",
       blocking: false,
@@ -525,8 +527,17 @@ function advanceToMission(a, mission, covers, friendlies, dt, threats) {
   );
   return true;
 }
-function shouldPressStreetObjective(a, e, d, covers, goal) {
-  if (!goal || goal.source !== "street") return false;
+function shouldPressObjective(a, e, d, covers, goal) {
+  if (!goal) return false;
+  var street =
+    typeof window !== "undefined" ? window.__streetObjectives : null;
+  var streetTask = goal.source === "street";
+  var resumeFort =
+    goal.source === "fort" &&
+    street &&
+    street.resumeForward &&
+    !street.current;
+  if (!streetTask && !resumeFort) return false;
   if (isHoldMode(squadMode) && !a.isMarine) return false;
   var tun = marineTuned(a);
   if (a.hp < a.maxHp * (tun ? tun.pushHp : 0.55)) return false;
@@ -641,7 +652,7 @@ export function updateAllies(
       aggressiveAdvance =
         (!!a.aggressiveAdvance && a.isMarine) ||
         (isAggressiveMode(squadMode) && !a.isMarine),
-      peekTun = tun || (aggressiveAdvance && !a.isMarine ? SQUAD_AGGRO : null),
+      peekTun = tun || (!a.isMarine ? SQUAD_AGGRO : null),
       engagementRange = aggressiveAdvance
         ? Math.min(
             a.weapon.range * (tun ? tun.engageRangeFactor : SQUAD_AGGRO.engageRangeFactor),
@@ -656,7 +667,7 @@ export function updateAllies(
       streetBreathing = isStreetBreathing(street),
       objectivePush =
         !streetBreathing &&
-        shouldPressStreetObjective(a, e, d, covers, activeGoal);
+        shouldPressObjective(a, e, d, covers, activeGoal);
     a.objectiveAdvancePaused = streetBreathing || (!!e && !objectivePush);
     if (streetBreathing) {
       a.objectiveHold = true;

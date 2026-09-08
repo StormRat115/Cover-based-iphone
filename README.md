@@ -86,6 +86,33 @@ Independent abilities (`js/squadAbilities.js`, `ABILITY_KNOBS`):
 
 Rebased onto BUILD 127 (leapfrog fireteams, suppression VFX, MAG CHECK breath → door/wreck breach). Those systems stay.
 
+## Street combat pack: 20260908-130
+
+Rebased onto latest `development` (BUILD 129 player scale 0.275). Sidewalks, engaged melee, Aggressive/Follow/Hold, abilities, and the player draw scale stay.
+
+1. **Weapon range −10%** — Knob `WEAPON_RANGE.scale` in `js/weapons.js` (default **0.9**). Catalog numbers are BUILD 129; effective combat range is catalog × scale after attachments. Rook **MG88 stays 9999** (unlimited). Melee (Leo sword 82, charger rushblade 50, knife) is unscaled.
+
+   | Gun | BUILD 129 | BUILD 130 |
+   | --- | --- | --- |
+   | rifle | 1085 | 977 |
+   | pistol / sidearm | 735 | 662 |
+   | shotgun | 560 | 504 |
+   | sniper | 1540 | 1386 |
+   | lmg | 1225 | 1103 |
+   | dmr | 1400 | 1260 |
+   | smg | 840 | 756 |
+   | magnum | 686 | 617 |
+   | machine pistol | 616 | 554 |
+   | fort turret | 1890 | 1701 |
+   | enemy roll | 630–980 | 567–882 |
+   | MG88 | 9999 | 9999 |
+
+2. **Street objectives** — Four rotating chapters: hold the crosswalk, clear the wreck, escort the stretch, clear the doorway nest. HUD title + line say what to do and the remaining clock / wrecks / meters / hostiles. World marker repeats the progress.
+3. **After a side task, push the fort** — Completing a street task still plays MAG CHECK (2.15–3.55s), then the live goal is always **capture the fort**. AI / autoplay / marines resume the forward push instead of waiting on the finished marker. A later random task can still spawn after the cooldown.
+4. **Two starting marines** — `INITIAL_MARINE_COUNT = 2`. Skill / reinforcement spawns can still add more.
+5. **Squad fights harder** — Doc / Rook / Viper / Leo accuracy and damage up; longer peeks and more shots (`SQUAD_AGGRO`). HP/DEF unchanged. Leo sword 40 → 46. Aggressive / Follow / Hold stay.
+6. **Bare squad guns get random attachments** — If a squadmate’s loadout left all four slots empty, combat start rolls one attachment per slot. Assigned loadouts are kept. The player’s gun is not auto-filled.
+
 ## Player street scale: 20260908-129
 
 Player character draw scale **0.31 → 0.275** (~11% smaller). Squad (Doc/Rook/Viper/Leo), marines, and enemies are unchanged. Atlas art and cover-slot / collision radii are unchanged.

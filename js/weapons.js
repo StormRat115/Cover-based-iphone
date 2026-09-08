@@ -1,13 +1,40 @@
 import {
   getAttachment,
   normalizeAttachmentIds,
-} from "./attachments.js?v=20260908-129";
+} from "./attachments.js?v=20260908-130";
 import {
   SIDEARMS,
   startingReserve,
   prepareWeaponAmmo,
-} from "./ammoEconomy.js?v=20260908-129";
+} from "./ammoEconomy.js?v=20260908-130";
 export { SIDEARMS };
+
+/**
+ * Effective weapon range knob.
+ * Catalog numbers below are BUILD 129 values. Combat range = catalog * scale
+ * after attachments, except unlimited guns (Rook MG88 at 9999).
+ *
+ * BUILD 129 → BUILD 130 (scale 0.9, -10%):
+ *   rifle 1085→977  pistol 735→662  shotgun 560→504
+ *   sniper 1540→1386  lmg 1225→1103  dmr 1400→1260  smg 840→756
+ *   magnum 686→617  machinePistol 616→554  fort turret 1890→1701
+ *   enemy roll 630–980 → 567–882
+ * Melee (Leo sword, charger rushblade, knife) and MG88 stay unscaled.
+ */
+export const WEAPON_RANGE = {
+  scale: 0.9,
+  unlimitedFloor: 9000,
+};
+
+export function isUnlimitedWeaponRange(range) {
+  return (Number(range) || 0) >= WEAPON_RANGE.unlimitedFloor;
+}
+
+export function scaledWeaponRange(range) {
+  var r = Number(range) || 0;
+  if (r <= 0 || isUnlimitedWeaponRange(r)) return r;
+  return Math.round(r * WEAPON_RANGE.scale);
+}
 
 export const WEAPONS = {
   rifle: {
@@ -148,7 +175,11 @@ export function applyAttachmentMods(base, attachmentIds) {
     });
   });
   w.damage = clamp(Math.round(w.damage), 4, 160);
-  w.range = clamp(Math.round(w.range), 350, 2800);
+  if (w.role === "melee" || w.melee || isUnlimitedWeaponRange(w.range)) {
+    w.range = Math.round(w.range);
+  } else {
+    w.range = clamp(scaledWeaponRange(w.range), 350, 2800);
+  }
   w.cooldown = clamp(+w.cooldown.toFixed(3), 0.08, 3.5);
   w.magazine = clamp(Math.round(w.magazine), 3, 120);
   w.reload = clamp(+w.reload.toFixed(3), 0.45, 4.5);

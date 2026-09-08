@@ -158,3 +158,23 @@ export function normalizeAttachmentIds(ids) {
   }
   return out;
 }
+
+export function attachmentsAreEmpty(ids) {
+  return normalizeAttachmentIds(ids).every(function (id) {
+    return !id;
+  });
+}
+
+export function rollRandomAttachments(random) {
+  random = random || Math.random;
+  return ATTACHMENT_SLOTS.map(function (slot) {
+    var pool = attachmentsForSlot(slot);
+    return pool[Math.floor(random() * pool.length)].id;
+  });
+}
+
+/** Fill all four slots only when the loadout left the gun completely bare. */
+export function fillEmptySquadAttachments(ids, random) {
+  if (!attachmentsAreEmpty(ids)) return normalizeAttachmentIds(ids);
+  return rollRandomAttachments(random);
+}

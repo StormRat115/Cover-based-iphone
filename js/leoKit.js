@@ -1,5 +1,5 @@
-import { weaponCopy } from "./weapons.js?v=20260908-129";
-import { orderDefense } from "./squadDialog.js?v=20260908-129";
+import { weaponCopy } from "./weapons.js?v=20260908-130";
+import { orderDefense } from "./squadDialog.js?v=20260908-130";
 
 // Tunable knight brain. StormRat can replace this with per-squadmate AI later.
 export const LEO_AGGRO = {
@@ -10,7 +10,7 @@ export const LEO_AGGRO = {
   closeSpeed: 1.24,
   coverCloseSpeed: 1.16,
   shieldDefense: 80,
-  swordDamage: 40,
+  swordDamage: 46,
   swordCooldown: 0.55,
   holdPeek: 0.7,
   reposition: 0.42,

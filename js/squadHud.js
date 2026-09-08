@@ -114,7 +114,9 @@ export function updateSquadHud() {
   var marines = window.__battleMarines || [];
   if (marines.length) {
     html +=
-      '<div style="font-size:8px;color:#8fb7c8;letter-spacing:1.4px;margin:7px 0 3px">MARINES</div>';
+      '<div style="font-size:8px;color:#8fb7c8;letter-spacing:1.4px;margin:7px 0 3px">MARINES · ' +
+      marines.length +
+      "</div>";
     html += marines
       .map(function (m) {
         return (

@@ -816,7 +816,7 @@ test("actual game handles combat, pause, restart, tab hiding and waves", async (
     ),
   );
   const player = h.window.__battlePlayer;
-  assert.equal(h.window.__battleMarines.length, 5);
+  assert.equal(h.window.__battleMarines.length, 2);
   assert.ok(
     h.window.__battleMarines.every(
       (marine) =>
@@ -917,7 +917,7 @@ test("the fort captures after 30 seconds and deploys a 200 HP support turret", a
   const vehicle = vehicleModule.createSupportVehicle(mission.objective);
   assert.equal(vehicle.hp, 200);
   assert.equal(vehicle.defense, 20);
-  assert.ok(vehicle.weapon.range >= 2700);
+  assert.equal(vehicle.weapon.range, Math.round(1890 * 0.9));
   assert.ok(vehicle.weapon.cooldown <= 0.075);
   assert.ok(vehicle.weapon.damage <= 3);
   const enemy = {
@@ -2789,6 +2789,12 @@ test("street objectives cycle and give marines a local goal", async () => {
   });
   assert.ok(covers.length >= 3);
   assert.ok(covers.every((c) => c.theme === "wreck"));
+  const after = obj.currentPushGoal(
+    { objective: { x: 0, y: -5700, radius: 265 } },
+    { current: null, completed: 1 },
+  );
+  assert.equal(after.source, "fort");
+  assert.equal(after.id, "fort");
 });
 
 test("completing a street objective unsticks friendlies and autoplay", async () => {
@@ -2868,6 +2874,9 @@ test("completing a street objective unsticks friendlies and autoplay", async () 
     marines.some((marine, i) => marine.y < marineStart[i] - 40),
     "marines should leave a finished street marker immediately",
   );
+  const fortGoal = obj.currentPushGoal(mission, state);
+  assert.equal(fortGoal.source, "fort", "after a side task the default goal is the fort");
+  assert.match(obj.objectiveStatusLine(state), /PUSH FORWARD|CAPTURE THE FORT|MAG CHECK/);
 
   const game = await h.importModule(entry);
   game.startGame();
@@ -3046,9 +3055,9 @@ test("fireteams split into a squad pair plus marine pairs and alternate bounds",
     1,
     "Leo leapfrogs as a solo knight so melee is not gated by overwatch",
   );
+  assert.equal(marines.length, 2, "mission starts with two marines");
   assert.equal(marines[0].fireteamId, marines[1].fireteamId);
-  assert.equal(marines[2].fireteamId, marines[3].fireteamId);
-  assert.ok(teams.filter((team) => team.members.length === 2).length >= 3);
+  assert.ok(teams.filter((team) => team.members.length === 2).length >= 2);
   allies[0].x = 0;
   allies[0].y = 220;
   allies[0].cover = { id: "rear" };
@@ -3490,5 +3499,156 @@ test("player street draw scale shrinks ~11% without changing squad, marines, or 
   );
   assert.ok(leoW >= allyW * 0.98, "Leo should not inherit the player shrink");
   assert.ok(enemyW > playerW, "enemies should not inherit the player shrink");
+});
+
+test("weapon range scale is -10% vs BUILD 129 and MG88 stays unlimited", async () => {
+  const h = createHarness();
+  const weapons = await h.importModule(`js/weapons.js?v=${BUILD}`);
+  const ammo = await h.importModule(`js/ammoEconomy.js?v=${BUILD}`);
+  const abilities = await h.importModule(`js/squadAbilities.js?v=${BUILD}`);
+  const charger = await h.importModule(`js/chargerEnemy.js?v=${BUILD}`);
+  const leo = await h.importModule(`js/leoKit.js?v=${BUILD}`);
+  const melee = await h.importModule(`js/melee.js?v=${BUILD}`);
+  const enemies = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
+  const vehicle = await h.importModule(`js/supportVehicle.js?v=${BUILD}`);
+  assert.equal(weapons.WEAPON_RANGE.scale, 0.9);
+  assert.equal(weapons.WEAPONS.rifle.range, 1085);
+  assert.equal(weapons.weaponCopy("rifle").range, 977);
+  assert.equal(weapons.weaponCopy("pistol").range, 662);
+  assert.equal(weapons.weaponCopy("shotgun").range, 504);
+  assert.equal(weapons.weaponCopy("sniper").range, 1386);
+  assert.equal(weapons.weaponCopy("lmg").range, 1103);
+  assert.equal(weapons.weaponCopy("dmr").range, 1260);
+  assert.equal(weapons.weaponCopy("smg").range, 756);
+  assert.equal(weapons.weaponCopy("magnum").range, 617);
+  assert.equal(weapons.weaponCopy("machinePistol").range, 554);
+  assert.equal(abilities.ABILITY_KNOBS.rook.range, 9999);
+  assert.equal(abilities.mg88Weapon().range, 9999);
+  assert.equal(charger.chargerWeapon().range, 50);
+  assert.equal(leo.leoSword().range, 82);
+  assert.equal(melee.knifeWeapon().range, 48);
+  const rolled = enemies.rollEnemyAttackRange("rifleman", () => 0);
+  assert.equal(rolled, weapons.scaledWeaponRange(630));
+  const turret = vehicle.createSupportVehicle({ x: 0, y: 0 });
+  assert.equal(turret.weapon.range, weapons.scaledWeaponRange(1890));
+  assert.ok(ammo.SIDEARMS.pistol.range === 735);
+});
+
+test("mission starts with two marines and HUD counts them", async () => {
+  const h = createHarness();
+  const marineModule = await h.importModule(`js/marines.js?v=${BUILD}`);
+  assert.equal(marineModule.INITIAL_MARINE_COUNT, 2);
+  const marines = marineModule.createMarines();
+  assert.equal(marines.length, 2);
+  const game = await h.importModule(entry);
+  game.startGame();
+  assert.equal(h.window.__battleMarines.length, 2);
+  const hud = await h.importModule(`js/squadHud.js?v=${BUILD}`);
+  hud.updateSquadHud();
+  assert.match(h.nodes.get("squadHealthHud").innerHTML, /MARINES · 2/);
+});
+
+test("empty squad attachments roll at combat start; assigned and player stay", async () => {
+  const h = createHarness();
+  const alliesModule = await h.importModule(`js/allyCore2.js?v=${BUILD}`);
+  const playerMod = await h.importModule(`js/player.js?v=${BUILD}`);
+  const atts = await h.importModule(`js/attachments.js?v=${BUILD}`);
+  h.window.__selectedLoadout = {
+    player: {
+      weapon: "rifle",
+      attachments: [null, null, null, null],
+      sidearm: "pistol",
+    },
+    Rook: {
+      weapon: "rifle",
+      attachments: [null, null, null, null],
+      sidearm: "pistol",
+    },
+    Viper: {
+      weapon: "smg",
+      attachments: ["reflex_sight", null, null, null],
+      sidearm: "pistol",
+    },
+    Doc: {
+      weapon: "dmr",
+      attachments: [null, null, null, null],
+      sidearm: "pistol",
+    },
+    Leo: {
+      weapon: "pistol",
+      attachments: [null, null, null, null],
+      sidearm: "pistol",
+    },
+  };
+  const player = playerMod.createPlayer();
+  assert.ok(atts.attachmentsAreEmpty(player.primary.attachments));
+  const allies = alliesModule.createAllies();
+  const rook = allies.find((a) => a.name === "Rook");
+  const viper = allies.find((a) => a.name === "Viper");
+  const doc = allies.find((a) => a.name === "Doc");
+  const leo = allies.find((a) => a.name === "Leo");
+  assert.equal(atts.attachmentsAreEmpty(rook.weapon.attachments), false);
+  assert.equal(rook.weapon.attachments.filter(Boolean).length, 4);
+  assert.equal(viper.weapon.attachments[0], "reflex_sight");
+  assert.equal(viper.weapon.attachments[1], null);
+  assert.equal(atts.attachmentsAreEmpty(doc.weapon.attachments), false);
+  assert.equal(leo.weapon.id, "sword");
+});
+
+test("doorway nest and wreck street tasks complete with readable HUD", async () => {
+  const h = createHarness();
+  const obj = await h.importModule(`js/streetObjectives.js?v=${BUILD}`);
+  const state = obj.createStreetObjectives();
+  const enemies = [];
+  const spawned = obj.spawnStreetObjective(state, {
+    type: "clear_doorway",
+    actors: [{ x: 0, y: 80, hp: 90, dead: false, downed: false }],
+    enemies,
+    random: () => 0.2,
+  });
+  assert.equal(spawned.type, "clear_doorway");
+  assert.ok(spawned.nest.length >= 3);
+  assert.equal(enemies.length, spawned.nest.length);
+  assert.match(obj.objectiveStatusLine(state), /DOOR NEST/);
+  assert.match(obj.objectiveStatusLine(state), /HOSTILES LEFT/);
+  spawned.nest.forEach((e) => {
+    e.dead = true;
+    e.hp = 0;
+  });
+  const result = obj.updateStreetObjectives(state, 0.2, { enemies });
+  assert.ok(result.justCompleted);
+  assert.equal(state.current, null);
+  assert.equal(state.resumeForward, true);
+  const fort = obj.currentPushGoal(
+    { objective: { x: 0, y: -5700, radius: 265 } },
+    state,
+  );
+  assert.equal(fort.source, "fort");
+  assert.match(obj.objectiveStatusLine(state), /MAG CHECK/);
+  assert.equal(obj.objectiveTitle(state, { captured: false }), "MAG CHECK");
+  state.breath = null;
+  assert.match(obj.objectiveStatusLine(state), /PUSH FORWARD/);
+  assert.equal(obj.objectiveTitle(state, { captured: false }), "CAPTURE THE FORT");
+});
+
+test("squad combat knobs are higher than marines without changing orders", async () => {
+  const h = createHarness();
+  const stats = await h.importModule(`js/combatStats.js?v=${BUILD}`);
+  const alliesModule = await h.importModule(`js/allyCore2.js?v=${BUILD}`);
+  assert.ok(stats.CHARACTER_STATS.Rook.accuracy >= 13);
+  assert.ok(stats.CHARACTER_STATS.Viper.accuracy >= 12);
+  assert.ok(stats.CHARACTER_STATS.Doc.accuracy >= 16);
+  assert.ok(stats.CHARACTER_STATS.Leo.accuracy >= 9);
+  assert.ok(stats.CHARACTER_STATS.Rook.damage >= 10);
+  assert.ok(stats.CHARACTER_STATS.Leo.damage >= 12);
+  assert.equal(stats.CHARACTER_STATS.player.accuracy, 6);
+  assert.equal(
+    alliesModule.SQUAD_MODES.slice().join(","),
+    "AGGRESSIVE,FOLLOW,HOLD",
+  );
+  assert.ok(alliesModule.SQUAD_AGGRO.peekShotsMin >= 14);
+  assert.ok(alliesModule.SQUAD_AGGRO.coveredDwell <= 0.1);
+  const marines = { accuracy: 0, damageBonus: 0 };
+  assert.equal(marines.accuracy, 0);
 });
 
