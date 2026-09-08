@@ -1,8 +1,10 @@
-import { loadImage } from "./assets.js?v=20260908-134";
+import { loadImage } from "./assets.js?v=20260908-136";
 import {
   cleanPackedSheet,
   drawClampedSheetFrame,
-} from "./soldierAssets.js?v=20260908-134";
+  packedCellLayout,
+  packedSpriteDest,
+} from "./soldierAssets.js?v=20260908-136";
 
 // Kit-locked Phone Art sheets from chore/enemy-variants-ripper-shield-medic.
 // Isolated from combat imports so boot can preload without the VM graph.
@@ -140,29 +142,28 @@ export function drawOfficialVariant(ctx, e, options) {
   }
   var fw = spec.frameWidth,
     fh = spec.frameHeight,
+    layout = packedCellLayout(source, fw, fh),
     scale = (options.scale == null ? 0.5 : options.scale * 1.65) * (e.scale || 1),
-    dw = fw * scale,
-    dh = fh * scale,
+    dest = packedSpriteDest(layout, scale, 0),
     flip = (e.facingX || 0) < 0 ? -1 : 1;
   ctx.save();
   ctx.translate(options.x || 0, options.y || 0);
   ctx.fillStyle = "#0007";
   ctx.beginPath();
-  ctx.ellipse(0, 3, dw * 0.22, dh * 0.05, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 3, dest.bodyW * 0.22, dest.bodyH * 0.05, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.scale(flip, 1);
-  var pad = 2;
   drawClampedSheetFrame(
     ctx,
     source,
-    frame * fw + pad,
-    anim.row * fh + pad,
-    fw - pad * 2,
-    fh - pad * 2,
-    -dw * 0.5,
-    -dh * 0.88,
-    dw,
-    dh,
+    frame * layout.cellW + dest.inset,
+    anim.row * layout.cellH + dest.inset,
+    layout.cellW - dest.inset * 2,
+    layout.cellH - dest.inset * 2,
+    dest.dx,
+    dest.dy,
+    dest.dw,
+    dest.dh,
   );
   ctx.restore();
   return true;

@@ -4065,19 +4065,49 @@ test("sprite draws clamp source rects so gun tips never wrap behind the body", a
   await sprites.preloadSoldierAssets();
   await variants.preloadVariantAssets();
   await charger.preloadChargerAssets();
-  assert.equal(sprites.CELL_GUTTER, 8);
+  assert.equal(sprites.CELL_GUTTER, 40);
+  assert.equal(sprites.SPRITE_BOX_PAD, 40);
+  assert.equal(sprites.SPRITE_FIT, 0.86);
+  assert.equal(sprites.UNWRAP_PAD, 48);
   assert.equal(typeof sprites.drawClampedSheetFrame, "function");
   assert.equal(typeof sprites.stripWrappedOverflow, "function");
   assert.equal(typeof sprites.cleanPackedSheet, "function");
-  assert.equal(sprites.getSoldierAtlasInfo().cellGutter, 8);
+  assert.equal(typeof sprites.packedCellLayout, "function");
+  assert.equal(typeof sprites.packedSpriteDest, "function");
+  assert.equal(sprites.getSoldierAtlasInfo().cellGutter, 40);
+  assert.equal(sprites.getSoldierAtlasInfo().unwrapPad, 48);
+  assert.equal(sprites.getSoldierAtlasInfo().spriteBoxPad, 40);
+  assert.equal(sprites.getSoldierAtlasInfo().spriteFit, 0.86);
   assert.equal(
     sprites.getSoldierAtlasInfo().wrapFix,
-    "clamp-source-strip-left-overflow",
+    "fit-box-empty-uv-edges",
   );
+  const fittedDest = sprites.packedSpriteDest(
+    {
+      cellW: 342,
+      cellH: 247,
+      coreW: 256,
+      coreH: 146,
+      footGutter: 8,
+      boxPad: 40,
+      pad: 48,
+    },
+    1,
+    0,
+  );
+  assert.equal(fittedDest.dw, 342);
+  assert.equal(fittedDest.dh, 247);
+  assert.equal(fittedDest.dx, -171);
+  assert.equal(fittedDest.dy, -239);
+  assert.equal(fittedDest.inset, 0, "fitted boxes blit empty UV edges");
+  assert.equal(fittedDest.bodyW, 256);
   const source = readFileSync("js/soldierAssets.js", "utf8");
   assert.match(source, /drawClampedSheetFrame/);
   assert.match(source, /stripWrappedOverflow/);
   assert.match(source, /CELL_GUTTER/);
+  assert.match(source, /SPRITE_BOX_PAD/);
+  assert.match(source, /SPRITE_FIT/);
+  assert.match(source, /packedSpriteDest/);
   assert.equal(
     readFileSync("js/variantArt.js", "utf8").includes("drawClampedSheetFrame"),
     true,

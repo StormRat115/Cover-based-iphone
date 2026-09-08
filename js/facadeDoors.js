@@ -3,9 +3,9 @@ import {
   doorExplodeSheet,
   doorBlownIdle,
   playableStreetHalfWidth,
-} from "./wartornCity.js?v=20260908-134";
-import { createHostileAt, doorHostileType } from "./enemyCore.js?v=20260908-134";
-import { moveTowardTarget } from "./combatAI.js?v=20260908-134";
+} from "./wartornCity.js?v=20260908-136";
+import { createHostileAt, doorHostileType } from "./enemyCore.js?v=20260908-136";
+import { moveTowardTarget } from "./combatAI.js?v=20260908-136";
 
 export const DOOR_EXPLODE_FRAMES = 8;
 export const DOOR_EXPLODE_FRAME_W = 96;

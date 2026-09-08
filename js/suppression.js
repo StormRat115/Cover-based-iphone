@@ -1,6 +1,6 @@
 /* Light incoming-fire suppression. Enemies get a short pin; friendlies barely flinch. */
 
-import { notifySuppressionPin } from "./combatVfx.js?v=20260908-134";
+import { notifySuppressionPin } from "./combatVfx.js?v=20260908-136";
 
 export const SUPPRESSION = {
   enemyRadius: 210,

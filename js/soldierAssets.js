@@ -1,4 +1,4 @@
-import { loadImage } from "./assets.js?v=20260908-134";
+import { loadImage } from "./assets.js?v=20260908-136";
 export const friendlyAtlasSource = new Image();
 friendlyAtlasSource.src =
   "./assets/generated/soldier/player-solid-atlas.png?v=20260906-102";
@@ -195,7 +195,10 @@ const FRIENDLY_COLS = 4;
 const FRIENDLY_ROWS_COUNT = 6;
 // Transparent gutter around isolated cells so GPU REPEAT / bilinear
 // samples empty pixels instead of wrapping the barrel to the back.
-export const CELL_GUTTER = 8;
+export const CELL_GUTTER = 40;
+export const SPRITE_BOX_PAD = 40;
+export const SPRITE_FIT = 0.86;
+export const UNWRAP_PAD = 48;
 const cleanedSheetCache = new WeakMap();
 const FRIENDLY_ROWS = {
   idle: 0,
@@ -449,13 +452,143 @@ export function hardenSheetAlpha(source, cut) {
   }
 }
 
-/** Drop disconnected chips glued to the left cell edge.
- *  Packed sheets park the previous pose's barrel there; flipping then
- *  teleports the tip behind the body. Right-edge chips stay — that is
- *  this pose's muzzle. */
+function analyzeCellData(img, cut) {
+  cut = cut == null ? 40 : cut;
+  var d = img.data,
+    w = img.width,
+    h = img.height,
+    seen = new Uint8Array(w * h),
+    frags = [],
+    mainN = 0,
+    mainBest = -1,
+    x,
+    y,
+    i,
+    p,
+    px,
+    py,
+    ni,
+    n,
+    minx,
+    maxx,
+    miny,
+    maxy,
+    touchL,
+    touchR,
+    touchT,
+    touchB,
+    pixels,
+    stack;
+  function idx(ix, iy) {
+    return iy * w + ix;
+  }
+  for (y = 0; y < h; y++) {
+    for (x = 0; x < w; x++) {
+      i = idx(x, y);
+      if (seen[i] || d[i * 4 + 3] < cut) continue;
+      stack = [i];
+      seen[i] = 1;
+      n = 0;
+      minx = maxx = x;
+      miny = maxy = y;
+      touchL = touchR = touchT = touchB = false;
+      pixels = [];
+      while (stack.length) {
+        p = stack.pop();
+        px = p % w;
+        py = (p - px) / w;
+        pixels.push(p);
+        n++;
+        if (px === 0) touchL = true;
+        if (px === w - 1) touchR = true;
+        if (py === 0) touchT = true;
+        if (py === h - 1) touchB = true;
+        if (px < minx) minx = px;
+        if (px > maxx) maxx = px;
+        if (py < miny) miny = py;
+        if (py > maxy) maxy = py;
+        if (px > 0 && !seen[(ni = idx(px - 1, py))] && d[ni * 4 + 3] >= cut) {
+          seen[ni] = 1;
+          stack.push(ni);
+        }
+        if (px + 1 < w && !seen[(ni = idx(px + 1, py))] && d[ni * 4 + 3] >= cut) {
+          seen[ni] = 1;
+          stack.push(ni);
+        }
+        if (py > 0 && !seen[(ni = idx(px, py - 1))] && d[ni * 4 + 3] >= cut) {
+          seen[ni] = 1;
+          stack.push(ni);
+        }
+        if (py + 1 < h && !seen[(ni = idx(px, py + 1))] && d[ni * 4 + 3] >= cut) {
+          seen[ni] = 1;
+          stack.push(ni);
+        }
+      }
+      frags.push({
+        n: n,
+        minx: minx,
+        maxx: maxx,
+        miny: miny,
+        maxy: maxy,
+        touchL: touchL,
+        touchR: touchR,
+        touchT: touchT,
+        touchB: touchB,
+        pixels: pixels,
+      });
+      if (n > mainN) {
+        mainN = n;
+        mainBest = frags.length - 1;
+      }
+    }
+  }
+  return {
+    frags: frags,
+    main: mainBest >= 0 ? frags[mainBest] : null,
+    mainBest: mainBest,
+  };
+}
+
+function isWrapFragment(frag, main, w, h) {
+  if (!frag || !main) return false;
+  var left =
+    frag.touchL &&
+    !frag.touchR &&
+    frag.maxx < main.minx + 2 &&
+    frag.maxx < w * 0.5;
+  var top =
+    frag.touchT &&
+    !frag.touchB &&
+    frag.maxy < main.miny + 2 &&
+    frag.maxy < h * 0.5;
+  var cx = (frag.minx + frag.maxx) / 2,
+    cy = (frag.miny + frag.maxy) / 2;
+  var orphanLeft =
+    !frag.touchR &&
+    cx < main.minx &&
+    frag.n < Math.max(40, main.n * 0.12);
+  var orphanTop =
+    !frag.touchB &&
+    cy < main.miny &&
+    frag.n < Math.max(40, main.n * 0.12);
+  return !!(left || top || orphanLeft || orphanTop);
+}
+
+function clearFrag(d, frag) {
+  var k, pi;
+  for (k = 0; k < frag.pixels.length; k++) {
+    pi = frag.pixels[k] * 4;
+    d[pi] = 0;
+    d[pi + 1] = 0;
+    d[pi + 2] = 0;
+    d[pi + 3] = 0;
+  }
+}
+
+/** Drop wrap chips: previous-cell barrel on the left, previous-row feet on
+ *  the top, and leftover leg/cloak specks that flip onto the far side. */
 export function stripWrappedOverflow(canvas, ox, oy, cellW, cellH, cut) {
   if (!canvas || !cellW || !cellH) return canvas;
-  cut = cut == null ? 40 : cut;
   ox = ox || 0;
   oy = oy || 0;
   try {
@@ -463,99 +596,16 @@ export function stripWrappedOverflow(canvas, ox, oy, cellW, cellH, cut) {
     if (!g || typeof g.getImageData !== "function") return canvas;
     var img = g.getImageData(ox, oy, cellW, cellH);
     if (!img || !img.data) return canvas;
-    var d = img.data,
-      w = cellW,
-      h = cellH,
-      seen = new Uint8Array(w * h),
-      frags = [],
-      mainN = 0,
-      mainBest = -1,
-      x,
-      y,
+    var info = analyzeCellData(img, cut),
+      cleared = false,
       i,
-      p,
-      px,
-      py,
-      nx,
-      ny,
-      n,
-      minx,
-      maxx,
-      touchL,
-      touchR,
-      pixels,
-      stack,
-      k,
-      pi,
-      cleared = false;
-    function idx(ix, iy) {
-      return iy * w + ix;
-    }
-    for (y = 0; y < h; y++) {
-      for (x = 0; x < w; x++) {
-        i = idx(x, y);
-        if (seen[i] || d[i * 4 + 3] < cut) continue;
-        stack = [i];
-        seen[i] = 1;
-        n = 0;
-        minx = x;
-        maxx = x;
-        touchL = false;
-        touchR = false;
-        pixels = [];
-        while (stack.length) {
-          p = stack.pop();
-          px = p % w;
-          py = (p - px) / w;
-          pixels.push(p);
-          n++;
-          if (px === 0) touchL = true;
-          if (px === w - 1) touchR = true;
-          if (px < minx) minx = px;
-          if (px > maxx) maxx = px;
-          if (px > 0 && !seen[(ny = idx(px - 1, py))] && d[(ny) * 4 + 3] >= cut) {
-            seen[ny] = 1;
-            stack.push(ny);
-          }
-          if (px + 1 < w && !seen[(ny = idx(px + 1, py))] && d[ny * 4 + 3] >= cut) {
-            seen[ny] = 1;
-            stack.push(ny);
-          }
-          if (py > 0 && !seen[(ny = idx(px, py - 1))] && d[ny * 4 + 3] >= cut) {
-            seen[ny] = 1;
-            stack.push(ny);
-          }
-          if (py + 1 < h && !seen[(ny = idx(px, py + 1))] && d[ny * 4 + 3] >= cut) {
-            seen[ny] = 1;
-            stack.push(ny);
-          }
-        }
-        frags.push({ n: n, minx: minx, maxx: maxx, touchL: touchL, touchR: touchR, pixels: pixels });
-        if (n > mainN) {
-          mainN = n;
-          mainBest = frags.length - 1;
-        }
-      }
-    }
-    if (mainBest < 0) return canvas;
-    var main = frags[mainBest];
-    for (i = 0; i < frags.length; i++) {
-      if (i === mainBest) continue;
-      var frag = frags[i];
-      // Previous-cell overflow sits on this cell's left, fully left of the body.
-      if (
-        frag.touchL &&
-        !frag.touchR &&
-        frag.maxx < main.minx + 2 &&
-        frag.maxx < w * 0.45
-      ) {
-        for (k = 0; k < frag.pixels.length; k++) {
-          pi = frag.pixels[k] * 4;
-          d[pi] = 0;
-          d[pi + 1] = 0;
-          d[pi + 2] = 0;
-          d[pi + 3] = 0;
-        }
+      frag;
+    if (!info.main) return canvas;
+    for (i = 0; i < info.frags.length; i++) {
+      if (i === info.mainBest) continue;
+      frag = info.frags[i];
+      if (isWrapFragment(frag, info.main, cellW, cellH)) {
+        clearFrag(img.data, frag);
         cleared = true;
       }
     }
@@ -566,7 +616,40 @@ export function stripWrappedOverflow(canvas, ox, oy, cellW, cellH, cut) {
   }
 }
 
-/** Copy a packed sheet and strip per-cell wrap chips. Official PNGs stay. */
+export function packedCellLayout(source, coreW, coreH) {
+  var pad = (source && source._unwrapPad) || 0;
+  var boxPad = (source && source._boxPad) || 0;
+  return {
+    pad: pad,
+    boxPad: boxPad,
+    footGutter: (source && source._footGutter) || 0,
+    cellW: (source && source._paddedFrameW) || coreW,
+    cellH: (source && source._paddedFrameH) || coreH,
+    coreW: coreW,
+    coreH: coreH,
+    fit: (source && source._fit) || 1,
+  };
+}
+
+/** Dest rect for a packed/fitted cell. Blit the full box (empty UV edges)
+ *  and plant using the foot gutter so ankles sit on the actor origin. */
+export function packedSpriteDest(layout, scale, yNudge) {
+  var dw = layout.cellW * scale;
+  var dh = layout.cellH * scale;
+  return {
+    dw: dw,
+    dh: dh,
+    dx: -dw * 0.5,
+    dy: -dh + (layout.footGutter || 0) * scale + (yNudge || 0),
+    bodyW: (layout.coreW || layout.cellW) * scale,
+    bodyH: (layout.coreH || layout.cellH) * scale,
+    inset: layout.boxPad ? 0 : layout.pad ? 1 : 5,
+  };
+}
+
+/** Copy a packed sheet into padded cells: strip wrap chips, then put the
+ *  next cell's leftover barrel/feet back on the right/bottom of this pose
+ *  so the figure is not sitting on cut-off ankles. Official PNGs stay. */
 export function cleanPackedSheet(source, frameW, frameH) {
   if (!source || !frameW || !frameH) return source;
   if (cleanedSheetCache.has(source)) return cleanedSheetCache.get(source);
@@ -577,28 +660,183 @@ export function cleanPackedSheet(source, frameW, frameH) {
     return source;
   }
   try {
-    var c = document.createElement("canvas");
-    c.width = iw;
-    c.height = ih;
-    var g = c.getContext("2d", { willReadFrequently: true });
-    if (!g || typeof g.drawImage !== "function") {
+    var srcCanvas = document.createElement("canvas");
+    srcCanvas.width = iw;
+    srcCanvas.height = ih;
+    var sg = srcCanvas.getContext("2d", { willReadFrequently: true });
+    if (!sg || typeof sg.getImageData !== "function") {
       cleanedSheetCache.set(source, source);
       return source;
     }
-    g.clearRect(0, 0, iw, ih);
-    g.drawImage(source, 0, 0);
+    sg.clearRect(0, 0, iw, ih);
+    sg.drawImage(source, 0, 0);
     var cols = Math.floor(iw / frameW),
       rows = Math.floor(ih / frameH),
+      pad = UNWRAP_PAD,
+      grid = [],
       row,
-      col;
+      col,
+      cellImg,
+      info;
     for (row = 0; row < rows; row++) {
+      grid[row] = [];
       for (col = 0; col < cols; col++) {
-        stripWrappedOverflow(c, col * frameW, row * frameH, frameW, frameH, 40);
+        cellImg = sg.getImageData(col * frameW, row * frameH, frameW, frameH);
+        if (!cellImg || !cellImg.data) {
+          cleanedSheetCache.set(source, source);
+          return source;
+        }
+        info = analyzeCellData(cellImg, 40);
+        grid[row][col] = { img: cellImg, info: info };
       }
     }
-    c.naturalWidth = iw;
-    c.naturalHeight = ih;
+    var outW = cols * (frameW + pad),
+      outH = rows * (frameH + pad),
+      c = document.createElement("canvas");
+    c.width = outW;
+    c.height = outH;
+    var g = c.getContext("2d", { willReadFrequently: true });
+    if (!g || typeof g.putImageData !== "function") {
+      cleanedSheetCache.set(source, source);
+      return source;
+    }
+    g.clearRect(0, 0, outW, outH);
+    for (row = 0; row < rows; row++) {
+      for (col = 0; col < cols; col++) {
+        var slot = grid[row][col],
+          core = new ImageData(
+            new Uint8ClampedArray(slot.img.data),
+            frameW,
+            frameH,
+          ),
+          dx = col * (frameW + pad),
+          dy = row * (frameH + pad),
+          nextCol = col + 1 < cols ? grid[row][col + 1] : null,
+          nextRow = row + 1 < rows ? grid[row + 1][col] : null,
+          k,
+          p,
+          px,
+          py,
+          si,
+          di,
+          dest;
+        if (slot.info.main) {
+          for (k = 0; k < slot.info.frags.length; k++) {
+            if (k === slot.info.mainBest) continue;
+            if (
+              isWrapFragment(slot.info.frags[k], slot.info.main, frameW, frameH)
+            )
+              clearFrag(core.data, slot.info.frags[k]);
+          }
+        }
+        g.putImageData(core, dx, dy);
+        dest = g.getImageData(dx, dy, frameW + pad, frameH + pad);
+        function stampFrag(fromImg, frag, ox, oy) {
+          for (k = 0; k < frag.pixels.length; k++) {
+            p = frag.pixels[k];
+            px = p % frameW;
+            py = (p - px) / frameW;
+            si = p * 4;
+            di = ((oy + py) * (frameW + pad) + (ox + px)) * 4;
+            if (fromImg.data[si + 3] < 40) continue;
+            dest.data[di] = fromImg.data[si];
+            dest.data[di + 1] = fromImg.data[si + 1];
+            dest.data[di + 2] = fromImg.data[si + 2];
+            dest.data[di + 3] = fromImg.data[si + 3];
+          }
+        }
+        if (nextCol && nextCol.info.main) {
+          for (k = 0; k < nextCol.info.frags.length; k++) {
+            if (k === nextCol.info.mainBest) continue;
+            if (
+              isWrapFragment(
+                nextCol.info.frags[k],
+                nextCol.info.main,
+                frameW,
+                frameH,
+              ) &&
+              (nextCol.info.frags[k].touchL ||
+                nextCol.info.frags[k].maxx < nextCol.info.main.minx)
+            )
+              stampFrag(nextCol.img, nextCol.info.frags[k], frameW, 0);
+          }
+        }
+        if (nextRow && nextRow.info.main) {
+          for (k = 0; k < nextRow.info.frags.length; k++) {
+            if (k === nextRow.info.mainBest) continue;
+            if (
+              isWrapFragment(
+                nextRow.info.frags[k],
+                nextRow.info.main,
+                frameW,
+                frameH,
+              ) &&
+              (nextRow.info.frags[k].touchT ||
+                nextRow.info.frags[k].maxy < nextRow.info.main.miny)
+            )
+              stampFrag(nextRow.img, nextRow.info.frags[k], 0, frameH);
+          }
+        }
+        g.putImageData(dest, dx, dy);
+      }
+    }
+    c.naturalWidth = outW;
+    c.naturalHeight = outH;
     c.complete = true;
+    c._unwrapPad = pad;
+    c._paddedFrameW = frameW + pad;
+    c._paddedFrameH = frameH + pad;
+    c._coreW = frameW;
+    c._coreH = frameH;
+    // Inset each unwrapped cell in a larger box so GPU REPEAT / packing
+    // neighbors cannot sample overflow sitting on the cell edge.
+    var boxPad = SPRITE_BOX_PAD,
+      innerW = frameW + pad,
+      innerH = frameH + pad,
+      contentW = Math.max(1, Math.round(innerW * SPRITE_FIT)),
+      contentH = Math.max(1, Math.round(innerH * SPRITE_FIT)),
+      cellOutW = contentW + boxPad * 2,
+      cellOutH = contentH + boxPad * 2,
+      fitted = document.createElement("canvas"),
+      fg,
+      foot = 8;
+    fitted.width = cols * cellOutW;
+    fitted.height = rows * cellOutH;
+    fg = fitted.getContext("2d", { willReadFrequently: true });
+    if (fg && typeof fg.drawImage === "function") {
+      fg.clearRect(0, 0, fitted.width, fitted.height);
+      fg.imageSmoothingEnabled = false;
+      for (row = 0; row < rows; row++) {
+        for (col = 0; col < cols; col++) {
+          var ox = col * cellOutW + Math.round((cellOutW - contentW) / 2),
+            oy = row * cellOutH + (cellOutH - contentH - foot);
+          fg.drawImage(
+            c,
+            col * innerW,
+            row * innerH,
+            innerW,
+            innerH,
+            ox,
+            oy,
+            contentW,
+            contentH,
+          );
+        }
+      }
+      fitted.naturalWidth = fitted.width;
+      fitted.naturalHeight = fitted.height;
+      fitted.complete = true;
+      fitted._unwrapPad = pad;
+      fitted._boxPad = boxPad;
+      fitted._footGutter = foot;
+      fitted._paddedFrameW = cellOutW;
+      fitted._paddedFrameH = cellOutH;
+      fitted._coreW = frameW;
+      fitted._coreH = frameH;
+      fitted._fit = SPRITE_FIT;
+      cleanedSheetCache.set(source, fitted);
+      return fitted;
+    }
     cleanedSheetCache.set(source, c);
     return c;
   } catch (_err) {
@@ -642,37 +880,59 @@ export function drawClampedSheetFrame(ctx, source, sx, sy, sw, sh, dx, dy, dw, d
 function buildCellFrameCache(source, rowCount, cols, cell) {
   if (!source) return null;
   var frames = [];
-  var gutter = CELL_GUTTER;
-  var padded = cell + gutter * 2;
+  var boxPad = SPRITE_BOX_PAD;
+  var foot = 8;
+  var content = Math.max(1, Math.round(cell * SPRITE_FIT));
+  var box = content + boxPad * 2;
   try {
+    var scratch = document.createElement("canvas");
+    scratch.width = cell;
+    scratch.height = cell;
+    var sg = scratch.getContext("2d", { willReadFrequently: true });
+    if (!sg || typeof sg.drawImage !== "function") return null;
     for (var row = 0; row < rowCount; row++) {
       frames[row] = [];
       for (var col = 0; col < cols; col++) {
-        var frame = document.createElement("canvas");
-        frame.width = padded;
-        frame.height = padded;
-        var g = frame.getContext("2d", { willReadFrequently: true });
-        if (!g || typeof g.drawImage !== "function") return null;
-        g.clearRect(0, 0, padded, padded);
-        g.imageSmoothingEnabled = false;
-        g.drawImage(
+        sg.clearRect(0, 0, cell, cell);
+        sg.imageSmoothingEnabled = false;
+        sg.drawImage(
           source,
           col * cell,
           row * cell,
           cell,
           cell,
-          gutter,
-          gutter,
+          0,
+          0,
           cell,
           cell,
         );
-        stripWrappedOverflow(frame, gutter, gutter, cell, cell, 40);
-        // Keep every visible armor pixel fully opaque. A separate padded
-        // frame also stops mobile GPU REPEAT from wrapping the barrel.
+        stripWrappedOverflow(scratch, 0, 0, cell, cell, 40);
+        var frame = document.createElement("canvas");
+        frame.width = box;
+        frame.height = box;
+        var g = frame.getContext("2d", { willReadFrequently: true });
+        if (!g || typeof g.drawImage !== "function") return null;
+        g.clearRect(0, 0, box, box);
+        g.imageSmoothingEnabled = false;
+        g.drawImage(
+          scratch,
+          0,
+          0,
+          cell,
+          cell,
+          Math.round((box - content) / 2),
+          box - content - foot,
+          content,
+          content,
+        );
+        // Shrink-to-fit inside a larger box: GPU REPEAT samples empty pad,
+        // not the barrel or boots.
         var hardened = hardenSheetAlpha(frame, 40) || frame;
-        hardened._cellGutter = gutter;
-        hardened.naturalWidth = padded;
-        hardened.naturalHeight = padded;
+        hardened._cellGutter = boxPad;
+        hardened._fitBox = 1;
+        hardened._footGutter = foot;
+        hardened.naturalWidth = box;
+        hardened.naturalHeight = box;
         hardened.complete = true;
         frames[row][col] = hardened;
       }
@@ -1390,11 +1650,19 @@ export function drawEnemyMonster(ctx, actor, options) {
     row = ENEMY_MONSTER_ROWS[state],
     baseScale = options.scale == null ? 0.38 : options.scale * 1.27,
     scale = baseScale * (actor.scale || 1),
-    dw = ENEMY_MONSTER_FRAME_WIDTH * scale,
-    dh = ENEMY_MONSTER_FRAME_HEIGHT * scale,
     flip = stableFacing(actor, state),
     baseAlpha = options.alpha == null ? 1 : options.alpha;
   var plant = coverPlantOffset(actor);
+  var layout = packedCellLayout(
+    source,
+    ENEMY_MONSTER_FRAME_WIDTH,
+    ENEMY_MONSTER_FRAME_HEIGHT,
+  );
+  var dest = packedSpriteDest(
+    layout,
+    scale,
+    state === "lowCover" ? 4 : state === "tallCover" ? 2 : 0,
+  );
   ctx.save();
   ctx.translate(
     (options.x || 0) + plant.x,
@@ -1406,8 +1674,8 @@ export function drawEnemyMonster(ctx, actor, options) {
   ctx.ellipse(
     0,
     2,
-    Math.max(8, dw * 0.22),
-    Math.max(2, dh * 0.05),
+    Math.max(8, dest.bodyW * 0.22),
+    Math.max(2, dest.bodyH * 0.05),
     0,
     0,
     Math.PI * 2,
@@ -1421,14 +1689,14 @@ export function drawEnemyMonster(ctx, actor, options) {
     anim.next,
     anim.blend,
     row,
-    ENEMY_MONSTER_FRAME_WIDTH,
-    ENEMY_MONSTER_FRAME_HEIGHT,
-    -dw * 0.5,
-    -dh + (state === "lowCover" ? 4 : state === "tallCover" ? 2 : 0),
-    dw,
-    dh,
+    layout.cellW,
+    layout.cellH,
+    dest.dx,
+    dest.dy,
+    dest.dw,
+    dest.dh,
     baseAlpha,
-    5,
+    dest.inset,
   );
   ctx.restore();
   return true;
@@ -1566,22 +1834,30 @@ export function drawSoldier(ctx, actor, options) {
   if (drawAtlas) {
     var baseAlpha = solidFriendly ? 1 : options.alpha == null ? 1 : options.alpha;
     if (enemyCorpse) baseAlpha *= 0.82;
-    var destX = -dw * 0.5;
-    var destY =
-      -dh +
-      (state === "lowCover" || state === "crouchShoot"
+    var coverNudge =
+      state === "lowCover" || state === "crouchShoot"
         ? 5
         : state === "tallCover"
           ? 2
-          : 0);
-    var gutter =
-      isolatedCell && isolatedCell._cellGutter != null
+          : 0;
+    var fitBox = !!(isolatedCell && isolatedCell._fitBox);
+    var gutter = fitBox
+      ? 0
+      : isolatedCell && isolatedCell._cellGutter != null
         ? isolatedCell._cellGutter
         : isolatedCell && isolatedCell.width > cellW
           ? Math.round((isolatedCell.width - cellW) / 2)
           : 0;
-    var srcX = isolatedCell ? gutter : r.col * cellW;
-    var srcY = isolatedCell ? gutter : (useVault ? 0 : r.row) * cellH;
+    var srcX = isolatedCell ? (fitBox ? 0 : gutter) : r.col * cellW;
+    var srcY = isolatedCell ? (fitBox ? 0 : gutter) : (useVault ? 0 : r.row) * cellH;
+    var srcW = fitBox ? isolatedCell.width : cellW;
+    var srcH = fitBox ? isolatedCell.height : cellH;
+    if (fitBox) {
+      dw = srcW * scale * (useVault ? 1.08 : 1);
+      dh = srcH * scale * (useVault ? 1.08 : 1);
+    }
+    var destX = -dw * 0.5;
+    var destY = -dh + (fitBox ? isolatedCell._footGutter || 0 : 0) * scale + coverNudge;
     if (solidFriendly) {
       ctx.globalAlpha = 1;
       ctx.filter = recolor || "none";
@@ -1594,8 +1870,8 @@ export function drawSoldier(ctx, actor, options) {
         drawAtlas,
         srcX,
         srcY,
-        cellW,
-        cellH,
+        srcW,
+        srcH,
         destX,
         destY,
         dw,
@@ -1683,6 +1959,9 @@ export function getSoldierAtlasInfo() {
     vaultSheet: "vault-sheet.png",
     vaultCell: VAULT_CELL,
     cellGutter: CELL_GUTTER,
-    wrapFix: "clamp-source-strip-left-overflow",
+    unwrapPad: UNWRAP_PAD,
+    spriteBoxPad: SPRITE_BOX_PAD,
+    spriteFit: SPRITE_FIT,
+    wrapFix: "fit-box-empty-uv-edges",
   };
 }

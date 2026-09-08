@@ -6,8 +6,8 @@ import {
   swingMelee,
   tickMeleeTimer,
   ensureMeleeWeapon,
-} from "./melee.js?v=20260908-134";
-import { moveTowardTarget, faceThreat } from "./combatAI.js?v=20260908-134";
+} from "./melee.js?v=20260908-136";
+import { moveTowardTarget, faceThreat } from "./combatAI.js?v=20260908-136";
 
 export const ENGAGED = {
   chaseRange: 160,

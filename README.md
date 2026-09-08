@@ -122,11 +122,16 @@ Rebased onto latest `development` (BUILD 129 player scale 0.275). Sidewalks, eng
 5. **Squad fights harder** — Doc / Rook / Viper / Leo accuracy and damage up; longer peeks and more shots (`SQUAD_AGGRO`). HP/DEF unchanged. Leo sword 40 → 46. Aggressive / Follow / Hold stay.
 6. **Bare squad guns get random attachments** — If a squadmate’s loadout left all four slots empty, combat start rolls one attachment per slot. Assigned loadouts are kept. The player’s gun is not auto-filled.
 
-## Gun barrel wrap/clip: 20260908-134
+## Gun barrel wrap/clip: 20260908-136
 
-When a rifle pose reached a cell edge, the barrel tip sampled the opposite side of the cell (GPU REPEAT / packed-sheet overflow) and flipped onto the character's back. Official Phone Art PNGs are unchanged. Draw clamps the source rect, isolates friendly cells with an 8px transparent gutter, and strips disconnected left-edge overflow on packed enemy sheets so the tip is clipped cleanly instead of wrapping. Phone Art should regenerate later with more cell padding so long rifles are not tight against the frame.
+Packed monster cells are shorter than the figure, so feet spilled into the next row and showed up on the head; leftover barrel/leg chips flipped onto the far side. Official Phone Art PNGs stay. Runtime now:
 
-Rook / player / Doc / Viper / Leo / marines / monster thralls / chargers / variants all share that draw path.
+- clamps `drawImage` source rects (never wrap UVs)
+- strips wrap chips, then stamps leftover barrel/feet back onto this pose
+- shrinks each sprite to **86%** inside a larger box (**40px** pad) so GPU REPEAT / bilinear samples empty pixels, not the barrel or boots
+- blits the **full** padded box (not the inner cell) and plants with an 8px foot gutter
+
+Phone Art should regenerate later with more cell padding. Rook / player / Doc / Viper / Leo / marines / monster thralls / chargers / variants share that draw path.
 
 ## Enemy variants (Ripper / Shield / Medic): 20260908-133
 
