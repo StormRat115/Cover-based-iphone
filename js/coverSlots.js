@@ -159,8 +159,15 @@ export function describeCoverSlots(cover, threat, actor) {
     slots = [],
     i,
     p;
+  // Build the block perimeter once per query, not once for every slot.
+  // Recompute on the next query so destruction and moving cover stay accurate.
+  var outer = cover && cover.blocks && cover.blocks.length
+    ? describeOuterSlots(cover, facingSide(cover, threat, actor), count)
+    : null;
   for (i = 0; i < count; i++) {
-    p = slotWorldPoint(cover, i, threat, actor);
+    p = outer && outer.length
+      ? outer[Math.min(outer.length - 1, i)]
+      : slotWorldPoint(cover, i, threat, actor);
     slots.push({
       index: i,
       x: p.x,
