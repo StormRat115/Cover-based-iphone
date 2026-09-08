@@ -1,4 +1,4 @@
-const BUILD = "20260908-136";
+const BUILD = "20260908-137";
 const element = (id) => document.getElementById(id);
 
 function showGameError(label, error) {
@@ -17,42 +17,58 @@ function setLoad(percent, status) {
   percent = Math.max(0, Math.min(100, Math.round(percent)));
   element("loadingPercent").textContent = percent + "%";
   element("loadingFill").style.width = percent + "%";
-  element("loadingStatus").textContent = status;
+  if (status) element("loadingStatus").textContent = status;
+}
+
+function yieldPaint() {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => resolve());
+      return;
+    }
+    setTimeout(resolve, 0);
+  });
 }
 
 async function boot() {
   const start = element("startGame");
   try {
-    setLoad(3, "LOADING SYSTEMS");
+    setLoad(4, "LOADING SYSTEMS");
+    await yieldPaint();
     // Independent modules and images download concurrently, using the same URLs
     // as the gameplay imports so atlases are built only once.
     const [menu, soldiers, city, audio, charger, variantArt] = await Promise.all([
-      import("./mainMenu.js?v=20260908-136"),
-      import("./soldierAssets.js?v=20260908-136"),
-      import("./cityAssets.js?v=20260908-136"),
-      import("./audio.js?v=20260908-136"),
-      import("./chargerEnemy.js?v=20260908-136"),
-      import("./variantArt.js?v=20260908-136"),
+      import("./mainMenu.js?v=20260908-137"),
+      import("./soldierAssets.js?v=20260908-137"),
+      import("./cityAssets.js?v=20260908-137"),
+      import("./audio.js?v=20260908-137"),
+      import("./chargerEnemy.js?v=20260908-137"),
+      import("./variantArt.js?v=20260908-137"),
     ]);
     if (audio && audio.AudioBus) audio.AudioBus.preload();
-    let soldierProgress = 0,
-      cityProgress = 0;
-    const report = () =>
+    const weights = { soldier: 0.5, city: 0.2, charger: 0.12, variant: 0.18 };
+    const progress = { soldier: 0, city: 0, charger: 0, variant: 0 };
+    const report = (channel, value, status) => {
+      progress[channel] = Math.max(0, Math.min(1, value || 0));
+      const mixed =
+        progress.soldier * weights.soldier +
+        progress.city * weights.city +
+        progress.charger * weights.charger +
+        progress.variant * weights.variant;
       setLoad(
-        10 + soldierProgress * 40 + cityProgress * 40,
-        "PREPARING BATTLEFIELD ASSETS",
+        8 + mixed * 84,
+        status || "PREPARING BATTLEFIELD ASSETS",
       );
+    };
+    setLoad(8, "PREPARING BATTLEFIELD ASSETS");
+    await yieldPaint();
     const [characters, environment] = await Promise.all([
-      soldiers.preloadSoldierAssets((p) => {
-        soldierProgress = p;
-        report();
-      }),
-      city.preloadCityAssets((p) => {
-        cityProgress = p;
-        report();
-      }),
-      charger.preloadChargerAssets(),
-      variantArt.preloadVariantAssets(),
+      soldiers.preloadSoldierAssets((p, status) => report("soldier", p, status)),
+      city.preloadCityAssets((p, status) => report("city", p, status)),
+      charger.preloadChargerAssets((p, status) => report("charger", p, status)),
+      variantArt.preloadVariantAssets((p, status) =>
+        report("variant", p, status),
+      ),
     ]);
     if (
       !characters?.soldierAtlas ||
@@ -62,7 +78,7 @@ async function boot() {
       throw new Error("Battlefield art is not ready. Please retry loading.");
     }
     setLoad(95, "LOADING STREET PUSH");
-    const game = await import("./game.js?v=20260908-136");
+    const game = await import("./game.js?v=20260908-137");
     setLoad(100, "READY");
     start.classList.add("ready");
     let enteredMenu = false;
