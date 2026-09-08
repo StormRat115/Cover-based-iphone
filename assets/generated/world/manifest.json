@@ -18,6 +18,43 @@
     "transparent": true
   },
   {
+    "file": "facade-office.webp",
+    "path": "assets/generated/world/facade-office.webp",
+    "width": 400,
+    "height": 533,
+    "bytes": 29554,
+    "category": "facade",
+    "transparent": false
+  },
+  {
+    "file": "facade-graffiti-brick.webp",
+    "path": "assets/generated/world/facade-graffiti-brick.webp",
+    "width": 400,
+    "height": 533,
+    "bytes": 30062,
+    "category": "facade",
+    "transparent": false
+  },
+  {
+    "file": "facade-alley.webp",
+    "path": "assets/generated/world/facade-alley.webp",
+    "width": 400,
+    "height": 533,
+    "bytes": 25502,
+    "category": "facade",
+    "transparent": false
+  },
+  {
+    "file": "door-explode-sheet.webp",
+    "path": "assets/generated/world/door-explode-sheet.webp",
+    "width": 960,
+    "height": 540,
+    "bytes": 35394,
+    "category": "fx",
+    "frames": 8,
+    "transparent": false
+  },
+  {
     "file": "rubble-concrete-rebar.webp",
     "path": "assets/generated/world/rubble-concrete-rebar.webp",
     "width": 260,

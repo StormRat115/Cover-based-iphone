@@ -1,0 +1,130 @@
+{
+  "pack": "top-backdrop-facade",
+  "description": "TMNT-style top sidewalk / facade backdrop pack. Upper-screen building row with sidewalk rubble band at strip bottoms. Door explode + alley mouth are overlays on the top backdrop.",
+  "keying": {
+    "facade_thresh": 28,
+    "door_thresh": 16,
+    "alley_thresh": 18
+  },
+  "files": [
+    {
+      "file": "facade-strip-a.webp",
+      "path": "assets/generated/world/backdrop/facade-strip-a.webp",
+      "width": 1280,
+      "height": 458,
+      "bytes": 141778,
+      "category": "facade-strip",
+      "transparent": true,
+      "notes": "TMNT-style top backdrop facade strip A; sidewalk rubble band; near-black keyed"
+    },
+    {
+      "file": "facade-strip-b.webp",
+      "path": "assets/generated/world/backdrop/facade-strip-b.webp",
+      "width": 1280,
+      "height": 636,
+      "bytes": 193842,
+      "category": "facade-strip",
+      "transparent": true,
+      "notes": "TMNT-style top backdrop facade strip B; sidewalk rubble band; near-black keyed"
+    },
+    {
+      "file": "facade-bldg-01.webp",
+      "path": "assets/generated/world/backdrop/facade-bldg-01.webp",
+      "width": 267,
+      "height": 440,
+      "bytes": 28850,
+      "category": "facade-bldg",
+      "transparent": true,
+      "notes": "Building #1 split from facade strip A at upper-ratio valley cuts [267, 523, 847, 1030]"
+    },
+    {
+      "file": "facade-bldg-02.webp",
+      "path": "assets/generated/world/backdrop/facade-bldg-02.webp",
+      "width": 256,
+      "height": 448,
+      "bytes": 29278,
+      "category": "facade-bldg",
+      "transparent": true,
+      "notes": "Building #2 split from facade strip A at upper-ratio valley cuts [267, 523, 847, 1030]"
+    },
+    {
+      "file": "facade-bldg-03.webp",
+      "path": "assets/generated/world/backdrop/facade-bldg-03.webp",
+      "width": 324,
+      "height": 456,
+      "bytes": 34248,
+      "category": "facade-bldg",
+      "transparent": true,
+      "notes": "Building #3 split from facade strip A at upper-ratio valley cuts [267, 523, 847, 1030]"
+    },
+    {
+      "file": "facade-bldg-04.webp",
+      "path": "assets/generated/world/backdrop/facade-bldg-04.webp",
+      "width": 183,
+      "height": 450,
+      "bytes": 18082,
+      "category": "facade-bldg",
+      "transparent": true,
+      "notes": "Building #4 split from facade strip A at upper-ratio valley cuts [267, 523, 847, 1030]"
+    },
+    {
+      "file": "facade-bldg-05.webp",
+      "path": "assets/generated/world/backdrop/facade-bldg-05.webp",
+      "width": 250,
+      "height": 442,
+      "bytes": 25858,
+      "category": "facade-bldg",
+      "transparent": true,
+      "notes": "Building #5 split from facade strip A at upper-ratio valley cuts [267, 523, 847, 1030]"
+    },
+    {
+      "file": "door-explode-sheet.webp",
+      "path": "assets/generated/world/backdrop/door-explode-sheet.webp",
+      "width": 768,
+      "height": 128,
+      "bytes": 44748,
+      "category": "door-explode",
+      "transparent": true,
+      "notes": "8-frame horizontal explode sheet; uniform cells; black keyed",
+      "cols": 8,
+      "frameW": 96,
+      "frameH": 128,
+      "frames": 8,
+      "fps": 12
+    },
+    {
+      "file": "door-blown-idle.webp",
+      "path": "assets/generated/world/backdrop/door-blown-idle.webp",
+      "width": 96,
+      "height": 128,
+      "bytes": 3448,
+      "category": "door-idle",
+      "transparent": true,
+      "notes": "Blown-open doorway idle (source cell 9 / rightmost); padded to explode cell width"
+    },
+    {
+      "file": "alley-mouth.webp",
+      "path": "assets/generated/world/backdrop/alley-mouth.webp",
+      "width": 280,
+      "height": 246,
+      "bytes": 57690,
+      "category": "alley",
+      "transparent": true,
+      "notes": "Alley mouth for top sidewalk backdrop; black keyed; max width ~280"
+    }
+  ],
+  "door": {
+    "cols": 8,
+    "frameW": 96,
+    "frameH": 128,
+    "frames": 8,
+    "fps": 12,
+    "sheet": "door-explode-sheet.webp",
+    "idle": "door-blown-idle.webp",
+    "idleWidth": 96,
+    "idleHeight": 128,
+    "facing": "camera/street-facing; explode outward toward viewer",
+    "order": "left-to-right frames 0..7 explode; idle from source rightmost cell",
+    "category": "door-explode"
+  }
+}

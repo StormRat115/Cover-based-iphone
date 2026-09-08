@@ -1324,8 +1324,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    73,
-    "soldier/vault/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn plates",
+    89,
+    "soldier/vault/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn facade plates",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
@@ -1750,6 +1750,15 @@ test("wartorn city plates load and dress the street sides", async () => {
   assert.match(city.wartornRubblePile.src, /wartorn-rubble-pile\.png/);
   assert.match(city.facadeApartment.src, /facade-ruin-apartment\.webp/);
   assert.match(city.facadeStorefront.src, /facade-ruin-storefront\.webp/);
+  assert.match(city.facadeOffice.src, /facade-office\.webp/);
+  assert.match(city.facadeGraffiti.src, /facade-graffiti-brick\.webp/);
+  assert.match(city.facadeAlley.src, /facade-alley\.webp/);
+  assert.match(city.facadeStripA.src, /backdrop\/facade-strip-a\.webp/);
+  assert.match(city.facadeStripB.src, /backdrop\/facade-strip-b\.webp/);
+  assert.match(city.facadeBldg01.src, /backdrop\/facade-bldg-01\.webp/);
+  assert.match(city.doorExplodeSheet.src, /backdrop\/door-explode-sheet\.webp/);
+  assert.match(city.doorBlownIdle.src, /backdrop\/door-blown-idle\.webp/);
+  assert.match(city.alleyMouth.src, /backdrop\/alley-mouth\.webp/);
   assert.match(city.rubbleBrick.src, /rubble-brick\.webp/);
   assert.match(city.rubbleConcrete.src, /rubble-concrete-rebar\.webp/);
   assert.match(city.rubbleSandbags.src, /rubble-sandbags-crates\.webp/);
@@ -1772,6 +1781,21 @@ test("wartorn city plates load and dress the street sides", async () => {
     "world-manifest.json",
     "facade-ruin-apartment.webp",
     "facade-ruin-storefront.webp",
+    "facade-office.webp",
+    "facade-graffiti-brick.webp",
+    "facade-alley.webp",
+    "door-explode-sheet.webp",
+    "backdrop/facade-strip-a.webp",
+    "backdrop/facade-strip-b.webp",
+    "backdrop/facade-bldg-01.webp",
+    "backdrop/facade-bldg-02.webp",
+    "backdrop/facade-bldg-03.webp",
+    "backdrop/facade-bldg-04.webp",
+    "backdrop/facade-bldg-05.webp",
+    "backdrop/door-explode-sheet.webp",
+    "backdrop/door-blown-idle.webp",
+    "backdrop/alley-mouth.webp",
+    "backdrop/manifest.json",
     "rubble-brick.webp",
     "rubble-concrete-rebar.webp",
     "rubble-sandbags-crates.webp",
@@ -1801,6 +1825,17 @@ test("wartorn city plates load and dress the street sides", async () => {
   assert.ok(dressing.wrecks.length >= 8);
   assert.ok(dressing.buildings.some((item) => item.kind === "apartment"));
   assert.ok(dressing.buildings.some((item) => item.kind === "storefront"));
+  assert.ok(dressing.buildings.some((item) => item.kind === "office"));
+  assert.ok(dressing.buildings.some((item) => item.kind === "graffiti"));
+  assert.ok(dressing.buildings.some((item) => item.kind === "bldg1"));
+  assert.ok(dressing.buildings.some((item) => item.kind === "alley"));
+  assert.ok(
+    dressing.buildings
+      .filter((item) => item.side === "top")
+      .every((item) => /^(bldg[1-5]|alley)$/.test(item.kind)),
+    "top void uses official Phone Art façades only",
+  );
+  assert.ok(dressing.doors.length >= 6);
   assert.ok(
     ["brick", "concrete", "sandbags", "scrap"].every((kind) =>
       dressing.rubble.some((item) => item.kind === kind),
@@ -1813,8 +1848,10 @@ test("wartorn city plates load and dress the street sides", async () => {
   );
   assert.ok(dressing.sidewalk >= 200, "sidewalk strips dress the street edges");
   assert.ok(
-    dressing.buildings.every((item) => Math.abs(item.x) > dressing.road + 400),
-    "ruins stay on the far backdrop, not the midfield street",
+    dressing.buildings.every(
+      (item) => Math.abs(item.x) > dressing.road + dressing.sidewalk - 40,
+    ),
+    "ruins stay past the sidewalk, not on the midfield street",
   );
   assert.ok(dressing.lamps.length >= 8);
   assert.ok(dressing.sidewalkProps.length >= 8);
@@ -1841,12 +1878,20 @@ test("wartorn city plates load and dress the street sides", async () => {
     "Phone Art sidewalk accents stay on sidewalks, not mid-road",
   );
   assert.ok(
-    dressing.wrecks.some((item) => Math.abs(item.x) < dressing.road),
-    "burnt wrecks sit on the street corridor",
+    dressing.wrecks.every((item) => Math.abs(item.x) > dressing.road),
+    "burnt wrecks stay off the playable asphalt",
   );
   assert.ok(
-    dressing.rubble.some((item) => Math.abs(item.x) < dressing.road),
-    "debris piles sit on the street corridor",
+    dressing.rubble.every((item) => Math.abs(item.x) > dressing.road),
+    "debris piles stay off the playable asphalt",
+  );
+  assert.ok(
+    dressing.doors.every(
+      (door) =>
+        door.doorX < -dressing.road &&
+        door.doorX > -dressing.road - dressing.sidewalk - 40,
+    ),
+    "door spawn mouths sit on the top sidewalk, not the road",
   );
   assert.equal(city.sidewalkWidth(), dressing.sidewalk);
   const ctx = h.document.createElement("canvas").getContext("2d");
@@ -1856,6 +1901,94 @@ test("wartorn city plates load and dress the street sides", async () => {
   city.drawWartornStreetSurface(ctx, iso, world, () => true);
   city.drawWartornDressing(ctx, iso, world, 390, 844, () => true);
   await city.preloadWartornAssets();
+});
+
+test("top facade doors explode then spill 1-3 hostiles onto the road", async () => {
+  const h = createHarness();
+  const doors = await h.importModule(`js/facadeDoors.js?v=${BUILD}`);
+  const city = await h.importModule(`js/wartornCity.js?v=${BUILD}`);
+  const dressing = city.createWartornDressing();
+  assert.ok(dressing.buildings.filter((b) => b.side === "top").length >= 20);
+  assert.ok(
+    dressing.buildings
+      .filter((b) => b.side === "top")
+      .every((b) => b.x < -city.playableStreetHalfWidth()),
+  );
+  assert.equal(doors.DOOR_SPAWN.burst(1, () => 0), 1);
+  assert.equal(doors.DOOR_SPAWN.waveDelay(1), 8.5);
+  assert.equal(doors.DOOR_SPAWN.interval(1), 16);
+  assert.ok(doors.DOOR_SPAWN.burst(4, () => 0.9) <= 3);
+  const director = doors.createFacadeDoorDirector();
+  const enemies = [];
+  const world = {
+    cameraX: 0,
+    cameraY: 0,
+    minX: -2300,
+    maxX: 2300,
+    minY: -6600,
+    maxY: 1900,
+  };
+  doors.updateFacadeDoors(director, 8.6, {
+    wave: 1,
+    waveState: "active",
+    enemies,
+    world,
+    random: () => 0,
+    onScreen: () => true,
+  });
+  assert.equal(director.bursts.length, 1);
+  const ctx = h.document.createElement("canvas").getContext("2d");
+  const painted = doors.drawFacadeDoorBursts(
+    ctx,
+    (x, y) => [x * 0.25, y * 0.125],
+    director,
+    () => true,
+  );
+  assert.ok(painted >= 1);
+  doors.updateFacadeDoors(director, 0.4, {
+    wave: 1,
+    waveState: "active",
+    enemies,
+    world,
+    random: () => 0,
+    onScreen: () => true,
+  });
+  assert.equal(enemies.length, 1);
+  assert.equal(enemies[0].fromDoor, true);
+  assert.ok(enemies[0].x < -city.playableStreetHalfWidth());
+  const startX = enemies[0].x;
+  enemies[0].spawnTimer = 0;
+  for (let i = 0; i < 90; i++) {
+    doors.updateDoorEgress(enemies, 1 / 30);
+  }
+  assert.ok(
+    enemies[0].x > startX,
+    "door hostiles must walk from the top sidewalk toward the road",
+  );
+  assert.ok(enemies[0].x > -city.playableStreetHalfWidth() + 40);
+  const padded = [];
+  for (let i = 0; i < 15; i++) {
+    padded.push({
+      dead: false,
+      hp: 10,
+      pendingSegment: i > 2,
+      spawnTimer: i > 2 ? 1e6 : 0,
+    });
+  }
+  const crowded = doors.createFacadeDoorDirector();
+  doors.updateFacadeDoors(crowded, 8.6, {
+    wave: 1,
+    waveState: "active",
+    enemies: padded,
+    world,
+    random: () => 0,
+    onScreen: () => true,
+  });
+  assert.equal(
+    crowded.bursts.length,
+    1,
+    "pending northeast packs must not suppress doorway bursts",
+  );
 });
 
 test("cover pieces expose exclusive slots by shape", async () => {
