@@ -2,7 +2,7 @@
 //
 // Formula:
 //   killXP(type, wave) = 12 + 4 * wave + typeBonus(type)
-//     typeBonus: charger 14, heavy 10, sniper 8, shotgunner 6, marksman 5, else 2
+//     typeBonus: charger 14, heavy 10, sniper 8, shotgunner 6, marksman 5, shield 8, medic 6, ripper 4, else 2
 //   waveXP(wave)       = 50 + 20 * wave
 //   xpToReach(level)   = sum_{n=1..level-1} (70 + 40 * n)
 //     level 1 starts at 0 XP; first level-up costs 110 XP
@@ -18,6 +18,9 @@ export const TYPE_BONUS = {
   sniper: 8,
   shotgunner: 6,
   marksman: 5,
+  shield: 8,
+  medic: 6,
+  ripper: 4,
 };
 
 export function typeBonus(type) {

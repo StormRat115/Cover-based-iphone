@@ -1,15 +1,23 @@
 import {
   createBandits,
   createSurroundSpawnPoints,
+  createHostileAt,
   updateBandits as updateBanditsCore,
-} from "./enemyCore.js?v=20260908-132";
+} from "./enemyCore.js?v=20260908-133";
 import {
   drawEnemyMonster,
   drawSoldier,
-} from "./soldierAssets.js?v=20260908-132";
-import { updateChargers, drawCharger } from "./chargerEnemy.js?v=20260908-132";
-import { drawCombatMarks } from "./engaged.js?v=20260908-132";
-export { createBandits, createSurroundSpawnPoints };
+} from "./soldierAssets.js?v=20260908-133";
+import { updateChargers, drawCharger } from "./chargerEnemy.js?v=20260908-133";
+import { drawCombatMarks } from "./engaged.js?v=20260908-133";
+import {
+  isVariantType,
+  updateVariants,
+  drawVariantSprite,
+  drawVariantOverlays,
+  variantBarColor,
+} from "./enemyVariants.js?v=20260908-133";
+export { createBandits, createSurroundSpawnPoints, createHostileAt };
 var ENEMY_LINES = {
   contact: ["CONTACT!", "THERE!", "I SEE THEM!", "MOVE! MOVE!"],
   fire: ["OPEN FIRE!", "KEEP FIRING!", "LIGHT THEM UP!", "PUT ROUNDS ON THEM!"],
@@ -29,6 +37,7 @@ function enemySay(e, key, chance) {
 export function updateBandits(enemies, dt, player, covers, spawnProjectile) {
   updateBanditsCore(enemies, dt, player, covers, spawnProjectile);
   updateChargers(enemies, dt, player, covers, spawnProjectile);
+  updateVariants(enemies, dt, player, covers, spawnProjectile);
   enemies.forEach(function (e) {
     if (e.dead) return;
     e.calloutTimer = Math.max(0, (e.calloutTimer || 0) - dt);
@@ -117,7 +126,8 @@ export function drawBandit(ctx, e, iso, selected) {
     ctx.fillStyle = "#111";
     ctx.fillRect(-13 * s, -45 * s, 26 * s, 3);
     ctx.fillStyle =
-      e.type === "charger"
+      variantBarColor(e.type) ||
+      (e.type === "charger"
         ? "#e07a32"
         : e.type === "heavy"
           ? "#d88c3f"
@@ -131,7 +141,7 @@ export function drawBandit(ctx, e, iso, selected) {
                   ? "#61a86b"
                   : e.type === "pistol"
                     ? "#a9a9a9"
-                    : "#d84b4b";
+                    : "#d84b4b");
     ctx.fillRect(-13 * s, -45 * s, 26 * s * Math.max(0, e.hp / e.maxHp), 3);
   }
   if (e.hit > 0 && !e.dead) {
@@ -151,9 +161,13 @@ export function drawBandit(ctx, e, iso, selected) {
   };
   if (e.type === "charger") {
     if (!drawCharger(ctx, e, spriteOptions)) drawSoldier(ctx, e, spriteOptions);
+  } else if (isVariantType(e.type)) {
+    if (!drawVariantSprite(ctx, e, spriteOptions))
+      drawSoldier(ctx, e, spriteOptions);
   } else if (!drawEnemyMonster(ctx, e, spriteOptions))
     drawSoldier(ctx, e, spriteOptions);
   drawBubble(ctx, e);
   drawCombatMarks(ctx, e);
+  drawVariantOverlays(ctx, e);
   ctx.restore();
 }

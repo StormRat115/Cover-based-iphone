@@ -1328,8 +1328,8 @@ test("complete boot reaches menu and PLAY without duplicate atlas modules or tim
   assert.equal(h.frames.length, 0);
   assert.equal(
     h.metrics.images,
-    104,
-    "soldier/vault/leo/doc/viper/monster/charger sources plus cover atlases, 36 Phone Art block skins, and wartorn facade plates",
+    107,
+    "soldier/vault/leo/doc/viper/monster/charger/variant sources plus cover atlases, 36 Phone Art block skins, and wartorn facade plates",
   );
   assert.equal(h.metrics.intervals, 0);
   h.nodes.get("startGame").emit("click");
@@ -3796,5 +3796,264 @@ test("squad combat knobs are higher than marines without changing orders", async
   assert.ok(alliesModule.SQUAD_AGGRO.coveredDwell <= 0.1);
   const marines = { accuracy: 0, damageBonus: 0 };
   assert.equal(marines.accuracy, 0);
+});
+
+test("ripper, shield, and medic mix into later waves with kit-locked temp tints", async () => {
+  const h = createHarness();
+  const enemies = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
+  const variants = await h.importModule(`js/enemyVariants.js?v=${BUILD}`);
+  const stance = await h.importModule(`js/enemyStance.js?v=${BUILD}`);
+  const stats = await h.importModule(`js/combatStats.js?v=${BUILD}`);
+  const melee = await h.importModule(`js/melee.js?v=${BUILD}`);
+  const wave1 = enemies.createBandits(1, {
+    extraCount: 6,
+    random: () => 0,
+    spawnView: { width: 390, height: 844, world: {} },
+  });
+  assert.equal(
+    wave1.filter((e) => variants.isVariantType(e.type)).length,
+    0,
+    "wave 1 must not flood with specialist variants",
+  );
+  const late = enemies.createBandits(5, {
+    extraCount: 12,
+    random: () => 0,
+    spawnView: { width: 390, height: 844, world: {} },
+  });
+  const types = new Set(late.map((e) => e.type));
+  assert.equal(types.has("ripper"), true);
+  assert.equal(types.has("shield"), true);
+  assert.equal(types.has("medic"), true);
+  late
+    .filter((e) => variants.isVariantType(e.type))
+    .forEach((e) => {
+      assert.equal(stance.seeksCover(e), false);
+      assert.equal(melee.ignoresCover(e), true);
+      assert.equal(e.worldLabel, variants.variantWorldLabel(e.type));
+      assert.equal(variants.variantArtStatus(e.type), "official");
+      assert.ok(e.weapon.role === "melee");
+    });
+  assert.equal(stats.ENEMY_STATS.ripper.defense, 12);
+  assert.equal(variants.SHIELD.frontReduction, 0.86);
+  assert.equal(variants.VARIANT_SPAWN.lateRipperEvery, 5);
+  assert.equal(
+    enemies.doorHostileType(1, 0, () => 0),
+    "rifleman",
+  );
+  assert.equal(
+    enemies.doorHostileType(2, 0, () => 0),
+    "shield",
+  );
+  assert.equal(
+    enemies.doorHostileType(3, 1, () => 0),
+    "ripper",
+  );
+  assert.equal(
+    enemies.doorHostileType(3, 2, () => 0),
+    "medic",
+  );
+});
+
+test("ripper dogpiles engaged units and always hits in melee", async () => {
+  const h = createHarness();
+  const enemies = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
+  const variants = await h.importModule(`js/enemyVariants.js?v=${BUILD}`);
+  const ripper = enemies.createHostileAt(0, 0, "ripper", { spawnTimer: 0 });
+  const marine = {
+    x: 400,
+    y: 0,
+    hp: 90,
+    maxHp: 90,
+    defense: 20,
+    dead: false,
+    downed: false,
+    isMarine: true,
+    engaged: true,
+    combatState: "melee",
+  };
+  const player = {
+    x: 40,
+    y: 0,
+    hp: 100,
+    maxHp: 100,
+    defense: 50,
+    dead: false,
+    downed: false,
+    isPlayer: true,
+  };
+  h.window.__battleMarines = [marine];
+  h.window.__battleAllies = [];
+  h.window.__battlePlayer = player;
+  variants.updateVariants([ripper], 0.2, player, [], null);
+  assert.equal(ripper.combatTarget, marine);
+  assert.equal(ripper.cover, null);
+  assert.equal(ripper.exposed, true);
+  assert.ok(ripper.x > 0, "ripper should close on the engaged marine");
+  const close = enemies.createHostileAt(marine.x - 20, 0, "ripper", {
+    spawnTimer: 0,
+  });
+  const hp = marine.hp;
+  variants.updateVariants([close], 0.05, player, [], null);
+  assert.equal(close.engaged, true);
+  assert.ok(marine.hp < hp, "melee always hits");
+  assert.equal(close.worldLabel, "RIPPER");
+});
+
+test("shield frontal gunfire is crushed; flank and Leo melee are not", async () => {
+  const h = createHarness();
+  const enemies = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
+  const variants = await h.importModule(`js/enemyVariants.js?v=${BUILD}`);
+  const shield = enemies.createHostileAt(0, 0, "shield", { spawnTimer: 0 });
+  shield.facingX = 1;
+  shield.facingY = 0;
+  const frontGunner = { x: 120, y: 0, weapon: { role: "assault" } };
+  const flankGunner = { x: 0, y: 140, weapon: { role: "assault" } };
+  const leo = {
+    x: 30,
+    y: 0,
+    name: "Leo",
+    knight: true,
+    combatState: "melee",
+    weaponSlot: "melee",
+    weapon: { role: "melee", id: "sword" },
+  };
+  const front = variants.applyIncomingHostileDamage(shield, 100, frontGunner, {
+    melee: false,
+  });
+  const flank = variants.applyIncomingHostileDamage(shield, 100, flankGunner, {
+    melee: false,
+  });
+  const blade = variants.applyIncomingHostileDamage(shield, 100, leo, {
+    melee: true,
+  });
+  assert.ok(front < 16, "frontal ranged should barely land");
+  assert.ok(flank > front * 3, "flank should bypass the shield face");
+  assert.ok(blade > front * 3, "Leo melee should ignore the tower shield");
+  assert.equal(variants.shieldBlocksRanged(shield, frontGunner), true);
+  assert.equal(variants.shieldBlocksRanged(shield, flankGunner), false);
+  assert.equal(variants.shieldBlocksRanged(shield, leo, { melee: true }), false);
+  h.window.__battlePlayer = {
+    x: 180,
+    y: 0,
+    hp: 100,
+    dead: false,
+    downed: false,
+    isPlayer: true,
+  };
+  variants.updateVariants([shield], 0.25, h.window.__battlePlayer, [], null);
+  assert.equal(shield.cover, null);
+  assert.ok(shield.x > 0, "shield thrall closes the gap in the open");
+});
+
+test("medic patches a wounded monster until shot or engaged", async () => {
+  const h = createHarness();
+  const enemies = await h.importModule(`js/enemyCore.js?v=${BUILD}`);
+  const variants = await h.importModule(`js/enemyVariants.js?v=${BUILD}`);
+  const medic = enemies.createHostileAt(0, 0, "medic", { spawnTimer: 0 });
+  const wounded = enemies.createHostileAt(40, 0, "charger", { spawnTimer: 0 });
+  wounded.hp = 40;
+  const player = {
+    x: 800,
+    y: 800,
+    hp: 100,
+    dead: false,
+    downed: false,
+    isPlayer: true,
+  };
+  h.window.__battlePlayer = player;
+  h.window.__battleMarines = [];
+  h.window.__battleAllies = [];
+  variants.updateVariants([medic, wounded], 0.2, player, [], null);
+  assert.equal(medic.healTarget, wounded);
+  assert.equal(medic.cover, null);
+  assert.ok(wounded.hp > 40, "medic should patch the wounded charger");
+  const hpAfterHeal = wounded.hp;
+  medic.hp -= 8;
+  medic.hit = 0.2;
+  variants.updateVariants([medic, wounded], 0.2, player, [], null);
+  assert.equal(medic.healing, false);
+  assert.equal(wounded.hp, hpAfterHeal, "a shot interrupts the patch");
+  assert.ok(medic.healLockout > 0);
+});
+
+test("variant labels, temp tint, and engaged sword mark draw in world space", async () => {
+  const h = createHarness();
+  const enemyMod = await h.importModule(`js/enemy.js?v=${BUILD}`);
+  const variants = await h.importModule(`js/enemyVariants.js?v=${BUILD}`);
+  const ctx = h.document.createElement("canvas").getContext("2d");
+  const iso = (x, y) => [x, y];
+  ["ripper", "shield", "medic"].forEach((type) => {
+    const e = {
+      type,
+      x: 10,
+      y: 12,
+      hp: 40,
+      maxHp: 40,
+      scale: 1,
+      facingX: 1,
+      facingY: 0,
+      dead: false,
+      worldLabel: variants.variantWorldLabel(type),
+      weapon: variants.variantWeapon(type),
+      engaged: type !== "medic",
+      healing: type === "medic",
+      healFlash: type === "medic" ? 0.4 : 0,
+    };
+    enemyMod.drawBandit(ctx, e, iso, false);
+    assert.equal(variants.variantArtStatus(type), "official");
+  });
+  const texts = (h.metrics.drawImages || []).length;
+  assert.ok(h.metrics.draws > 6, "each variant should paint sprite plus HUD");
+  assert.ok(texts >= 0);
+  const penalty = variants.engagedTargetPenalty({ engaged: true });
+  const free = variants.engagedTargetPenalty({ engaged: false });
+  assert.ok(penalty < free);
+  const pool = variants.preferUnengaged([
+    { hp: 10, dead: false, engaged: true, spawnTimer: 0 },
+    { hp: 10, dead: false, engaged: false, spawnTimer: 0 },
+  ]);
+  assert.equal(pool.length, 1);
+  assert.equal(pool[0].engaged, false);
+});
+
+test("Phone Art ripper, shielded thrall, and medic sheets are kit-locked 160px cells", async () => {
+  const h = createHarness();
+  const art = await h.importModule(`js/variantArt.js?v=${BUILD}`);
+  const manifest = JSON.parse(
+    readFileSync("assets/generated/enemies/manifest.json", "utf8"),
+  );
+  assert.equal(manifest.characters.ripper.file, "enemy-ripper-sheet.png");
+  assert.equal(
+    manifest.characters.shieldedThrall.file,
+    "enemy-shielded-thrall-sheet.png",
+  );
+  assert.equal(manifest.characters.medicThrall.file, "enemy-medic-thrall-sheet.png");
+  const expected = {
+    ripper: { file: "enemy-ripper.json", rows: 4, states: ["idle", "run", "meleeSwing", "death"] },
+    shield: {
+      file: "enemy-shielded-thrall.json",
+      rows: 5,
+      states: ["idle", "run", "shieldBlock", "meleeSwing", "death"],
+    },
+    medic: { file: "enemy-medic-thrall.json", rows: 4, states: ["idle", "run", "heal", "death"] },
+  };
+  Object.entries(expected).forEach(([type, spec]) => {
+    const json = JSON.parse(
+      readFileSync(resolve("assets/generated/enemies", spec.file), "utf8"),
+    );
+    assert.equal(json.cols, 4);
+    assert.equal(json.rows, spec.rows);
+    assert.equal(json.cell, 160);
+    assert.equal(json.facing, "right");
+    assert.deepEqual(json.states, spec.states);
+    const sheet = art.VARIANT_SHEETS[type];
+    assert.equal(sheet.frameWidth, 160);
+    assert.equal(sheet.rows, spec.rows);
+    spec.states.forEach((state) => {
+      assert.ok(sheet.animations[state], type + " missing " + state);
+    });
+    const png = readFileSync(resolve("assets/generated/enemies", sheet.file));
+    assert.equal(png[25], 6, sheet.file + " must be an RGBA PNG");
+  });
 });
 

@@ -1,7 +1,14 @@
-import { ignoresCover } from "./melee.js?v=20260908-132";
+import { ignoresCover } from "./melee.js?v=20260908-133";
 
 export function stanceForEnemy(index, type) {
-  if (type === "charger" || type === "melee") return "rush";
+  if (
+    type === "charger" ||
+    type === "melee" ||
+    type === "ripper" ||
+    type === "shield" ||
+    type === "medic"
+  )
+    return "rush";
   if (type === "sniper" || type === "marksman") return "cover";
   if (type === "heavy") return index % 2 === 0 ? "cover" : "exposed";
   if (type === "shotgunner" || type === "smg")
